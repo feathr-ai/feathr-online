@@ -1,5 +1,8 @@
+use std::{fmt::Debug, sync::Arc};
+
 use azure_core::auth::TokenCredential;
-use azure_identity::DefaultAzureCredential;
+use azure_identity::{DefaultAzureCredential, AutoRefreshingTokenCredential};
+use once_cell::sync::OnceCell;
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
 
@@ -19,7 +22,19 @@ pub enum Auth {
     },
     Aad {
         resource: String,
+        #[serde(skip, default)]
+        credential: OnceCell<IgnoreDebug<AutoRefreshingTokenCredential>>,
     },
+}
+
+pub struct IgnoreDebug<T> {
+    pub inner: T,
+}
+
+impl<T> Debug for IgnoreDebug<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("...")
+    }
 }
 
 impl Default for Auth {
@@ -40,14 +55,21 @@ impl Auth {
                 Some(token) => request.bearer_auth(token),
                 None => request,
             },
-            Auth::Aad { resource } => {
+            Auth::Aad {
+                resource,
+                credential,
+            } => {
                 let resource =
                     get_secret(Some(resource).as_ref()).unwrap_or_else(|| resource.to_string());
-                let credential = DefaultAzureCredential::default();
-                let token = credential
-                    .get_token(&resource)
-                    .await
-                    .map_err(|e| PiperError::AuthError(format!("Failed to get token: {}", e)))?;
+                let credential = credential.get_or_init(|| IgnoreDebug {
+                    inner: AutoRefreshingTokenCredential::new(
+                        Arc::new(DefaultAzureCredential::default()),
+                    ),
+                });
+                let token =
+                    credential.inner.get_token(&resource).await.map_err(|e| {
+                        PiperError::AuthError(format!("Failed to get token: {}", e))
+                    })?;
                 request.bearer_auth(token.token.secret())
             }
         })
