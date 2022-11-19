@@ -32,6 +32,8 @@ poem = { version = "1", features = ["tokio-metrics"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 rust_heap = "0.1"
+azure_core = "0.6"
+azure_identity = "0.7"
 
 [target.'cfg(target_env = "musl")'.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }

@@ -88,6 +88,10 @@ pub enum PiperError {
 
     // Unspecific HTTP error
     #[error("{0}")]
+    AuthError(String),
+
+    // Unspecific HTTP error
+    #[error("{0}")]
     HttpError(String),
 
     // Feathr Online Store specific
