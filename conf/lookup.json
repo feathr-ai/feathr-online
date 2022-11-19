@@ -32,6 +32,29 @@
     },
     {
       "class": "HttpJsonApiSource",
+      "name": "ipgeolocation",
+      "urlBase": "https://api.ipgeolocation.io/ipgeo",
+      "keyQueryParam": "ip",
+      "additionalQueryParams": {
+        "apiKey": "${IPGEOLOCATION_APIKEY}"
+      },
+      "resultPath": {
+        "status": "$.status",
+        "country": "$.country_name",
+        "countryCode": "$.country_code3",
+        "region": "$.district",
+        "city": "$.city",
+        "zip": "$.zipcode",
+        "lat": "$.latitude",
+        "lon": "$.longitude",
+        "timezone": "$.time_zone.name",
+        "isp": "$.isp",
+        "org": "$.organization",
+        "as": "$.asn"
+      }
+    },
+    {
+      "class": "HttpJsonApiSource",
       "name": "locationsvc",
       "method": "get",
       "urlBase": "https://locsvc.azurewebsites.net",
