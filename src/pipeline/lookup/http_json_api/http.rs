@@ -179,7 +179,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0], Value::String("67 Lake Forest St.".into()));
+        assert_eq!(result[0], Value::String("577 Lakewood Dr., Bronx, NY 10473".into()));
         assert_eq!(result[1], Value::Long(107));
     }
 }
