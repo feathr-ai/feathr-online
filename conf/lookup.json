@@ -1,0 +1,45 @@
+{
+  "sources": [
+    {
+      "class": "FeathrRedisSource",
+      "name": "feathrci",
+      "host": "${FEATHRCI_HOST}",
+      "password": "${FEATHRCI_PASS}",
+      "ssl": true,
+      "table": "${FEATHRCI_TABLE}"
+    },
+    {
+      "class": "HttpJsonApiSource",
+      "name": "geoip",
+      "urlBase": "http://ip-api.com",
+      "keyUrlTemplate": "/json/$",
+      "resultPath": {
+        "status": "$.status",
+        "country": "$.country",
+        "countryCode": "$.countryCode",
+        "region": "$.region",
+        "regionName": "$.regionName",
+        "city": "$.city",
+        "zip": "$.zip",
+        "lat": "$.lat",
+        "lon": "$.lon",
+        "timezone": "$.timezone",
+        "isp": "$.isp",
+        "org": "$.org",
+        "as": "$.as",
+        "query": "$.query"
+      }
+    },
+    {
+      "class": "HttpJsonApiSource",
+      "name": "locationsvc",
+      "method": "get",
+      "urlBase": "https://locsvc.azurewebsites.net",
+      "keyUrlTemplate": "/locations/$",
+      "resultPath": {
+        "id": "$.id",
+        "name": "$.name"
+      }
+    }
+  ]
+}

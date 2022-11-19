@@ -1,0 +1,203 @@
+use async_trait::async_trait;
+use bb8::Pool;
+use bb8_redis::RedisConnectionManager;
+use protobuf::Message;
+use redis::cmd;
+use serde::{Deserialize, Serialize};
+use tokio::sync::OnceCell;
+use tracing::{debug, instrument, error};
+
+use crate::{
+    pipeline::{PiperError, Value, ValueType},
+    Logged,
+};
+
+use self::generated::feathr::FeatureValue;
+
+use super::{get_secret, LookupSource};
+
+pub mod generated {
+    include!(concat!(env!("OUT_DIR"), "/generated/mod.rs"));
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct FeathrOnlineStore {
+    host: String,
+    #[serde(skip_serializing, default)]
+    password: Option<String>,
+    #[serde(default)]
+    ssl: bool,
+    table: String,
+
+    #[serde(skip, default)]
+    client: OnceCell<RedisConnectionPool>,
+}
+
+#[derive(Clone, Debug)]
+struct RedisConnectionPool {
+    pool: Pool<RedisConnectionManager>,
+}
+
+impl RedisConnectionPool {
+    #[instrument(level = "trace", skip(password))]
+    async fn new(
+        url: &str,
+        password: &Option<String>,
+        ssl: bool,
+    ) -> Result<RedisConnectionPool, PiperError> {
+        debug!("Creating new Redis connection pool for {}", url);
+        let url = get_secret(Some(url)).unwrap_or_default();
+        let url = match (get_secret(password.as_ref()), ssl) {
+            (None, true) => format!("rediss://{}", url),
+            (None, false) => format!("redis://{}", url),
+            (Some(p), true) => format!("rediss://:{}@{}", p, url),
+            (Some(p), false) => format!("redis://:{}@{}", p, url),
+        };
+        let manager =
+            RedisConnectionManager::new(url).map_err(|e| PiperError::RedisError(e.to_string()))?;
+
+        let pool = Pool::builder()
+            .build(manager)
+            .await
+            .map_err(|e| PiperError::RedisError(e.to_string()))?;
+        debug!("New Redis connection pool created");
+        Ok(RedisConnectionPool { pool })
+    }
+}
+
+impl FeathrOnlineStore {}
+
+#[async_trait]
+impl LookupSource for FeathrOnlineStore {
+    #[instrument(level = "trace", skip(self))]
+    async fn lookup(&self, key: &Value, fields: &Vec<String>) -> Result<Vec<Value>, PiperError> {
+        let client = self
+            .client
+            .get_or_try_init(|| async {
+                RedisConnectionPool::new(&self.host, &self.password, self.ssl).await
+            })
+            .await?;
+
+        debug!("Getting connection from the Redis connection pool");
+        let mut conn = client
+            .pool
+            .get()
+            .await
+            .map_err(|e| PiperError::RedisError(e.to_string()))?;
+
+        let mut cmd = cmd("HMGET");
+        // Key format is "table:key"
+        cmd.arg(format!(
+            "{}:{}",
+            get_secret(Some(&self.table)).unwrap_or_default(),
+            key.clone().try_convert(ValueType::String)?.get_string()?
+        ));
+        for f in fields {
+            cmd.arg(f);
+        }
+
+        debug!("Executing HMGET command");
+        let resp: Vec<String> = cmd
+            .query_async(&mut *conn)
+            .await
+            .log()
+            .unwrap_or(vec![Default::default(); fields.len()])
+            ;
+        let features = resp
+            .into_iter()
+            .map(|s| {
+                base64::decode(s)
+                    .map_err(|e| PiperError::Base64Error(e.to_string()))
+                    .and_then(|v| {
+                        FeatureValue::parse_from_bytes(&v)
+                            .log()
+                            .map_err(|e| PiperError::ProtobufError(e.to_string()))
+                    })
+            })
+            .collect::<Vec<_>>();
+        let ret: Vec<_> = features
+            .into_iter()
+            .map(|f| f.map(|f|feature_to_value(f).unwrap_or_default()))
+            .map(|f| f.unwrap_or_default())
+            .collect();
+        Ok(ret)
+    }
+}
+
+fn feature_to_value(f: FeatureValue) -> Result<Value, PiperError> {
+    // TODO: Sparse arrays
+    Ok(if f.has_boolean_value() {
+        f.boolean_value().into()
+    } else if f.has_int_value() {
+        f.int_value().into()
+    } else if f.has_long_value() {
+        f.long_value().into()
+    } else if f.has_float_value() {
+        f.float_value().into()
+    } else if f.has_double_value() {
+        f.double_value().into()
+    } else if f.has_string_value() {
+        f.string_value().to_string().into()
+    } else if f.has_boolean_array() {
+        f.boolean_array().booleans.clone().into()
+    } else if f.has_int_array() {
+        f.int_array().integers.clone().into()
+    } else if f.has_long_array() {
+        f.long_array().longs.clone().into()
+    } else if f.has_float_array() {
+        f.float_array().floats.clone().into()
+    } else if f.has_double_array() {
+        f.double_array().doubles.clone().into()
+    } else if f.has_string_array() {
+        f.string_array().strings.clone().into()
+    } else {
+        error!("Unsupported feature type");
+        return Err(PiperError::RedisError(
+            "Unsupported feature type".to_string(),
+        ));
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::pipeline::{lookup::LookupSource, Value};
+
+    use super::FeathrOnlineStore;
+
+    #[tokio::test]
+    async fn test_lookup() {
+        dotenv::dotenv().ok();
+        let s = r#"
+        {
+            "host": "${REDIS_HOST}",
+            "password": "${REDIS_PASSWORD}",
+            "table": "${REDIS_TABLE}",
+            "ssl": true
+              }
+        "#;
+        let s: FeathrOnlineStore = serde_json::from_str(s).unwrap();
+        let l = Box::new(s);
+        let k: Value = 107.into();
+        let fields = vec![
+            "f_location_avg_fare".to_string(),
+            "f_location_max_fare".to_string(),
+        ];
+        let ret = l.lookup(&k, &fields).await.unwrap();
+        assert_eq!(ret.len(), 2);
+        assert_eq!(
+            ret[0]
+                .clone()
+                .get_int()
+                .unwrap(),
+            23
+        );
+        assert_eq!(
+            ret[1]
+                .clone()
+                .get_int()
+                .unwrap(),
+            78
+        );
+        println!("{:?}", ret);
+    }
+}
