@@ -99,7 +99,7 @@ impl LookupSource for HttpJsonApi {
             .iter()
             .fold(req, |req, (k, v)| {
                 // Use `get_secret` in case there something like API key in the query param.
-                req.query(&[k, &get_secret(Some(v)).unwrap_or_default()])
+                req.query(&[(k, &get_secret(Some(v)).unwrap_or_default())])
             });
         let req = match self.request_template {
             Some(ref t) => match self.key_path {
