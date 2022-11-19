@@ -74,8 +74,8 @@ impl LookupSource for HttpJsonApi {
             .get_string()?
             .into_owned();
         let url = match &self.key_url_template {
-            Some(s) => format!("{}{}", self.url_base, s.to_owned().replace("$", &key)),
-            None => self.url_base.clone(),
+            Some(s) => format!("{}{}", get_secret(Some(&self.url_base)).unwrap_or_default(), s.to_owned().replace("$", &key)),
+            None => get_secret(Some(&self.url_base)).unwrap_or_default(),
         };
         let m = self.method.clone().unwrap_or("GET".to_string());
         let method = Method::from_bytes(m.to_uppercase().as_bytes())
