@@ -70,8 +70,11 @@ peg::parser! {
                 / explode_transformation()
                 / lookup_transformation()
                 / top_transformation()
+                / ignore_error_transformation()
             ) {t}
 
+        pub rule ignore_error_transformation() -> Box<dyn TransformationBuilder>
+            = "ignore-error" { IgnoreErrorTransformationBuilder::new() }
         pub rule take_transformation() -> Box<dyn TransformationBuilder>
             = "take" _ count:u64_lit() { TakeTransformationBuilder::new(count.get_long().unwrap() as usize) }
         pub rule where_transformation() -> Box<dyn TransformationBuilder>

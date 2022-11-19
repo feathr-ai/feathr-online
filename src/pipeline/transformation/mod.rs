@@ -10,6 +10,7 @@ mod project_remove_transformation;
 mod explode_transformation;
 mod lookup_transformation;
 mod top_transformation;
+mod ignore_error_transformation;
 
 pub use take_transformation::TakeTransformation;
 pub use where_transformation::WhereTransformation;
@@ -19,6 +20,7 @@ pub use project_remove_transformation::ProjectRemoveTransformation;
 pub use explode_transformation::ExplodeTransformation;
 pub use lookup_transformation::LookupTransformation;
 pub use top_transformation::{TopTransformation, SortOrder, NullPos};
+pub use ignore_error_transformation::IgnoreErrorTransformation;
 
 pub trait Transformation: Sync + Send + Debug {
     fn get_output_schema(&self, input_schema: &Schema) -> Schema;

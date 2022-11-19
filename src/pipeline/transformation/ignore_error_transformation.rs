@@ -1,15 +1,13 @@
 use async_trait::async_trait;
 
-use crate::pipeline::{Schema, DataSet, Value, PiperError};
+use crate::pipeline::{Value, PiperError, DataSet, Schema};
 
 use super::Transformation;
 
-#[derive(Clone, Debug)]
-pub struct TakeTransformation {
-    pub count: usize,
-}
+#[derive(Debug)]
+pub struct IgnoreErrorTransformation;
 
-impl Transformation for TakeTransformation {
+impl Transformation for IgnoreErrorTransformation {
     fn get_output_schema(&self, input_schema: &Schema) -> Schema {
         input_schema.clone()
     }
@@ -18,34 +16,34 @@ impl Transformation for TakeTransformation {
         &self,
         dataset: Box<dyn DataSet>,
     ) -> Result<Box<dyn DataSet>, PiperError> {
-        Ok(Box::new(TakeDataSet {
+        Ok(Box::new(IgnoreErrorDataSet {
             input: dataset,
-            count: self.count,
         }))
     }
 
     fn dump(&self) -> String {
-        format!("take {}", self.count)
+        "ignore_error".to_string()
     }
 }
 
-struct TakeDataSet {
+struct IgnoreErrorDataSet {
     input: Box<dyn DataSet>,
-    count: usize,
 }
 
 #[async_trait]
-impl DataSet for TakeDataSet {
+impl DataSet for IgnoreErrorDataSet {
     fn schema(&self) -> &Schema {
         self.input.schema()
     }
 
     async fn next(&mut self) -> Option<Result<Vec<Value>, PiperError>> {
-        if self.count == 0 {
-            None
-        } else {
-            self.count -= 1;
-            self.input.next().await
+        loop {
+            match self.input.next().await {
+                Some(Ok(row)) => return Some(Ok(row)),
+                Some(Err(_)) => continue,
+                None => return None,
+            }
         }
+        
     }
 }

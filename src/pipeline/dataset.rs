@@ -113,7 +113,7 @@ pub enum ValidationMode {
 
 impl Default for ValidationMode {
     fn default() -> Self {
-        ValidationMode::Convert
+        ValidationMode::Strict
     }
 }
 
