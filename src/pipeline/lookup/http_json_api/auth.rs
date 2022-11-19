@@ -6,7 +6,10 @@ use once_cell::sync::OnceCell;
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
 
-use crate::{pipeline::{lookup::get_secret, PiperError}, common::IgnoreDebug};
+use crate::{
+    common::IgnoreDebug,
+    pipeline::{lookup::get_secret, PiperError},
+};
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", tag = "type")]
@@ -42,27 +45,19 @@ impl Auth {
     pub async fn auth(&self, request: RequestBuilder) -> Result<RequestBuilder, PiperError> {
         Ok(match self {
             Auth::None => request,
-            Auth::Basic { username, password } => match get_secret(Some(username)) {
-                Some(username) => request.basic_auth(username, get_secret(password.as_ref())),
-                None => request,
-            },
-            Auth::Header { key, value } => match get_secret(Some(key)) {
-                Some(key) => match get_secret(value.as_ref()) {
-                    Some(value) => request.header(key, value),
-                    None => request,
-                },
-                None => request,
-            },
-            Auth::Bearer { token } => match get_secret(Some(token)) {
-                Some(token) => request.bearer_auth(token),
-                None => request,
-            },
+            Auth::Basic { username, password } => request.basic_auth(
+                get_secret(Some(username))?,
+                Some(get_secret(password.as_ref())?),
+            ),
+            Auth::Header { key, value } => {
+                request.header(get_secret(Some(key))?, get_secret(value.as_ref())?)
+            }
+            Auth::Bearer { token } => request.bearer_auth(get_secret(Some(token))?),
             Auth::Aad {
                 resource,
                 credential,
             } => {
-                let resource =
-                    get_secret(Some(resource).as_ref()).unwrap_or_else(|| resource.to_string());
+                let resource = get_secret(Some(resource))?;
                 let credential = credential.get_or_init(|| IgnoreDebug {
                     inner: AutoRefreshingTokenCredential::new(Arc::new(
                         DefaultAzureCredential::default(),

@@ -19,4 +19,8 @@ jobs:
     - name: Build
       run: cargo build --verbose
     - name: Run tests
+      env:
+        REDIS_HOST: ${{ secrets.REDIS_HOST }}
+        REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+        REDIS_TABLE: ${{ secrets.REDIS_TABLE }}
       run: cargo test --verbose

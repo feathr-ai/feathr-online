@@ -107,4 +107,7 @@ pub enum PiperError {
     // Protobuf decoding error
     #[error("{0}")]
     ProtobufError(String),
+
+    #[error("Environment variable {0} is not set.")]
+    EnvVarNotSet(String),
 }

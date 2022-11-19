@@ -1,6 +1,6 @@
+use std::fmt::Debug;
 use std::sync::Arc;
 use std::{collections::HashMap, env};
-use std::fmt::Debug;
 
 use async_trait::async_trait;
 use once_cell::sync::OnceCell;
@@ -108,7 +108,7 @@ fn init_lookup_source_repo(
     cfg.expect("Internal error: lookup source repo is not initialized")
 }
 
-pub fn get_secret<T>(secret: Option<T>) -> Option<String>
+pub fn get_secret<T>(secret: Option<T>) -> Result<String, PiperError>
 where
     T: AsRef<str>,
 {
@@ -116,12 +116,14 @@ where
         Some(p) => {
             let re = Regex::new(r"^\$\{([^}]+)\}$").unwrap();
             match re.captures(p.as_ref()) {
-                Some(cap) => env::var(cap.get(1).unwrap().as_str())
+                Some(cap) => Ok(env::var(cap.get(1).unwrap().as_str())
                     .map(|s| s.to_string())
-                    .ok(),
-                None => Some(p.as_ref().to_string()),
+                    .map_err(|_| {
+                        PiperError::EnvVarNotSet(cap.get(1).unwrap().as_str().to_string())
+                    })?),
+                None => Ok(p.as_ref().to_string()),
             }
         }
-        None => None,
+        None => Ok(Default::default()),
     }
 }

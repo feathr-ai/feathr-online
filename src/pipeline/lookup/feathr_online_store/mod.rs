@@ -5,7 +5,7 @@ use protobuf::Message;
 use redis::cmd;
 use serde::{Deserialize, Serialize};
 use tokio::sync::OnceCell;
-use tracing::{debug, instrument, error};
+use tracing::{debug, error, instrument};
 
 use crate::{
     pipeline::{PiperError, Value, ValueType},
@@ -23,6 +23,8 @@ pub mod generated {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FeathrOnlineStore {
     host: String,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    user: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     password: Option<String>,
     #[serde(default)]
@@ -42,16 +44,24 @@ impl RedisConnectionPool {
     #[instrument(level = "trace", skip(password))]
     async fn new(
         url: &str,
+        user: &Option<String>,
         password: &Option<String>,
         ssl: bool,
     ) -> Result<RedisConnectionPool, PiperError> {
         debug!("Creating new Redis connection pool for {}", url);
-        let url = get_secret(Some(url)).unwrap_or_default();
-        let url = match (get_secret(password.as_ref()), ssl) {
-            (None, true) => format!("rediss://{}", url),
-            (None, false) => format!("redis://{}", url),
-            (Some(p), true) => format!("rediss://:{}@{}", p, url),
-            (Some(p), false) => format!("redis://:{}@{}", p, url),
+        let proto = if ssl { "rediss" } else { "redis" };
+        let user = get_secret(user.as_ref())?;
+        let pwd = get_secret(password.as_ref())?;
+        let url = if pwd.is_empty() && user.is_empty() {
+            format!("{}://{}", proto, get_secret(Some(url).as_ref())?)
+        } else {
+            format!(
+                "{}://{}:{}@{}",
+                proto,
+                user,
+                pwd,
+                get_secret(Some(url).as_ref())?
+            )
         };
         let manager =
             RedisConnectionManager::new(url).map_err(|e| PiperError::RedisError(e.to_string()))?;
@@ -74,7 +84,7 @@ impl LookupSource for FeathrOnlineStore {
         let client = self
             .client
             .get_or_try_init(|| async {
-                RedisConnectionPool::new(&self.host, &self.password, self.ssl).await
+                RedisConnectionPool::new(&self.host, &self.user, &self.password, self.ssl).await
             })
             .await?;
 
@@ -89,7 +99,7 @@ impl LookupSource for FeathrOnlineStore {
         // Key format is "table:key"
         cmd.arg(format!(
             "{}:{}",
-            get_secret(Some(&self.table)).unwrap_or_default(),
+            get_secret(Some(&self.table))?,
             key.clone().try_convert(ValueType::String)?.get_string()?
         ));
         for f in fields {
@@ -97,12 +107,8 @@ impl LookupSource for FeathrOnlineStore {
         }
 
         debug!("Executing HMGET command");
-        let resp: Vec<String> = cmd
-            .query_async(&mut *conn)
-            .await
-            .log()
-            .unwrap_or(vec![Default::default(); fields.len()])
-            ;
+        let resp: Vec<String> = cmd.query_async(&mut *conn).await.log().unwrap();
+        // .unwrap_or(vec![Default::default(); fields.len()]);
         let features = resp
             .into_iter()
             .map(|s| {
@@ -117,7 +123,7 @@ impl LookupSource for FeathrOnlineStore {
             .collect::<Vec<_>>();
         let ret: Vec<_> = features
             .into_iter()
-            .map(|f| f.map(|f|feature_to_value(f).unwrap_or_default()))
+            .map(|f| f.map(|f| feature_to_value(f).unwrap_or_default()))
             .map(|f| f.unwrap_or_default())
             .collect();
         Ok(ret)
@@ -177,7 +183,7 @@ mod tests {
             "password": "${REDIS_PASSWORD}",
             "table": "${REDIS_TABLE}",
             "ssl": true
-              }
+        }
         "#;
         let s: FeathrOnlineStore = serde_json::from_str(s).unwrap();
         let l = Box::new(s);
@@ -187,21 +193,9 @@ mod tests {
             "f_location_max_fare".to_string(),
         ];
         let ret = l.lookup(&k, &fields).await.unwrap();
-        assert_eq!(ret.len(), 2);
-        assert_eq!(
-            ret[0]
-                .clone()
-                .get_int()
-                .unwrap(),
-            23
-        );
-        assert_eq!(
-            ret[1]
-                .clone()
-                .get_int()
-                .unwrap(),
-            78
-        );
         println!("{:?}", ret);
+        assert_eq!(ret.len(), 2);
+        assert_eq!(ret[0].clone().get_int().unwrap(), 23);
+        assert_eq!(ret[1].clone().get_int().unwrap(), 78);
     }
 }
