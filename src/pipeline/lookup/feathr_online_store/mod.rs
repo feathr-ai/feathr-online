@@ -23,7 +23,7 @@ pub mod generated {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FeathrOnlineStore {
     host: String,
-    #[serde(skip_serializing, default)]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     password: Option<String>,
     #[serde(default)]
     ssl: bool,
