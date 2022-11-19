@@ -150,6 +150,10 @@ impl LookupSource for HttpJsonApi {
             })
             .collect()
     }
+
+    fn dump(&self) -> serde_json::Value {
+        serde_json::to_value(self).unwrap()
+    }
 }
 
 #[cfg(test)]

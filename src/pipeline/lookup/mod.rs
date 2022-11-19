@@ -18,6 +18,8 @@ use http_json_api::HttpJsonApi;
 #[async_trait]
 pub trait LookupSource: Sync + Send + Debug {
     async fn lookup(&self, key: &Value, fields: &Vec<String>) -> Result<Vec<Value>, PiperError>;
+
+    fn dump(&self) -> serde_json::Value;
 }
 
 /**
@@ -54,6 +56,14 @@ pub fn init_lookup_sources(cfg: &str) -> Result<usize, PiperError> {
     Ok(ret)
 }
 
+pub fn dump_lookup_sources() -> serde_json::Value {
+    LOOKUP_SOURCE_REPO
+        .get_or_init(|| init_lookup_source_repo(None))
+        .iter()
+        .map(|(k, v)| (k, v.dump()))
+        .collect()
+}
+
 static LOOKUP_SOURCE_REPO: OnceCell<HashMap<String, Arc<LookupSourceType>>> = OnceCell::new();
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -74,6 +84,13 @@ impl LookupSource for LookupSourceType {
         match self {
             LookupSourceType::HttpJsonApi(s) => s.lookup(key, fields).await,
             LookupSourceType::FeathrOnlineStore(s) => s.lookup(key, fields).await,
+        }
+    }
+
+    fn dump(&self) -> serde_json::Value {
+        match self {
+            LookupSourceType::HttpJsonApi(s) => s.dump(),
+            LookupSourceType::FeathrOnlineStore(s) => s.dump(),
         }
     }
 }

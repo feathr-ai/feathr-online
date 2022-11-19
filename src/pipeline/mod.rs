@@ -11,5 +11,6 @@ mod value;
 
 pub use dataset::{Column, DataSet, Schema, ValidationMode, DataSetCreator, DataSetValidator};
 pub use errors::PiperError;
+pub use lookup::dump_lookup_sources;
 pub use pipeline::Pipeline;
 pub use value::{Value, ValueType};

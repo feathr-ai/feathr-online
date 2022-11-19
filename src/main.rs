@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, info, instrument, metadata::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
-use crate::pipeline::{ValidationMode, Value};
+use crate::pipeline::{dump_lookup_sources, ValidationMode, Value};
 
 mod common;
 mod pipeline;
@@ -74,7 +74,7 @@ async fn health_check() -> &'static str {
 }
 
 #[handler]
-fn dump_pipelines() -> Json<HashMap<String, serde_json::Value>> {
+fn get_pipelines() -> Json<HashMap<String, serde_json::Value>> {
     Json(
         PIPELINES
             .get()
@@ -83,6 +83,11 @@ fn dump_pipelines() -> Json<HashMap<String, serde_json::Value>> {
             .map(|p| (p.name.clone(), p.to_json()))
             .collect(),
     )
+}
+
+#[handler]
+fn get_lookup_sources() -> Json<serde_json::Value> {
+    Json(dump_lookup_sources())
 }
 
 #[handler]
@@ -258,7 +263,8 @@ async fn main() -> Result<(), PiperError> {
         .at("/metrics", metrics_process.exporter())
         .at("/process", post(process).with(metrics_process))
         .at("/healthz", get(health_check))
-        .at("/pipelines", get(dump_pipelines))
+        .at("/pipelines", get(get_pipelines))
+        .at("/lookup-sources", get(get_lookup_sources))
         .with(Cors::new())
         .with(Tracing);
 

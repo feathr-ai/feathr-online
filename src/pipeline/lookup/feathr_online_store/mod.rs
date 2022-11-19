@@ -122,6 +122,10 @@ impl LookupSource for FeathrOnlineStore {
             .collect();
         Ok(ret)
     }
+
+    fn dump(&self) -> serde_json::Value {
+        serde_json::to_value(self).unwrap()
+    }
 }
 
 fn feature_to_value(f: FeatureValue) -> Result<Value, PiperError> {
