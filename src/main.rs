@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    fmt::{Debug, Display},
-    time::Instant,
-};
+use std::{collections::HashMap, fmt::Debug, time::Instant};
 
 use clap::Parser;
 use futures::future::join_all;
@@ -11,54 +7,21 @@ use pipeline::{Pipeline, PiperError};
 use poem::{
     get, handler,
     listener::TcpListener,
-    middleware::{TokioMetrics, Tracing, Cors},
+    middleware::{Cors, TokioMetrics, Tracing},
     post,
     web::Json,
     EndpointExt, Route, Server,
 };
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error, info, instrument, metadata::LevelFilter};
+use tracing::{debug, info, instrument, metadata::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
 use crate::pipeline::{ValidationMode, Value};
 
+mod common;
 mod pipeline;
 
-pub trait Logged {
-    fn log(self) -> Self;
-}
-
-impl<T: Sized, E: Display> Logged for Result<T, E> {
-    fn log(self) -> Self {
-        match &self {
-            Ok(_) => {}
-            Err(e) => error!("{}", e),
-        }
-        self
-    }
-}
-
-pub trait Appliable
-where
-    Self: Sized,
-{
-    fn apply<F>(self, f: F) -> Self
-    where
-        F: FnOnce(Self) -> Self,
-    {
-        f(self)
-    }
-
-    fn then<F>(self, f: F) -> Self
-    where
-        F: FnOnce(&Self),
-    {
-        f(&self);
-        self
-    }
-}
-
-impl<T> Appliable for T where T: Sized {}
+pub use common::{Appliable, Logged};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]

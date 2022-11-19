@@ -1,12 +1,12 @@
 use std::{fmt::Debug, sync::Arc};
 
 use azure_core::auth::TokenCredential;
-use azure_identity::{DefaultAzureCredential, AutoRefreshingTokenCredential};
+use azure_identity::{AutoRefreshingTokenCredential, DefaultAzureCredential};
 use once_cell::sync::OnceCell;
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
 
-use crate::pipeline::{lookup::get_secret, PiperError};
+use crate::{pipeline::{lookup::get_secret, PiperError}, common::IgnoreDebug};
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", tag = "type")]
@@ -17,6 +17,11 @@ pub enum Auth {
         #[serde(skip_serializing_if = "Option::is_none", default)]
         password: Option<String>,
     },
+    Header {
+        key: String,
+        #[serde(skip_serializing_if = "Option::is_none", default)]
+        value: Option<String>,
+    },
     Bearer {
         token: String,
     },
@@ -25,16 +30,6 @@ pub enum Auth {
         #[serde(skip, default)]
         credential: OnceCell<IgnoreDebug<AutoRefreshingTokenCredential>>,
     },
-}
-
-pub struct IgnoreDebug<T> {
-    pub inner: T,
-}
-
-impl<T> Debug for IgnoreDebug<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("...")
-    }
 }
 
 impl Default for Auth {
@@ -51,6 +46,13 @@ impl Auth {
                 Some(username) => request.basic_auth(username, get_secret(password.as_ref())),
                 None => request,
             },
+            Auth::Header { key, value } => match get_secret(Some(key)) {
+                Some(key) => match get_secret(value.as_ref()) {
+                    Some(value) => request.header(key, value),
+                    None => request,
+                },
+                None => request,
+            },
             Auth::Bearer { token } => match get_secret(Some(token)) {
                 Some(token) => request.bearer_auth(token),
                 None => request,
@@ -62,9 +64,9 @@ impl Auth {
                 let resource =
                     get_secret(Some(resource).as_ref()).unwrap_or_else(|| resource.to_string());
                 let credential = credential.get_or_init(|| IgnoreDebug {
-                    inner: AutoRefreshingTokenCredential::new(
-                        Arc::new(DefaultAzureCredential::default()),
-                    ),
+                    inner: AutoRefreshingTokenCredential::new(Arc::new(
+                        DefaultAzureCredential::default(),
+                    )),
                 });
                 let token =
                     credential.inner.get_token(&resource).await.map_err(|e| {
