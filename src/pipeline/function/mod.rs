@@ -12,6 +12,8 @@ mod case;
 mod bucket;
 mod timestamp;
 mod math;
+mod make_array;
+mod len;
 
 use type_conv::TypeConverterFunction;
 use substring::SubstringFunction;
@@ -20,6 +22,8 @@ use case::CaseFunction;
 use bucket::BucketFunction;
 use timestamp::TimestampFunction;
 use math::*;
+use make_array::MakeArray;
+use len::Len;
 
 pub trait Function: Send + Sync + Debug {
     fn get_output_type(&self, argument_types: &[ValueType]) -> Result<ValueType, PiperError>;
@@ -71,6 +75,8 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     function_map.insert("case".to_string(), Box::new(CaseFunction));
     function_map.insert("bucket".to_string(), Box::new(BucketFunction));
     function_map.insert("timestamp".to_string(), Box::new(TimestampFunction));
+    function_map.insert("make_array".to_string(), Box::new(MakeArray));
+    function_map.insert("len".to_string(), Box::new(Len));
     function_map.insert(
         "to_bool".to_string(),
         Box::new(TypeConverterFunction {
