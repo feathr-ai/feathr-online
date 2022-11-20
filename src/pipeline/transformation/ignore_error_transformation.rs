@@ -36,11 +36,23 @@ impl DataSet for IgnoreErrorDataSet {
         self.input.schema()
     }
 
-    async fn next(&mut self) -> Option<Result<Vec<Value>, PiperError>> {
+    async fn next(&mut self) -> Option<Vec<Value>> {
         loop {
             match self.input.next().await {
-                Some(Ok(row)) => return Some(Ok(row)),
-                Some(Err(_)) => continue,
+                Some(row) => {
+                    let mut has_error = false;
+                    for v in &row {
+                        if v.is_error() {
+                            has_error = true;
+                            break;
+                        }
+                    }
+                    if has_error {
+                        continue;
+                    } else {
+                        return Some(row);
+                    }
+                }
                 None => return None,
             }
         }

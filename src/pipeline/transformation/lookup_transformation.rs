@@ -126,28 +126,29 @@ impl DataSet for LookupDataSet {
         &self.output_schema
     }
 
-    async fn next(&mut self) -> Option<Result<Vec<Value>, PiperError>> {
+    async fn next(&mut self) -> Option<Vec<Value>> {
         match self.input.next().await {
-            Some(Ok(mut row)) => match self.key.eval(&row) {
-                Ok(v) => match self
+            Some(mut row) => {
+                let v = self.key.eval(&row);
+                if v.is_error() {
+                    row.extend(vec![v; self.lookup_field_names.len()]);
+                    return Some(row);
+                }
+                let fields = self
                     .lookup_source
                     .lookup(&v, &self.lookup_field_names)
-                    .await
-                {
-                    Ok(fields) => {
-                        let additional_fields = self
-                            .lookup_field_types
-                            .iter()
-                            .zip(fields.into_iter())
-                            .map(|(t, v)| v.try_into(*t).unwrap_or_default());
-                        row.extend(additional_fields);
-                        Some(Ok(row))
-                    }
-                    Err(e) => Some(Err(e)),
-                },
-                Err(e) => Some(Err(e)),
-            },
-            Some(Err(e)) => Some(Err(e)),
+                    .await;
+                let additional_fields =
+                    self.lookup_field_types
+                        .iter()
+                        .zip(fields.into_iter())
+                        .map(|(t, v)| match v.try_into(*t) {
+                            Ok(v) => v,
+                            Err(e) => e.into(),
+                        });
+                row.extend(additional_fields);
+                Some(row)
+            }
             None => None,
         }
     }

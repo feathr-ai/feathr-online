@@ -71,7 +71,7 @@ impl DataSet for ProjectRenamedDataSet {
     fn schema(&self) -> &crate::pipeline::Schema {
         &self.output_schema
     }
-    async fn next(&mut self) -> Option<Result<Vec<Value>, PiperError>> {
+    async fn next(&mut self) -> Option<Vec<Value>> {
         self.input.next().await
     }
 }

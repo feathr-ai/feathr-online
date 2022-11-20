@@ -81,7 +81,11 @@ impl Transformation for ProjectTransformation {
             "project {}",
             self.column_names
                 .iter()
-                .zip(self.columns.iter().skip( self.columns.len() - self.column_names.len()))
+                .zip(
+                    self.columns
+                        .iter()
+                        .skip(self.columns.len() - self.column_names.len())
+                )
                 .map(|(c, e)| format!("{} = {}", c, e.dump()))
                 .collect::<Vec<_>>()
                 .join(", ")
@@ -101,16 +105,15 @@ impl DataSet for ProjectedDataSet {
         &self.output_schema
     }
 
-    async fn next(&mut self) -> Option<Result<Vec<Value>, PiperError>> {
+    async fn next(&mut self) -> Option<Vec<Value>> {
         match self.input_dataset.next().await {
-            Some(Ok(row)) => {
+            Some(row) => {
                 let mut output_row = Vec::with_capacity(self.columns.len());
                 for col in &self.columns {
-                    output_row.push(col.eval(&row).unwrap_or_default());
+                    output_row.push(col.eval(&row));
                 }
-                Some(Ok(output_row))
+                Some(output_row)
             }
-            Some(Err(e)) => Some(Err(e)),
             None => None,
         }
     }

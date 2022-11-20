@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use async_trait::async_trait;
 use rust_heap::BoundedBinaryHeap;
 
-use crate::pipeline::{expression::Expression, DataSet, PiperError, Schema, Value};
+use crate::pipeline::{expression::Expression, DataSet, Schema, Value};
 
 use super::Transformation;
 
@@ -125,7 +125,7 @@ impl DataSet for TopDataSet {
     }
 
     /// Sorting is an expensive operation, it has to fetch all the rows from the input dataset in order to decide which rows to keep.
-    async fn next(&mut self) -> Option<Result<Vec<Value>, PiperError>> {
+    async fn next(&mut self) -> Option<Vec<Value>> {
         // The sorting happens on the 1st time next() is called.
         if self.rows.is_none() {
             // Sort input if we haven't
@@ -133,7 +133,7 @@ impl DataSet for TopDataSet {
         }
 
         match self.rows.as_mut() {
-            Some(rows) => rows.pop_front().map(|x| Ok(x)),
+            Some(rows) => rows.pop_front(),
             None => None,
         }
     }
@@ -145,20 +145,9 @@ impl TopDataSet {
         let mut heap = BoundedBinaryHeap::new(self.count);
 
         while let Some(row) = self.input.next().await {
-            // Skip all upstream errors
-            if row.is_err() {
-                continue;
-            }
+            let sort_row = SortRow(self.criteria.eval(&row), row, self.sort_order);
 
-            let sort_row = SortRow(
-                self.criteria
-                    .eval(row.as_ref().unwrap())
-                    .unwrap_or_default(),
-                row.unwrap(),
-                self.sort_order,
-            );
-
-            if sort_row.0.is_null() {
+            if sort_row.0.is_null() || sort_row.0.is_error() {
                 if null_rows.len() < self.count {
                     // We don't really send null rows to the heap, they're stashed in a separate vector.
                     // We only keep at most `count` of null rows, we don't need more no matter the sorting dir.
@@ -240,7 +229,7 @@ mod tests {
             Some(NullPos::First),
         );
         let (_, rows) = transform.transform(dataset).unwrap().eval().await;
-        let rows = rows.into_iter().map(|x| x.unwrap()).collect::<Vec<_>>();
+        let rows = rows.into_iter().map(|x| x).collect::<Vec<_>>();
         println!("{:?}", rows);
         assert_eq!(rows.len(), 5);
         assert_eq!(rows[0][0], Value::Int(9));

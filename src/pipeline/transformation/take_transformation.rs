@@ -40,7 +40,7 @@ impl DataSet for TakeDataSet {
         self.input.schema()
     }
 
-    async fn next(&mut self) -> Option<Result<Vec<Value>, PiperError>> {
+    async fn next(&mut self) -> Option<Vec<Value>> {
         if self.count == 0 {
             None
         } else {

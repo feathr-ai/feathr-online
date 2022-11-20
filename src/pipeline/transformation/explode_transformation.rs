@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use async_trait::async_trait;
-use tracing::{instrument, debug};
+use tracing::{debug, instrument};
 
 use crate::pipeline::{DataSet, PiperError, Schema, Value, ValueType};
 
@@ -47,7 +47,10 @@ impl Transformation for ExplodeTransformation {
     }
 
     fn dump(&self) -> String {
-        format!("explode {} as {}", self.output_schema.columns[self.column_idx].name, self.exploded_type)
+        format!(
+            "explode {} as {}",
+            self.output_schema.columns[self.column_idx].name, self.exploded_type
+        )
     }
 }
 
@@ -67,17 +70,13 @@ impl DataSet for ExplodedDataSet {
     }
 
     #[instrument(level = "trace", skip(self))]
-    async fn next(&mut self) -> Option<Result<Vec<Value>, PiperError>> {
+    async fn next(&mut self) -> Option<Vec<Value>> {
         while self.current_exploded_column.is_empty() {
             debug!("current_exploded_column is empty, fetching next row from upstream");
             match self.get_next_row().await {
-                Some(Ok(_)) => {
+                Some(_) => {
                     // We do have a new row, but loop again to check if the array is empty
                     // We should skip such rows
-                }
-                Some(Err(e)) => {
-                    debug!("Upstream returned error {}", e);
-                    return Some(Err(e));
                 }
                 None => {
                     debug!("Upstream returned None");
@@ -99,30 +98,31 @@ impl DataSet for ExplodedDataSet {
         {
             Ok(v) => {
                 row[self.column_idx] = v;
-                Some(Ok(row))
+                Some(row)
             }
-            Err(e) => Some(Err(e)),
+            Err(e) => {
+                row[self.column_idx] = e.into();
+                Some(row)
+            }
         }
     }
 }
 
 impl ExplodedDataSet {
     #[instrument(level = "trace", skip(self))]
-    async fn get_next_row(&mut self) -> Option<Result<Vec<Value>, PiperError>> {
-        if let Some(r) = self.input.next().await {
-            match r {
-                Ok(row) => {
-                    debug!("Fetched 1 row from upstream");
-                    self.current_row = Some(row.clone());
-                    self.current_exploded_column = match row[self.column_idx].get_array() {
-                        Ok(array) => array.clone().into_iter().collect(),
-                        Err(e) => return Some(Err(e)),
-                    };
-                    debug!("Exploded column has {} elements", self.current_exploded_column.len());
-                    Some(Ok(row))
-                }
-                Err(e) => return Some(Err(e)),
-            }
+    async fn get_next_row(&mut self) -> Option<Vec<Value>> {
+        if let Some(row) = self.input.next().await {
+            debug!("Fetched 1 row from upstream");
+            self.current_row = Some(row.clone());
+            self.current_exploded_column = match row[self.column_idx].get_array() {
+                Ok(array) => array.clone().into_iter().collect(),
+                Err(e) => return Some(vec![Value::Error(e); self.output_schema.columns.len()]),
+            };
+            debug!(
+                "Exploded column has {} elements",
+                self.current_exploded_column.len()
+            );
+            Some(row)
         } else {
             return None;
         }

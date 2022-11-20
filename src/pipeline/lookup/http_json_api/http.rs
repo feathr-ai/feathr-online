@@ -63,10 +63,8 @@ pub struct HttpJsonApi {
     // TODO: Support auth, for now only static key in header or query param is supported
 }
 
-#[async_trait]
-impl LookupSource for HttpJsonApi {
-    #[instrument(level = "trace", skip(self))]
-    async fn lookup(&self, k: &Value, fields: &Vec<String>) -> Result<Vec<Value>, PiperError> {
+impl HttpJsonApi {
+    async fn do_lookup(&self, k: &Value, fields: &Vec<String>) -> Result<Vec<Value>, PiperError> {
         // The key string will be used in url, header, and query param, but not in request body.
         let key = k
             .clone()
@@ -74,7 +72,11 @@ impl LookupSource for HttpJsonApi {
             .get_string()?
             .into_owned();
         let url = match &self.key_url_template {
-            Some(s) => format!("{}{}", get_secret(Some(&self.url_base)).unwrap_or_default(), s.to_owned().replace("$", &key)),
+            Some(s) => format!(
+                "{}{}",
+                get_secret(Some(&self.url_base)).unwrap_or_default(),
+                s.to_owned().replace("$", &key)
+            ),
             None => get_secret(Some(&self.url_base)).unwrap_or_default(),
         };
         let m = self.method.clone().unwrap_or("GET".to_string());
@@ -150,6 +152,20 @@ impl LookupSource for HttpJsonApi {
             })
             .collect()
     }
+}
+
+#[async_trait]
+impl LookupSource for HttpJsonApi {
+    #[instrument(level = "trace", skip(self))]
+    async fn lookup(&self, k: &Value, fields: &Vec<String>) -> Vec<Value> {
+        let ret = self.do_lookup(k, fields).await;
+        match ret {
+            Ok(v) => v,
+            Err(e) => {
+                vec![e.into(); fields.len()]
+            }
+        }
+    }
 
     fn dump(&self) -> serde_json::Value {
         serde_json::to_value(self).unwrap()
@@ -176,10 +192,12 @@ mod tests {
         let source: HttpJsonApi = serde_json::from_str(src).unwrap();
         let result = source
             .lookup(&Value::Int(107), &vec!["name".to_owned(), "id".to_owned()])
-            .await
-            .unwrap();
+            .await;
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0], Value::String("577 Lakewood Dr., Bronx, NY 10473".into()));
+        assert_eq!(
+            result[0],
+            Value::String("577 Lakewood Dr., Bronx, NY 10473".into())
+        );
         assert_eq!(result[1], Value::Long(107));
     }
 }

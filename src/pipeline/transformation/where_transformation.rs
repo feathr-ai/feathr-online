@@ -41,21 +41,14 @@ impl DataSet for WhereDataSet {
         self.input.schema()
     }
 
-    async fn next(&mut self) -> Option<Result<Vec<Value>, PiperError>> {
+    async fn next(&mut self) -> Option<Vec<Value>> {
         loop {
             let row = self.input.next().await?;
-            let row = match row {
-                Ok(row) => row,
-                Err(err) => return Some(Err(err)),
-            };
-            let predicate = match self.predicate.eval(&row) {
-                Ok(predicate) => predicate,
-                Err(err) => return Some(Err(err)),
-            };
+            let predicate = self.predicate.eval(&row);
             match predicate.get_bool() {
-                Ok(true) => return Some(Ok(row)),
+                Ok(true) => return Some(row),
                 Ok(false) => continue,
-                Err(e) => return Some(Err(e)),
+                Err(e) => return Some(vec![e.into(); self.input.schema().columns.len()]),
             }
         }
     }

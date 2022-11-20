@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt::Debug, time::Instant};
 use clap::Parser;
 use futures::future::join_all;
 use once_cell::sync::OnceCell;
-use pipeline::{Pipeline, PiperError};
+use pipeline::{ErrorCollectingMode, ErrorRecord, Pipeline, PiperError};
 use poem::{
     get, handler,
     listener::TcpListener,
@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, info, instrument, metadata::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
-use crate::pipeline::{dump_lookup_sources, ValidationMode, Value};
+use crate::pipeline::{dump_lookup_sources, ErrorCollector, ValidationMode, Value};
 
 mod common;
 mod pipeline;
@@ -54,19 +54,10 @@ async fn health_check() -> &'static str {
         .unwrap()
         .eval()
         .await;
-    if ret.len() == 1 {
-        match &ret[0] {
-            Ok(row) => {
-                if row.len() == 2 {
-                    match row[1] {
-                        Value::Int(99) => "OK",
-                        _ => "ERROR",
-                    }
-                } else {
-                    "ERROR"
-                }
-            }
-            Err(_) => "ERROR",
+    if (ret.len() == 1) && (ret[0].len() == 2) {
+        match ret[0][1] {
+            Value::Int(99) => "OK",
+            _ => "ERROR",
         }
     } else {
         "ERROR"
@@ -106,9 +97,11 @@ fn get_version() -> Json<HashMap<String, String>> {
 #[serde(rename_all = "camelCase")]
 struct SingleRequest {
     pipeline: String,
-    #[serde(default)]
-    validation_mode: ValidationMode,
     data: HashMap<String, serde_json::Value>,
+    #[serde(default)]
+    validate: bool,
+    #[serde(default)]
+    errors: ErrorCollectingMode,
 }
 
 #[derive(Debug, Deserialize)]
@@ -127,6 +120,8 @@ struct SingleResponse {
     count: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     data: Option<Vec<HashMap<String, serde_json::Value>>>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    errors: Vec<ErrorRecord>,
 }
 
 #[derive(Debug, Serialize)]
@@ -156,6 +151,7 @@ async fn process(req: Json<Request>) -> poem::Result<Json<Response>> {
                     time: None,
                     count: None,
                     data: None,
+                    errors: vec![],
                 },
             }
         })
@@ -187,24 +183,25 @@ async fn process_single_request(req: SingleRequest) -> Result<SingleResponse, Pi
         .collect();
 
     let now = Instant::now();
-    let (schema, ret) = pipeline.process_row(row, req.validation_mode)?.eval().await;
-    let ret: Vec<HashMap<String, serde_json::Value>> = ret
-        .into_iter()
-        .map(|r| {
-            r.map(|v| {
-                v.into_iter()
-                    .zip(schema.columns.iter())
-                    .map(|(v, c)| (c.name.clone(), v.into()))
-                    .collect()
-            })
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    let (ret, errors) = pipeline
+        .process_row(
+            row,
+            if req.validate {
+                ValidationMode::Strict
+            } else {
+                ValidationMode::Lenient
+            },
+        )?
+        .eval()
+        .await
+        .collect_into_json(req.errors);
     Ok(SingleResponse {
         pipeline: req.pipeline,
         status: "OK".to_owned(),
         time: Some((now.elapsed().as_micros() as f64) / 1000f64),
         count: Some(ret.len()),
         data: Some(ret),
+        errors,
     })
 }
 

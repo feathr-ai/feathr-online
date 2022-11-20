@@ -75,12 +75,9 @@ impl RedisConnectionPool {
     }
 }
 
-impl FeathrOnlineStore {}
-
-#[async_trait]
-impl LookupSource for FeathrOnlineStore {
+impl FeathrOnlineStore {
     #[instrument(level = "trace", skip(self))]
-    async fn lookup(&self, key: &Value, fields: &Vec<String>) -> Result<Vec<Value>, PiperError> {
+    async fn do_lookup(&self, key: &Value, fields: &Vec<String>) -> Result<Vec<Value>, PiperError> {
         let client = self
             .client
             .get_or_try_init(|| async {
@@ -127,6 +124,18 @@ impl LookupSource for FeathrOnlineStore {
             .map(|f| f.unwrap_or_default())
             .collect();
         Ok(ret)
+    }
+}
+
+#[async_trait]
+impl LookupSource for FeathrOnlineStore {
+    async fn lookup(&self, key: &Value, fields: &Vec<String>) -> Vec<Value> {
+        match self.do_lookup(key, fields).await {
+            Ok(v) => v,
+            Err(e) => {
+                vec![e.into(); fields.len()]
+            }
+        }
     }
 
     fn dump(&self) -> serde_json::Value {
@@ -192,7 +201,7 @@ mod tests {
             "f_location_avg_fare".to_string(),
             "f_location_max_fare".to_string(),
         ];
-        let ret = l.lookup(&k, &fields).await.unwrap();
+        let ret = l.lookup(&k, &fields).await;
         println!("{:?}", ret);
         assert_eq!(ret.len(), 2);
         assert_eq!(ret[0].clone().get_int().unwrap(), 23);

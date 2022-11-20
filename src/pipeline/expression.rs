@@ -10,7 +10,7 @@ use super::operator::Operator;
 pub trait Expression: Clone + Debug + Send + Sync {
     fn get_output_type(&self, schema: &[ValueType]) -> Result<ValueType, PiperError>;
 
-    fn eval(&self, row: &[Value]) -> Result<Value, PiperError>;
+    fn eval(&self, row: &[Value]) -> Value;
 
     fn dump(&self) -> String;
 }
@@ -30,12 +30,12 @@ impl Expression for ColumnExpression {
         Ok(schema[self.column_index])
     }
 
-    fn eval(&self, row: &[Value]) -> Result<Value, PiperError> {
+    fn eval(&self, row: &[Value]) -> Value {
         if self.column_index >= row.len() {
             // This shouldn't happen, because the index is set by ColumnExpressionBuilder at the parsing time
             panic!("Column index out of range");
         }
-        Ok(row[self.column_index].clone())
+        row[self.column_index].clone()
     }
 
     fn dump(&self) -> String {
@@ -52,8 +52,8 @@ impl Expression for LiteralExpression {
         Ok(self.value.value_type())
     }
 
-    fn eval(&self, _row: &[Value]) -> Result<Value, PiperError> {
-        Ok(self.value.clone())
+    fn eval(&self, _row: &[Value]) -> Value {
+        self.value.clone()
     }
 
     fn dump(&self) -> String {
@@ -69,16 +69,24 @@ pub struct OperatorExpression {
 
 impl Expression for OperatorExpression {
     fn get_output_type(&self, schema: &[ValueType]) -> Result<ValueType, PiperError> {
-        self.operator.get_output_type(&self.arguments.iter().map(|arg| arg.get_output_type(schema)).collect::<Result<Vec<ValueType>, PiperError>>()?)
+        self.operator.get_output_type(
+            &self
+                .arguments
+                .iter()
+                .map(|arg| arg.get_output_type(schema))
+                .collect::<Result<Vec<ValueType>, PiperError>>()?,
+        )
     }
 
-    fn eval(&self, row: &[Value]) -> Result<Value, PiperError> {
-        let arguments = self
-            .arguments
-            .iter()
-            .map(|e| e.eval(row))
-            .collect::<Result<Vec<_>, _>>()?;
-        self.operator.eval(arguments)
+    fn eval(&self, row: &[Value]) -> Value {
+        // All errors will be propagated to the caller
+        let args: Vec<Value> = self.arguments.iter().map(|e| e.eval(row)).collect();
+        for arg in args.iter() {
+            if arg.is_error() {
+                return arg.clone();
+            }
+        }
+        self.operator.eval(args).into()
     }
 
     fn dump(&self) -> String {
@@ -89,7 +97,7 @@ impl Expression for OperatorExpression {
 
 #[cfg(test)]
 mod tests {
-    use crate::pipeline::{Value, operator::LessThanOperator, expression::Expression};
+    use crate::pipeline::{expression::Expression, operator::LessThanOperator, Value};
 
     use super::{ColumnExpression, LiteralExpression, OperatorExpression};
 
@@ -99,16 +107,14 @@ mod tests {
             column_name: "a".to_owned(),
             column_index: 0,
         };
-        let r = LiteralExpression {
-            value: 42.into(),
-        };
+        let r = LiteralExpression { value: 42.into() };
         let e = OperatorExpression {
             operator: Box::new(LessThanOperator {}),
             arguments: vec![Box::new(l), Box::new(r)],
         };
         let row: Vec<Value> = vec![100.into()];
-        assert_eq!(e.eval(&row).unwrap(), false.into());
+        assert_eq!(e.eval(&row), false.into());
         let row: Vec<Value> = vec![21.into()];
-        assert_eq!(e.eval(&row).unwrap(), true.into());
+        assert_eq!(e.eval(&row), true.into());
     }
 }

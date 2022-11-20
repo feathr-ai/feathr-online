@@ -11,7 +11,7 @@ use super::{
     operator::PlusOperator,
     parser::{parse_pipeline, parse_script},
     transformation::{ProjectTransformation, Transformation},
-    Column, DataSet, DataSetCreator, DataSetValidator, PiperError, Schema, ValidationMode, Value,
+    Column, DataSet, DataSetCreator, PiperError, Schema, Validated, ValidationMode, Value,
     ValueType,
 };
 
@@ -182,12 +182,13 @@ impl Pipeline {
     ) -> Result<Box<dyn DataSet>, PiperError> {
         self.transformations
             .iter()
-            .try_fold(input, |input, stage| {
+            .try_fold(input.validated(validation_mode), |input, stage| {
                 stage
                     .transformation
-                    .transform(input.validated(validation_mode))
+                    .transform(input)
+                    .map(|output| output.validated(validation_mode))
             })
-            .map(|dataset| dataset.validated(validation_mode))
+            .map(|dataset| dataset)
     }
 
     /**
@@ -205,90 +206,7 @@ impl Pipeline {
 
 #[cfg(test)]
 mod tests {
-    use crate::pipeline::{DataSet, DataSetCreator, Value};
-
-    use super::Pipeline;
-
-    fn gen_ds(pipeline: &Pipeline) -> Box<dyn DataSet> {
-        DataSetCreator::eager(
-            pipeline.input_schema.clone(),
-            vec![
-                vec![Value::from(10), Value::from(100), Value::from(true)],
-                vec![Value::from(20), Value::from(200), Value::from(true)],
-                vec![Value::from(30), Value::from(300), Value::from(false)],
-                vec![Value::from(40), Value::from(400), Value::from(false)],
-                vec![Value::from(50), Value::from(500), Value::from("false")],
-                vec![Value::from(60), Value::from("600"), Value::from(false)],
-                vec![Value::from(70), Value::from(700), Value::from(false)],
-                vec![Value::from(80), Value::from(800), Value::from(true)],
-            ],
-        )
-    }
-
-    #[tokio::test]
-    async fn test_pipeline() {
-        let pipeline = super::Pipeline::parse(
-            "test_pipeline(a as int, b as int, c as bool)
-            | where not c and (a>42)
-            ;",
-        )
-        .unwrap();
-
-        println!("{}", pipeline.dump());
-
-        // Strict mode should output 1 row and 2 errors
-        let (schema, rows) = pipeline
-            .process(gen_ds(&pipeline), crate::pipeline::ValidationMode::Strict)
-            .unwrap()
-            .eval()
-            .await;
-        assert_eq!(schema, pipeline.output_schema);
-        assert_eq!(rows.len(), 3);
-        println!("{:?}", rows);
-        assert!(rows[0].is_err());
-        assert!(rows[1].is_err());
-        // Succeeded row has a==70
-        assert_eq!(rows[2].as_ref().unwrap()[0], 70.into());
-
-        // Skip mode should output 1 rows, 2 error rows are skipped
-        let (schema, rows) = pipeline
-            .process(gen_ds(&pipeline), crate::pipeline::ValidationMode::Skip)
-            .unwrap()
-            .eval()
-            .await;
-        assert_eq!(schema, pipeline.output_schema);
-        println!("{:?}", rows);
-        assert_eq!(rows.len(), 1);
-        assert_eq!(rows[0].as_ref().unwrap()[0], 70.into());
-
-        // Lenient mode should output 2 rows, the 1st has field `b` as null because of the type cast failure
-        let (schema, rows) = pipeline
-            .process(gen_ds(&pipeline), crate::pipeline::ValidationMode::Lenient)
-            .unwrap()
-            .eval()
-            .await;
-        assert_eq!(schema, pipeline.output_schema);
-        println!("{:?}", rows);
-        assert_eq!(rows.len(), 2);
-        assert_eq!(rows[0].as_ref().unwrap()[0], 60.into());
-        assert_eq!(rows[0].as_ref().unwrap()[1], Value::Null);
-        assert_eq!(rows[1].as_ref().unwrap()[0], 70.into());
-
-        // Convert mode should output 3 rows with converted values
-        let (schema, rows) = pipeline
-            .process(gen_ds(&pipeline), crate::pipeline::ValidationMode::Convert)
-            .unwrap()
-            .eval()
-            .await;
-        assert_eq!(schema, pipeline.output_schema);
-        println!("{:?}", rows);
-        assert_eq!(rows.len(), 3);
-        assert_eq!(rows[0].as_ref().unwrap()[0], 50.into());
-        assert_eq!(rows[0].as_ref().unwrap()[2], false.into());
-        assert_eq!(rows[1].as_ref().unwrap()[0], 60.into());
-        assert_eq!(rows[1].as_ref().unwrap()[1], 600.into());
-        assert_eq!(rows[2].as_ref().unwrap()[0], 70.into());
-    }
+    use crate::pipeline::{DataSetCreator, Value};
 
     #[tokio::test]
     async fn test_explode() {
@@ -312,29 +230,29 @@ mod tests {
             ],
         );
         let (schema, rows) = pipeline
-            .process(ds, crate::pipeline::ValidationMode::Convert)
+            .process(ds, crate::pipeline::ValidationMode::Strict)
             .unwrap()
             .eval()
             .await;
         assert_eq!(schema, pipeline.output_schema);
         assert_eq!(rows.len(), 9);
-        assert_eq!(rows[0].as_ref().unwrap()[0], 10.into());
-        assert_eq!(rows[0].as_ref().unwrap()[1], 1.into());
-        assert_eq!(rows[1].as_ref().unwrap()[0], 10.into());
-        assert_eq!(rows[1].as_ref().unwrap()[1], 2.into());
-        assert_eq!(rows[2].as_ref().unwrap()[0], 10.into());
-        assert_eq!(rows[2].as_ref().unwrap()[1], 3.into());
-        assert_eq!(rows[3].as_ref().unwrap()[0], 40.into());
-        assert_eq!(rows[3].as_ref().unwrap()[1], 400.into());
-        assert_eq!(rows[4].as_ref().unwrap()[0], 50.into());
-        assert_eq!(rows[4].as_ref().unwrap()[1], 4.into());
-        assert_eq!(rows[5].as_ref().unwrap()[0], 50.into());
-        assert_eq!(rows[5].as_ref().unwrap()[1], 5.into());
-        assert_eq!(rows[6].as_ref().unwrap()[0], 50.into());
-        assert_eq!(rows[6].as_ref().unwrap()[1], 6.into());
-        assert_eq!(rows[7].as_ref().unwrap()[0], 60.into());
-        assert_eq!(rows[7].as_ref().unwrap()[1], 600.into());
-        assert_eq!(rows[8].as_ref().unwrap()[0], 80.into());
-        assert_eq!(rows[8].as_ref().unwrap()[1], 800.into());
+        assert_eq!(rows[0][0], 10.into());
+        assert_eq!(rows[0][1], 1.into());
+        assert_eq!(rows[1][0], 10.into());
+        assert_eq!(rows[1][1], 2.into());
+        assert_eq!(rows[2][0], 10.into());
+        assert_eq!(rows[2][1], 3.into());
+        assert_eq!(rows[3][0], 40.into());
+        assert_eq!(rows[3][1], 400.into());
+        assert_eq!(rows[4][0], 50.into());
+        assert_eq!(rows[4][1], 4.into());
+        assert_eq!(rows[5][0], 50.into());
+        assert_eq!(rows[5][1], 5.into());
+        assert_eq!(rows[6][0], 50.into());
+        assert_eq!(rows[6][1], 6.into());
+        assert_eq!(rows[7][0], 60.into());
+        assert_eq!(rows[7][1], 600.into());
+        assert_eq!(rows[8][0], 80.into());
+        assert_eq!(rows[8][1], 800.into());
     }
 }

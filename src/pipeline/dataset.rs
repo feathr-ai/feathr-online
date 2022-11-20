@@ -1,9 +1,9 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 use async_trait::async_trait;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-use super::{PiperError, Value, ValueType};
+use super::{Value, ValueType};
 
 /**
  * The column definition
@@ -85,39 +85,6 @@ impl Schema {
 }
 
 /**
- * Define how the data set is validated
- */
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ValidationMode {
-    /**
-     * The row will become a failure if there is any field doesn't match the schema, already failed rows remain failed.
-     */
-    Strict,
-
-    /**
-     * The row will be skipped if there is any field doesn't match the schema.
-     */
-    Skip,
-
-    /**
-     * The row that has column doesn't match the schema will be skipped, and failed rows will be skipped.
-     */
-    Lenient,
-
-    /**
-     * The unmatched column will be converted to the schema type, and turned into `null` if failed, failed rows will be skipped
-     */
-    Convert,
-}
-
-impl Default for ValidationMode {
-    fn default() -> Self {
-        ValidationMode::Strict
-    }
-}
-
-/**
  * The DataSet interface
  * A DataSet is a collection of rows, each row is a collection of fields.
  * DataSet works like an iterator, it can only be used once.
@@ -132,12 +99,12 @@ pub trait DataSet: Sync + Send {
     /**
      * Get the next row of the data set, returns None if there is no more row
      */
-    async fn next(&mut self) -> Option<Result<Vec<Value>, PiperError>>;
+    async fn next(&mut self) -> Option<Vec<Value>>;
 
     /**
      * Get all rows of the data set
      */
-    async fn eval(&mut self) -> (Schema, Vec<Result<Vec<Value>, PiperError>>) {
+    async fn eval(&mut self) -> (Schema, Vec<Vec<Value>>) {
         let mut rows = Vec::new();
         while let Some(row) = self.next().await {
             rows.push(row);
@@ -153,23 +120,169 @@ pub trait DataSet: Sync + Send {
         ret.push_str("-".repeat(s.len()).as_str());
         ret.push('\n');
         for row in self.next().await {
-            match row {
-                Ok(row) => {
-                    ret.push_str(
-                        row.iter()
-                            .map(|v| v.dump())
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                            .as_str(),
-                    );
-                }
-                Err(e) => {
-                    ret.push_str(&format!("Error: {}\n", e));
-                }
-            }
+            ret.push_str(
+                row.iter()
+                    .map(|v| v.dump())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+                    .as_str(),
+            );
             ret.push('\n');
         }
         ret
+    }
+}
+
+/**
+ * Validate if the data set is aligned with the schema
+ */
+#[derive(Copy, Debug, Clone)]
+pub enum ValidationMode {
+    /**
+     * Strict mode turns every field that doesn't match the schema into error
+     */
+    Strict,
+    /**
+     * Lenient mode tries to convert the field into the schema type
+     */
+    Lenient,
+}
+
+pub struct ValidatedDataSet {
+    data_set: Box<dyn DataSet>,
+    mode: ValidationMode,
+}
+
+impl ValidatedDataSet {
+    pub fn new(data_set: Box<dyn DataSet>, mode: ValidationMode) -> Self {
+        Self { data_set, mode }
+    }
+}
+
+pub trait Validated {
+    fn validated(self, mode: ValidationMode) -> Box<dyn DataSet>;
+}
+
+impl Validated for Box<dyn DataSet> {
+    fn validated(self, mode: ValidationMode) -> Box<dyn DataSet> {
+        Box::new(ValidatedDataSet::new(self, mode))
+    }
+}
+
+#[async_trait]
+impl DataSet for ValidatedDataSet {
+    fn schema(&self) -> &Schema {
+        self.data_set.schema()
+    }
+
+    async fn next(&mut self) -> Option<Vec<Value>> {
+        self.data_set.next().await.map(|row| {
+            row.into_iter()
+                .enumerate()
+                .map(|(idx, v)| {
+                    let column_type = self.schema().columns[idx].column_type;
+                    if column_type == ValueType::Dynamic || column_type == v.value_type() {
+                        v
+                    } else {
+                        match self.mode {
+                            ValidationMode::Strict => v.try_into(column_type).into(),
+                            ValidationMode::Lenient => v.try_convert(column_type).into(),
+                        }
+                    }
+                })
+                .collect()
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ErrorCollectingMode {
+    Off,
+    // TODO: Remove this alias when the debug mode is actually implemented
+    #[serde(alias = "debug")]
+    On,
+    // TODO: Real debug mode needs backtrace
+    // Debug,
+}
+
+impl Default for ErrorCollectingMode {
+    fn default() -> Self {
+        ErrorCollectingMode::On
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ErrorRecord {
+    pub row: usize,
+    pub column: String,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub details: Option<String>,
+}
+
+pub trait ErrorCollector {
+    fn collect_errors(
+        self,
+        mode: ErrorCollectingMode,
+    ) -> (Schema, Vec<Vec<Value>>, Vec<ErrorRecord>);
+
+    fn collect_into_json(
+        self,
+        mode: ErrorCollectingMode,
+    ) -> (Vec<HashMap<String, serde_json::Value>>, Vec<ErrorRecord>);
+}
+
+impl ErrorCollector for (Schema, Vec<Vec<Value>>) {
+    fn collect_errors(
+        self,
+        mode: ErrorCollectingMode,
+    ) -> (Schema, Vec<Vec<Value>>, Vec<ErrorRecord>) {
+        if mode == ErrorCollectingMode::Off {
+            return (self.0, self.1, vec![]);
+        }
+        let mut errors = Vec::new();
+        for (row_num, row) in self.1.iter().enumerate() {
+            for (i, value) in row.iter().enumerate() {
+                if let Value::Error(err) = value {
+                    errors.push(ErrorRecord {
+                        row: row_num,
+                        column: self.0.columns[i].name.clone(),
+                        message: err.to_string(),
+                        details: None, // TODO: Debug mode, save backtrace info here
+                    });
+                }
+            }
+        }
+        (self.0, self.1, errors)
+    }
+
+    fn collect_into_json(
+        self,
+        mode: ErrorCollectingMode,
+    ) -> (Vec<HashMap<String, serde_json::Value>>, Vec<ErrorRecord>) {
+        let mut ret = vec![];
+        let mut errors = Vec::new();
+        for (row_num, row) in self.1.into_iter().enumerate() {
+            let mut ret_row = HashMap::new();
+            for (i, value) in row.into_iter().enumerate() {
+                if let Value::Error(err) = value {
+                    ret_row.insert(self.0.columns[i].name.clone(), serde_json::Value::Null);
+                    if mode != ErrorCollectingMode::Off {
+                        errors.push(ErrorRecord {
+                            row: row_num,
+                            column: self.0.columns[i].name.clone(),
+                            message: err.to_string(),
+                            details: None, // TODO: Debug mode, save backtrace info here
+                        });
+                    }
+                } else {
+                    ret_row.insert(self.0.columns[i].name.clone(), value.into());
+                }
+            }
+            ret.push(ret_row);
+        }
+        (ret, errors)
     }
 }
 
@@ -205,147 +318,6 @@ impl DataSetCreator {
         T: IntoIterator<Item = Vec<Value>>,
     {
         rows.into_iter().collect::<Box<EagerDataSet>>()
-    }
-}
-
-pub trait DataSetValidator {
-    /**
-     * Validate the data set, make sure all rows match the schema.
-     * `validate_mode` defines how the rows are validated
-     */
-    fn validated(self, validate_mode: ValidationMode) -> Box<dyn DataSet>;
-}
-
-impl DataSetValidator for Box<dyn DataSet> {
-    fn validated(self, validate_mode: ValidationMode) -> Box<dyn DataSet> {
-        Box::new(ValidatedDataSet {
-            inner: self,
-            validate_mode,
-        })
-    }
-}
-
-struct ValidatedDataSet {
-    inner: Box<dyn DataSet>,
-    validate_mode: ValidationMode,
-}
-
-impl ValidatedDataSet {
-    fn validate_row(
-        &self,
-        row: Result<Vec<Value>, PiperError>,
-    ) -> Option<Result<Vec<Value>, PiperError>> {
-        match self.validate_mode {
-            ValidationMode::Strict => {
-                match row {
-                    Ok(row) => {
-                        // Fail if row length doesn't match
-                        if row.len() != self.inner.schema().columns.len() {
-                            return Some(Err(PiperError::InvalidRowLength(
-                                self.inner.schema().columns.len(),
-                                row.len(),
-                            )));
-                        }
-                        // Fail if any field type doesn't match
-                        Some(
-                            row.into_iter()
-                                .zip(self.inner.schema().columns.iter())
-                                .map(|(field, column)| field.try_into(column.column_type))
-                                .collect::<Result<Vec<_>, _>>(),
-                        )
-                    }
-                    // Retain upstream error
-                    Err(e) => Some(Err(e)),
-                }
-            }
-            ValidationMode::Skip => {
-                match row {
-                    Ok(row) => {
-                        // Fail if row length doesn't match
-                        if row.len() != self.inner.schema().columns.len() {
-                            return Some(Err(PiperError::InvalidRowLength(
-                                self.inner.schema().columns.len(),
-                                row.len(),
-                            )));
-                        }
-                        // Fail if any field type doesn't match
-                        let ret = Some(
-                            row.into_iter()
-                                .zip(self.inner.schema().columns.iter())
-                                .map(|(field, column)| field.try_into(column.column_type))
-                                .collect::<Result<Vec<_>, _>>(),
-                        );
-                        // Skip error
-                        if let Some(Err(_)) = ret {
-                            return None;
-                        }
-                        ret
-                    }
-                    // Skip upstream error
-                    Err(_) => None,
-                }
-            }
-            ValidationMode::Lenient => {
-                match row {
-                    // Field is set to null if type doesn't match
-                    Ok(mut row) => {
-                        row.resize(self.inner.schema().columns.len(), Value::Null);
-                        let ret = row
-                            .into_iter()
-                            .zip(self.inner.schema().columns.iter())
-                            .map(|(field, column)| {
-                                field.try_into(column.column_type).unwrap_or(Value::Null)
-                            })
-                            .collect::<Vec<_>>();
-                        Some(Ok(ret))
-                    }
-                    // Skip upstream error
-                    Err(_) => None,
-                }
-            }
-            ValidationMode::Convert => {
-                match row {
-                    // Field is set to null if it cannot be converted
-                    Ok(mut row) => {
-                        row.resize(self.inner.schema().columns.len(), Value::Null);
-                        let ret = row
-                            .into_iter()
-                            .zip(self.inner.schema().columns.iter())
-                            .map(|(field, column)| {
-                                field.try_convert(column.column_type).unwrap_or(Value::Null)
-                            })
-                            .collect::<Vec<_>>();
-                        Some(Ok(ret))
-                    }
-                    // Skip upstream error
-                    Err(_) => None,
-                }
-            }
-        }
-    }
-}
-
-#[async_trait]
-impl DataSet for ValidatedDataSet {
-    fn schema(&self) -> &Schema {
-        self.inner.schema()
-    }
-
-    async fn next(&mut self) -> Option<Result<Vec<Value>, PiperError>> {
-        let mut ret = None;
-        while ret.is_none() {
-            let row = self.inner.next().await;
-            match row {
-                Some(row) => {
-                    ret = self.validate_row(row);
-                }
-                None => {
-                    // Upstream returns None, means it's exhausted.
-                    return None;
-                }
-            }
-        }
-        ret
     }
 }
 
@@ -402,8 +374,8 @@ impl DataSet for EagerDataSet {
         &self.schema
     }
 
-    async fn next(&mut self) -> Option<Result<Vec<Value>, PiperError>> {
-        self.rows.pop_front().map(|row| Ok(row))
+    async fn next(&mut self) -> Option<Vec<Value>> {
+        self.rows.pop_front()
     }
 }
 
@@ -436,24 +408,72 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_validate_strict() {
+    async fn test_strict_validate() {
         let (schema, rows) = gen_ds().validated(ValidationMode::Strict).eval().await;
-        assert_eq!(gen_schema(), schema);
-        assert!(rows[0].is_err());
-        assert!(rows[1].is_ok());
-        assert!(rows[2].is_err());
-        assert!(rows[3].is_err());
-        assert!(rows[4].is_err());
-        assert!(rows[5].is_ok());
-        assert!(rows[6].is_err());
+        assert_eq!(schema, gen_schema());
+        assert_eq!(rows.len(), 7);
+        assert!(matches!(
+            rows[0].as_slice(),
+            [Value::Int(10), Value::Error(_), Value::Bool(true)]
+        ));
+        assert!(matches!(
+            rows[1].as_slice(),
+            [Value::Int(20), Value::String(_), Value::Bool(true)]
+        ));
+        assert!(matches!(
+            rows[2].as_slice(),
+            [Value::Int(30), Value::Error(_), Value::Bool(false)]
+        ));
+        assert!(matches!(
+            rows[3].as_slice(),
+            [Value::Int(40), Value::Error(_), Value::Bool(false)]
+        ));
+        assert!(matches!(
+            rows[4].as_slice(),
+            [Value::Int(50), Value::Error(_), Value::Bool(false)]
+        ));
+        assert!(matches!(
+            rows[5].as_slice(),
+            [Value::Int(60), Value::String(_), Value::Bool(false)]
+        ));
+        assert!(matches!(
+            rows[6].as_slice(),
+            [Value::Int(70), Value::Error(_), Value::Bool(true)]
+        ));
     }
 
     #[tokio::test]
-    async fn test_validate_skip() {
-        let (schema, rows) = gen_ds().validated(ValidationMode::Skip).eval().await;
-        assert_eq!(gen_schema(), schema);
-        assert_eq!(rows.len(), 2);
-        assert!(rows[0].is_ok());
-        assert!(rows[1].is_ok());
+    async fn test_strict_lenient() {
+        let (schema, rows) = gen_ds().validated(ValidationMode::Lenient).eval().await;
+        assert_eq!(schema, gen_schema());
+        assert_eq!(rows.len(), 7);
+        assert!(matches!(
+            rows[0].as_slice(),
+            [Value::Int(10), Value::String(_), Value::Bool(true)]
+        ));
+        assert!(matches!(
+            rows[1].as_slice(),
+            [Value::Int(20), Value::String(_), Value::Bool(true)]
+        ));
+        assert!(matches!(
+            rows[2].as_slice(),
+            [Value::Int(30), Value::String(_), Value::Bool(false)]
+        ));
+        assert!(matches!(
+            rows[3].as_slice(),
+            [Value::Int(40), Value::String(_), Value::Bool(false)]
+        ));
+        assert!(matches!(
+            rows[4].as_slice(),
+            [Value::Int(50), Value::String(_), Value::Bool(false)]
+        ));
+        assert!(matches!(
+            rows[5].as_slice(),
+            [Value::Int(60), Value::String(_), Value::Bool(false)]
+        ));
+        assert!(matches!(
+            rows[6].as_slice(),
+            [Value::Int(70), Value::String(_), Value::Bool(true)]
+        ));
     }
 }

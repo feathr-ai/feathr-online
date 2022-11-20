@@ -24,6 +24,10 @@ pub enum ValueType {
      * Dynamic means the value is polymorphic, and can be any of the above types.
      */
     Dynamic,
+    /**
+     * Error means this value is an error.
+     */
+    Error,
 }
 
 impl ValueType {
@@ -51,6 +55,7 @@ impl Display for ValueType {
             ValueType::Array => write!(f, "array"),
             ValueType::Object => write!(f, "object"),
             ValueType::Dynamic => write!(f, "dynamic"),
+            ValueType::Error => write!(f, "error"),
         }
     }
 }
@@ -58,7 +63,7 @@ impl Display for ValueType {
 /**
  * Value is the type of a value in the pipeline.
  */
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Value {
     Null,
     Bool(bool),
@@ -69,6 +74,25 @@ pub enum Value {
     String(Cow<'static, str>),
     Array(Vec<Value>),
     Object(HashMap<String, Value>),
+    Error(PiperError),
+}
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Null, Self::Null) => true,
+            (Self::Bool(l0), Self::Bool(r0)) => l0 == r0,
+            (Self::Int(l0), Self::Int(r0)) => l0 == r0,
+            (Self::Long(l0), Self::Long(r0)) => l0 == r0,
+            (Self::Float(l0), Self::Float(r0)) => l0 == r0,
+            (Self::Double(l0), Self::Double(r0)) => l0 == r0,
+            (Self::String(l0), Self::String(r0)) => l0 == r0,
+            (Self::Array(l0), Self::Array(r0)) => l0 == r0,
+            (Self::Object(l0), Self::Object(r0)) => l0 == r0,
+            (Self::Error(l0), Self::Error(r0)) => false,
+            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+        }
+    }
 }
 
 impl Into<serde_json::Value> for Value {
@@ -85,6 +109,7 @@ impl Into<serde_json::Value> for Value {
             Value::Object(v) => {
                 serde_json::Value::Object(v.into_iter().map(|(k, v)| (k, v.into())).collect())
             }
+            Value::Error(e) => serde_json::Value::Null,
         }
     }
 }
@@ -190,6 +215,24 @@ impl From<&'static str> for Value {
     }
 }
 
+impl From<PiperError> for Value {
+    fn from(value: PiperError) -> Self {
+        Value::Error(value)
+    }
+}
+
+impl<T> From<Result<T, PiperError>> for Value
+where
+    T: Into<Value>,
+{
+    fn from(value: Result<T, PiperError>) -> Self {
+        match value {
+            Ok(v) => v.into(),
+            Err(e) => e.into(),
+        }
+    }
+}
+
 impl<T> From<Vec<T>> for Value
 where
     T: Into<Value>,
@@ -223,6 +266,7 @@ impl Value {
             Value::String(_) => ValueType::String,
             Value::Array(_) => ValueType::Array,
             Value::Object(_) => ValueType::Object,
+            Value::Error(_) => ValueType::Error,
         }
     }
 
@@ -237,11 +281,22 @@ impl Value {
     }
 
     /**
+     * True if the value is null
+     */
+    pub fn is_error(&self) -> bool {
+        match self {
+            Value::Error(_) => true,
+            _ => false,
+        }
+    }
+
+    /**
      * Get the bool value, if the value is not a bool, return PiperError::InvalidValueType
      */
     pub fn get_bool(&self) -> Result<bool, PiperError> {
         match self {
             Value::Bool(b) => Ok(*b),
+            Value::Error(e) => Err(e.clone())?,
             _ => Err(PiperError::InvalidValueType(
                 self.value_type(),
                 ValueType::Bool,
@@ -357,6 +412,19 @@ impl Value {
     }
 
     /**
+     * Get the object value, if the value is not an object, return PiperError::InvalidValueType
+     */
+    pub fn get_error(&self) -> Result<(), PiperError> {
+        match self {
+            Value::Error(e) => Err(e.clone()),
+            _ => Err(PiperError::InvalidValueType(
+                self.value_type(),
+                ValueType::Object,
+            )),
+        }
+    }
+
+    /**
      * Type cast, number types can be auto casted to each others, others are not
      */
     pub fn try_into(self, value_type: ValueType) -> Result<Value, PiperError> {
@@ -417,6 +485,7 @@ impl Value {
                 ValueType::Object => v.into(),
                 _ => Err(PiperError::InvalidTypeCast(ValueType::String, value_type))?,
             },
+            Value::Error(e) => Err(e)?,
         });
     }
 
@@ -534,6 +603,7 @@ impl Value {
                     value_type,
                 ))?,
             },
+            Value::Error(e) => Err(e)?,
         });
     }
 
@@ -569,6 +639,7 @@ impl Value {
                 s.push_str("}");
                 s
             }
+            Value::Error(e) => format!("{:?}", e),
         }
     }
 }
@@ -580,17 +651,17 @@ impl PartialOrd for Value {
             (Value::Int(x), Value::Long(y)) => (*x as i64).partial_cmp(y),
             (Value::Int(x), Value::Float(y)) => (*x as f32).partial_cmp(y),
             (Value::Int(x), Value::Double(y)) => (*x as f64).partial_cmp(y),
-            
+
             (Value::Long(x), Value::Int(y)) => x.partial_cmp(&(*y as i64)),
             (Value::Long(x), Value::Long(y)) => x.partial_cmp(y),
             (Value::Long(x), Value::Float(y)) => (*x as f64).partial_cmp(&(*y as f64)),
             (Value::Long(x), Value::Double(y)) => (*x as f64).partial_cmp(y),
-            
+
             (Value::Float(x), Value::Int(y)) => x.partial_cmp(&(*y as f32)),
             (Value::Float(x), Value::Long(y)) => (*x as f64).partial_cmp(&(*y as f64)),
             (Value::Float(x), Value::Float(y)) => x.partial_cmp(y),
             (Value::Float(x), Value::Double(y)) => (*x as f64).partial_cmp(y),
-            
+
             (Value::Double(x), Value::Int(y)) => x.partial_cmp(&(*y as f64)),
             (Value::Double(x), Value::Long(y)) => x.partial_cmp(&(*y as f64)),
             (Value::Double(x), Value::Float(y)) => x.partial_cmp(&(*y as f64)),

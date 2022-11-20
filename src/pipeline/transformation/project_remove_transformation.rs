@@ -75,15 +75,15 @@ impl DataSet for ProjectRemovedDataSet {
         &self.output_schema
     }
 
-    async fn next(&mut self) -> Option<Result<Vec<Value>, PiperError>> {
+    async fn next(&mut self) -> Option<Vec<Value>> {
         match self.input.next().await {
-            Some(Ok(row)) => Some(Ok(row
-                .into_iter()
-                .enumerate()
-                .filter(|(i, _)| !self.remove_set.contains(i))
-                .map(|(_, v)| v)
-                .collect())),
-            Some(Err(e)) => Some(Err(e)),
+            Some(row) => Some(
+                row.into_iter()
+                    .enumerate()
+                    .filter(|(i, _)| !self.remove_set.contains(i))
+                    .map(|(_, v)| v)
+                    .collect(),
+            ),
             None => None,
         }
     }

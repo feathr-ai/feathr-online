@@ -3,7 +3,7 @@ use thiserror::Error;
 use super::ValueType;
 
 // All errors that can be returned by the pipeline.
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, Error)]
 pub enum PiperError {
     // Unknown error
     #[error("{0}")]

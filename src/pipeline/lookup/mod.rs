@@ -17,7 +17,7 @@ use http_json_api::HttpJsonApi;
 
 #[async_trait]
 pub trait LookupSource: Sync + Send + Debug {
-    async fn lookup(&self, key: &Value, fields: &Vec<String>) -> Result<Vec<Value>, PiperError>;
+    async fn lookup(&self, key: &Value, fields: &Vec<String>) -> Vec<Value>;
 
     fn dump(&self) -> serde_json::Value;
 }
@@ -80,7 +80,7 @@ enum LookupSourceType {
 
 #[async_trait]
 impl LookupSource for LookupSourceType {
-    async fn lookup(&self, key: &Value, fields: &Vec<String>) -> Result<Vec<Value>, PiperError> {
+    async fn lookup(&self, key: &Value, fields: &Vec<String>) -> Vec<Value> {
         match self {
             LookupSourceType::HttpJsonApi(s) => s.lookup(key, fields).await,
             LookupSourceType::FeathrOnlineStore(s) => s.lookup(key, fields).await,
