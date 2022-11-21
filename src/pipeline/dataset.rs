@@ -61,10 +61,6 @@ impl FromIterator<Column> for Schema {
 }
 
 impl Schema {
-    pub fn new() -> Self {
-        Default::default()
-    }
-
     pub fn get_column_types(&self) -> Vec<ValueType> {
         self.columns.iter().map(|c| c.column_type).collect()
     }

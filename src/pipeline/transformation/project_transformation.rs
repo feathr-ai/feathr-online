@@ -1,13 +1,15 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 
-use crate::pipeline::{expression::Expression, Column, DataSet, PiperError, Value, Schema};
+use crate::pipeline::{expression::Expression, Column, DataSet, PiperError, Schema, Value};
 
 use super::Transformation;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct ProjectTransformation {
     output_schema: crate::pipeline::Schema,
-    columns: Vec<Box<dyn Expression>>,
+    columns: Arc<Vec<Box<dyn Expression>>>,
     column_names: Vec<String>,
 }
 
@@ -38,9 +40,7 @@ impl ProjectTransformation {
                 }) as Box<dyn Expression>
             })
             .collect::<Vec<_>>();
-        col_expr.extend(columns
-            .iter()
-            .map(|(_, exp)| exp.clone()));
+        col_expr.extend(columns.into_iter().map(|(_, exp)| exp));
         let output_schema = input_schema
             .columns
             .clone()
@@ -49,24 +49,18 @@ impl ProjectTransformation {
             .collect();
         Ok(Box::new(Self {
             output_schema,
-            columns: col_expr,
+            columns: Arc::new(col_expr),
             column_names,
         }))
     }
 }
 
 impl Transformation for ProjectTransformation {
-    fn get_output_schema(
-        &self,
-        _input_schema: &Schema,
-    ) -> Schema {
+    fn get_output_schema(&self, _input_schema: &Schema) -> Schema {
         self.output_schema.clone()
     }
 
-    fn transform(
-        &self,
-        dataset: Box<dyn DataSet>,
-    ) -> Result<Box<dyn DataSet>, PiperError> {
+    fn transform(&self, dataset: Box<dyn DataSet>) -> Result<Box<dyn DataSet>, PiperError> {
         Ok(Box::new(ProjectedDataSet {
             input_dataset: dataset,
             output_schema: self.output_schema.clone(),
@@ -94,7 +88,7 @@ impl Transformation for ProjectTransformation {
 struct ProjectedDataSet {
     input_dataset: Box<dyn DataSet>,
     output_schema: Schema,
-    columns: Vec<Box<dyn Expression>>,
+    columns: Arc<Vec<Box<dyn Expression>>>,
 }
 
 #[async_trait]
@@ -107,7 +101,7 @@ impl DataSet for ProjectedDataSet {
         match self.input_dataset.next().await {
             Some(row) => {
                 let mut output_row = Vec::with_capacity(self.columns.len());
-                for col in &self.columns {
+                for col in self.columns.as_ref().iter() {
                     output_row.push(col.eval(&row));
                 }
                 Some(output_row)

@@ -42,7 +42,7 @@ mod tests {
 
     #[test]
     fn test_build() {
-        let schema = Schema::new();
+        let schema = Schema::default();
         let operator = FunctionOperatorBuilder::create("bucket");
         let expression = OperatorExpressionBuilder::create(
             operator,

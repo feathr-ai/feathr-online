@@ -121,7 +121,6 @@ peg::parser! {
             / (name:identifier() _ "as" _ vt:value_type() { (name.to_string(), None, vt) })
             / (name:identifier() { (name.to_string(), None, ValueType::Dynamic) })
 
-        #[cache_left_rec]
         pub rule expression() -> Box<dyn ExpressionBuilder> = precedence!{
             x:(@) _ ">" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create(">")), vec![x, y])) }
             x:(@) _ "<" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("<")), vec![x, y])) }
@@ -293,7 +292,7 @@ mod tests {
         +1";
         let result = pipeline_parser::expression(input);
         assert!(result.is_ok());
-        let schema = Schema::new();
+        let schema = Schema::default();
         let expr = result.unwrap().build(&schema);
         println!("{}", expr.unwrap().dump());
     }

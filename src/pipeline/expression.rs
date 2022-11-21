@@ -1,13 +1,10 @@
 use std::fmt::Debug;
 
-use dyn_clonable::clonable;
-
 use super::{PiperError, Value, ValueType};
 
 use super::operator::Operator;
 
-#[clonable]
-pub trait Expression: Clone + Debug + Send + Sync {
+pub trait Expression: Debug + Send + Sync {
     fn get_output_type(&self, schema: &[ValueType]) -> Result<ValueType, PiperError>;
 
     fn eval(&self, row: &[Value]) -> Value;
@@ -15,7 +12,7 @@ pub trait Expression: Clone + Debug + Send + Sync {
     fn dump(&self) -> String;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct ColumnExpression {
     pub column_name: String,
     pub column_index: usize,
@@ -42,7 +39,7 @@ impl Expression for ColumnExpression {
         self.column_name.to_owned()
     }
 }
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct LiteralExpression {
     pub value: Value,
 }
@@ -61,7 +58,7 @@ impl Expression for LiteralExpression {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct OperatorExpression {
     pub operator: Box<dyn Operator>,
     pub arguments: Vec<Box<dyn Expression>>,

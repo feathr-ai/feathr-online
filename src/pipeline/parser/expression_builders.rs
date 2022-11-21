@@ -1,17 +1,15 @@
 use std::fmt::Debug;
-use dyn_clonable::clonable;
 
 use super::{
     super::{PiperError, Schema, Value},
     super::expression::{Expression, ColumnExpression, LiteralExpression, OperatorExpression}, operator_builder::OperatorBuilder,
 };
 
-#[clonable]
-pub trait ExpressionBuilder : Clone + Debug {
+pub trait ExpressionBuilder : Debug {
     fn build(&self, schema: &Schema) -> Result<Box<dyn Expression>, PiperError>;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct ColumnExpressionBuilder {
     pub column_name: String,
 }
@@ -39,7 +37,7 @@ impl ExpressionBuilder for ColumnExpressionBuilder {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct LiteralExpressionBuilder {
     pub value: Value,
 }
@@ -63,7 +61,7 @@ impl ExpressionBuilder for LiteralExpressionBuilder {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct OperatorExpressionBuilder {
     pub operator: Box<dyn OperatorBuilder>,
     pub arguments: Vec<Box<dyn ExpressionBuilder>>,

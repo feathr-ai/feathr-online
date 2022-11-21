@@ -1,12 +1,14 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 
 use crate::pipeline::{expression::Expression, DataSet, PiperError, Schema, Value};
 
 use super::Transformation;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct WhereTransformation {
-    pub predicate: Box<dyn Expression>,
+    pub predicate: Arc<dyn Expression>,
 }
 
 impl Transformation for WhereTransformation {
@@ -28,7 +30,7 @@ impl Transformation for WhereTransformation {
 
 struct WhereDataSet {
     input: Box<dyn DataSet>,
-    predicate: Box<dyn Expression>,
+    predicate: Arc<dyn Expression>,
 }
 
 #[async_trait]

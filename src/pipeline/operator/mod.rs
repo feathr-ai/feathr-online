@@ -1,7 +1,5 @@
 use std::fmt::Debug;
 
-use dyn_clonable::clonable;
-
 use super::{PiperError, Value, ValueType};
 
 mod math_op;
@@ -18,8 +16,7 @@ pub use unary_op::{NotOperator, NegativeOperator, PositiveOperator, IsNullOperat
 pub use index_op::{ArrayIndexOperator, MapIndexOperator};
 pub use function_op::FunctionOperator;
 
-#[clonable]
-pub trait Operator: Clone + Debug + Send + Sync {
+pub trait Operator: Debug + Send + Sync {
     fn get_output_type(&self, argument_types: &[ValueType]) -> Result<ValueType, PiperError>;
 
     fn eval(&self, arguments: Vec<Value>) -> Value;

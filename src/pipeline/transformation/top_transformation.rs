@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, sync::Arc};
 
 use async_trait::async_trait;
 use rust_heap::BoundedBinaryHeap;
@@ -31,10 +31,10 @@ impl Default for NullPos {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct TopTransformation {
     pub count: usize,
-    pub criteria: Box<dyn Expression>,
+    pub criteria: Arc<dyn Expression>,
     pub sort_order: SortOrder,
     pub null_pos: NullPos,
 }
@@ -48,7 +48,7 @@ impl TopTransformation {
     ) -> Box<Self> {
         Box::new(TopTransformation {
             count,
-            criteria,
+            criteria: criteria.into(),
             sort_order: sort_order.unwrap_or_default(),
             null_pos: null_pos.unwrap_or_default(),
         })
@@ -94,7 +94,7 @@ impl Transformation for TopTransformation {
 struct TopDataSet {
     input: Box<dyn DataSet>,
     count: usize,
-    criteria: Box<dyn Expression>,
+    criteria: Arc<dyn Expression>,
     sort_order: SortOrder,
     null_pos: NullPos,
     rows: Option<VecDeque<Vec<Value>>>,

@@ -13,7 +13,7 @@ use super::Transformation;
 pub struct LookupTransformation {
     lookup_source_name: String,
     lookup_source: Arc<dyn LookupSource>,
-    key: Box<dyn Expression>,
+    key: Arc<dyn Expression>,
     lookup_fields: Schema,
     output_schema: Schema,
 }
@@ -45,7 +45,7 @@ impl LookupTransformation {
         Ok(Box::new(Self {
             lookup_source_name,
             lookup_source,
-            key,
+            key: key.into(),
             lookup_fields: lookup_schema,
             output_schema,
         }))
@@ -57,10 +57,7 @@ impl Transformation for LookupTransformation {
         self.output_schema.clone()
     }
 
-    fn transform(
-        &self,
-        dataset: Box<dyn DataSet>,
-    ) -> Result<Box<dyn DataSet>, PiperError> {
+    fn transform(&self, dataset: Box<dyn DataSet>) -> Result<Box<dyn DataSet>, PiperError> {
         let lookup_field_names = self
             .lookup_fields
             .columns
@@ -114,7 +111,7 @@ impl Transformation for LookupTransformation {
 struct LookupDataSet {
     input: Box<dyn DataSet>,
     lookup_source: Arc<dyn LookupSource>,
-    key: Box<dyn Expression>,
+    key: Arc<dyn Expression>,
     output_schema: Schema,
     lookup_field_names: Vec<String>,
     lookup_field_types: Vec<ValueType>,
