@@ -104,10 +104,12 @@ impl FeathrOnlineStore {
         }
 
         debug!("Executing HMGET command");
-        // TODO: Handle errors
-        let resp: Vec<String> = cmd.query_async(&mut *conn).await.log().unwrap();
-        // .unwrap_or(vec![Default::default(); fields.len()]);
-        
+        let resp: Vec<String> = cmd
+            .query_async(&mut *conn)
+            .await
+            .log()
+            .map_err(|e| PiperError::RedisError(e.to_string()))?;
+
         let ret: Vec<_> = resp
             .into_iter()
             .map(|s| {
@@ -119,8 +121,8 @@ impl FeathrOnlineStore {
                             .map_err(|e| PiperError::ProtobufError(e.to_string()))
                     })
             })
-            .map(|f| f.map(|f| feature_to_value(f).unwrap_or_default()))
-            .map(|f| f.unwrap_or_default())
+            .map(|f| f.map(feature_to_value))
+            .map(Into::into)
             .collect();
         Ok(ret)
     }
@@ -142,9 +144,9 @@ impl LookupSource for FeathrOnlineStore {
     }
 }
 
-fn feature_to_value(f: FeatureValue) -> Result<Value, PiperError> {
+fn feature_to_value(f: FeatureValue) -> Value {
     // TODO: Sparse arrays
-    Ok(if f.has_boolean_value() {
+    if f.has_boolean_value() {
         f.boolean_value().into()
     } else if f.has_int_value() {
         f.int_value().into()
@@ -170,10 +172,10 @@ fn feature_to_value(f: FeatureValue) -> Result<Value, PiperError> {
         f.string_array().strings.clone().into()
     } else {
         error!("Unsupported feature type");
-        return Err(PiperError::RedisError(
+        Value::Error(PiperError::RedisError(
             "Unsupported feature type".to_string(),
-        ));
-    })
+        ))
+    }
 }
 
 #[cfg(test)]
