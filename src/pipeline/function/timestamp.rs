@@ -9,13 +9,13 @@ use super::Function;
 #[derive(Debug)]
 pub struct TimestampFunction;
 
-const DEFAULT_FORMAT: &'static str = "%Y-%m-%d %H:%M:%S";
+const DEFAULT_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
 
 impl Function for TimestampFunction {
     fn get_output_type(
         &self,
-        argument_types: &[crate::pipeline::ValueType],
-    ) -> Result<crate::pipeline::ValueType, crate::pipeline::PiperError> {
+        argument_types: &[ValueType],
+    ) -> Result<ValueType, PiperError> {
         if argument_types.is_empty() || argument_types.len() > 3 {
             return Err(PiperError::ArityError(
                 "timestamp".to_string(),
@@ -57,10 +57,10 @@ impl Function for TimestampFunction {
 
         match arguments.as_slice() {
             [Value::String(s)] => self.timestamp(s, DEFAULT_FORMAT, &Tz::UTC),
-            [Value::String(s), Value::String(format)] => self.timestamp(s, &format, &Tz::UTC),
+            [Value::String(s), Value::String(format)] => self.timestamp(s, format, &Tz::UTC),
             [Value::String(s), Value::String(format), Value::String(tz)] => {
                 if let Ok(tz) = tz.parse::<Tz>() {
-                    self.timestamp(s, &format, &tz)
+                    self.timestamp(s, format, &tz)
                 } else {
                     Value::Null
                 }

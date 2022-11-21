@@ -11,7 +11,7 @@ pub struct ExplodeTransformationBuilder {
 }
 
 impl ExplodeTransformationBuilder {
-    pub fn new(column: String, exploded_type: Option<ValueType>) -> Box<dyn TransformationBuilder> {
+    pub fn create(column: String, exploded_type: Option<ValueType>) -> Box<dyn TransformationBuilder> {
         Box::new(Self {
             column,
             exploded_type: exploded_type.unwrap_or(ValueType::Dynamic),
@@ -29,10 +29,10 @@ impl TransformationBuilder for ExplodeTransformationBuilder {
                 PiperError::ColumnNotFound(self.column.clone())
             })?;
 
-        Ok(ExplodeTransformation::new(
+        Ok(ExplodeTransformation::create(
             input_schema,
             column_idx,
-            self.exploded_type.clone(),
+            self.exploded_type,
         ))
     }
 }

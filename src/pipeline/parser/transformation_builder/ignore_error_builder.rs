@@ -11,7 +11,7 @@ impl TransformationBuilder for IgnoreErrorTransformationBuilder {
 }
 
 impl IgnoreErrorTransformationBuilder {
-    pub fn new() -> Box<dyn TransformationBuilder> {
+    pub fn create() -> Box<dyn TransformationBuilder> {
         Box::new(Self)
     }
 }

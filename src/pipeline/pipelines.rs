@@ -97,7 +97,7 @@ impl Pipeline {
     /// Returns a health checking pipeline, which does `a as int + 42`
     pub fn get_health_checker() -> Pipeline {
         let input_schema = Schema::from(vec![Column::new("a", ValueType::Int)]);
-        let transformation = ProjectTransformation::new(
+        let transformation = ProjectTransformation::create(
             &input_schema,
             vec![(
                 "b".to_string(),
@@ -188,7 +188,6 @@ impl Pipeline {
                     .transform(input)
                     .map(|output| output.validated(validation_mode))
             })
-            .map(|dataset| dataset)
     }
 
     /**

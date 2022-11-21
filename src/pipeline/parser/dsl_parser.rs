@@ -74,26 +74,26 @@ peg::parser! {
             ) {t}
 
         pub rule ignore_error_transformation() -> Box<dyn TransformationBuilder>
-            = "ignore-error" { IgnoreErrorTransformationBuilder::new() }
+            = "ignore-error" { IgnoreErrorTransformationBuilder::create() }
         pub rule take_transformation() -> Box<dyn TransformationBuilder>
-            = "take" _ count:u64_lit() { TakeTransformationBuilder::new(count.get_long().unwrap() as usize) }
+            = "take" _ count:u64_lit() { TakeTransformationBuilder::create(count.get_long().unwrap() as usize) }
         pub rule where_transformation() -> Box<dyn TransformationBuilder>
-            = "where" _ condition:expression() { WhereTransformationBuilder::new(condition) }
+            = "where" _ condition:expression() { WhereTransformationBuilder::create(condition) }
         pub rule project_transformation() -> Box<dyn TransformationBuilder>
             = "project" _ columns:(project_column_def() **<1,> list_sep()) {
-                ProjectTransformationBuilder::new(columns)
+                ProjectTransformationBuilder::create(columns)
             }
         pub rule project_rename_transformation() -> Box<dyn TransformationBuilder>
             = "project-rename" _ columns:(project_rename_column() **<1,> list_sep()) {
-                ProjectRenameTransformationBuilder::new(columns)
+                ProjectRenameTransformationBuilder::create(columns)
             }
         pub rule project_remove_transformation() -> Box<dyn TransformationBuilder>
             = "project-remove" _ columns:(identifier() **<1,> list_sep()) {
-                ProjectRemoveTransformationBuilder::new(columns)
+                ProjectRemoveTransformationBuilder::create(columns)
             }
         pub rule explode_transformation() ->  Box<dyn TransformationBuilder>
             = ("explode" / "mv-expand") _ column:identifier() _ exploded_type:("as" _ vt:value_type() {vt})? {
-                ExplodeTransformationBuilder::new(column.to_string(), exploded_type)
+                ExplodeTransformationBuilder::create(column.to_string(), exploded_type)
             }
         pub rule lookup_transformation() ->  Box<dyn TransformationBuilder>
             = "lookup" _ columns:(rename_with_type() **<1,> list_sep()) _ "from" _ source:identifier() _ "on" _ key:expression() {
@@ -101,7 +101,7 @@ peg::parser! {
             }
         rule top_transformation() -> Box<dyn TransformationBuilder>
             = "top" _ count:u64_lit() _ "by" _ exp:expression()  _ order:sort_order()? _ null:null_pos()? {
-                TopTransformationBuilder::new(count.get_long().unwrap() as usize, exp, order, null)
+                TopTransformationBuilder::create(count.get_long().unwrap() as usize, exp, order, null)
             }
         rule sort_order() -> SortOrder = "asc"{ SortOrder::Ascending} / "desc" {SortOrder::Descending}
         rule null_pos() -> NullPos = ("nulls" _ "first") {NullPos::First} / ("nulls" _ "last") {NullPos::Last}
@@ -123,45 +123,45 @@ peg::parser! {
 
         #[cache_left_rec]
         pub rule expression() -> Box<dyn ExpressionBuilder> = precedence!{
-            x:(@) _ ">" _ y:@ { (OperatorExpressionBuilder::new((BinaryOperatorBuilder::new(">")), vec![x, y])) }
-            x:(@) _ "<" _ y:@ { (OperatorExpressionBuilder::new((BinaryOperatorBuilder::new("<")), vec![x, y])) }
-            x:(@) _ ">=" _ y:@ { (OperatorExpressionBuilder::new((BinaryOperatorBuilder::new(">=")), vec![x, y])) }
-            x:(@) _ "<=" _ y:@ { (OperatorExpressionBuilder::new((BinaryOperatorBuilder::new("<=")), vec![x, y])) }
-            x:(@) _ "==" _ y:@ { (OperatorExpressionBuilder::new((BinaryOperatorBuilder::new("==")), vec![x, y])) }
-            x:(@) _ "!=" _ y:@ { (OperatorExpressionBuilder::new((BinaryOperatorBuilder::new("!=")), vec![x, y])) }
+            x:(@) _ ">" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create(">")), vec![x, y])) }
+            x:(@) _ "<" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("<")), vec![x, y])) }
+            x:(@) _ ">=" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create(">=")), vec![x, y])) }
+            x:(@) _ "<=" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("<=")), vec![x, y])) }
+            x:(@) _ "==" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("==")), vec![x, y])) }
+            x:(@) _ "!=" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("!=")), vec![x, y])) }
             --
-            x:(@) _ "+" _ y:@ { (OperatorExpressionBuilder::new((BinaryOperatorBuilder::new("+")), vec![x, y])) }
-            x:(@) _ "-" _ y:@ { (OperatorExpressionBuilder::new((BinaryOperatorBuilder::new("-")), vec![x, y])) }
-            x:(@) _ "or" _ y:@ { (OperatorExpressionBuilder::new((BinaryOperatorBuilder::new("or")), vec![x, y])) }
+            x:(@) _ "+" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("+")), vec![x, y])) }
+            x:(@) _ "-" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("-")), vec![x, y])) }
+            x:(@) _ "or" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("or")), vec![x, y])) }
             --
-            x:(@) _ "*" _ y:@ { (OperatorExpressionBuilder::new((BinaryOperatorBuilder::new("*")), vec![x, y])) }
-            x:(@) _ "/" _ y:@ { (OperatorExpressionBuilder::new((BinaryOperatorBuilder::new("/")), vec![x, y])) }
-            x:(@) _ "and" _ y:@ { (OperatorExpressionBuilder::new((BinaryOperatorBuilder::new("and")), vec![x, y])) }
+            x:(@) _ "*" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("*")), vec![x, y])) }
+            x:(@) _ "/" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("/")), vec![x, y])) }
+            x:(@) _ "and" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("and")), vec![x, y])) }
             --
-            "+" _ x:(@) { (OperatorExpressionBuilder::new((UnaryOperatorBuilder::new("+")), vec![x])) }
-            "-" _ x:(@) { (OperatorExpressionBuilder::new((UnaryOperatorBuilder::new("-")), vec![x])) }
-            "not" _ x:(@) { (OperatorExpressionBuilder::new((UnaryOperatorBuilder::new("not")), vec![x])) }
+            "+" _ x:(@) { (OperatorExpressionBuilder::create((UnaryOperatorBuilder::create("+")), vec![x])) }
+            "-" _ x:(@) { (OperatorExpressionBuilder::create((UnaryOperatorBuilder::create("-")), vec![x])) }
+            "not" _ x:(@) { (OperatorExpressionBuilder::create((UnaryOperatorBuilder::create("not")), vec![x])) }
             --
-            x:(@) _ "is" _ "null" { (OperatorExpressionBuilder::new((UnaryOperatorBuilder::new("is null")), vec![x])) }
-            x:(@) _ "is" _ "not" _ "null" { (OperatorExpressionBuilder::new((UnaryOperatorBuilder::new("is not null")), vec![x])) }
+            x:(@) _ "is" _ "null" { (OperatorExpressionBuilder::create((UnaryOperatorBuilder::create("is null")), vec![x])) }
+            x:(@) _ "is" _ "not" _ "null" { (OperatorExpressionBuilder::create((UnaryOperatorBuilder::create("is not null")), vec![x])) }
             --
             f:function_call() _ idx:(index() ** _) {
                 idx.into_iter().fold(f, |e, i| {
-                    OperatorExpressionBuilder::new((BinaryOperatorBuilder::new("index")), vec![e, i])
+                    OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("index")), vec![e, i])
                 })
             }
             c:dot_member_term() _ idx:(index() ** _) {
                 idx.into_iter().fold(c, |e, i| {
-                    OperatorExpressionBuilder::new((BinaryOperatorBuilder::new("index")), vec![e, i])
+                    OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("index")), vec![e, i])
                 })
             }
             --
             lit:literal() {
-                (LiteralExpressionBuilder::new(lit))
+                (LiteralExpressionBuilder::create(lit))
             }
             "(" _ e:expression() _ ")" _ idx:(index() ** _) {
                 idx.into_iter().fold(e, |e, i| {
-                    OperatorExpressionBuilder::new((BinaryOperatorBuilder::new("index")), vec![e, i])
+                    OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("index")), vec![e, i])
                 })
             }
         }
@@ -172,12 +172,12 @@ peg::parser! {
         rule expression_list() -> Vec<Box<dyn ExpressionBuilder>> = e:expression() ** list_sep() { e }
 
         rule dot_member_term() -> Box<dyn ExpressionBuilder> = seg:dot_member() {
-            let col = ColumnExpressionBuilder::new(seg[0].to_string());
+            let col = ColumnExpressionBuilder::create(seg[0].to_string());
             if seg.len()>1 {
                 seg.into_iter().skip(1).fold(col, |acc, id| {
-                    OperatorExpressionBuilder::new(
-                        BinaryOperatorBuilder::new("dot"),
-                        vec![acc, LiteralExpressionBuilder::new(id.to_string())],
+                    OperatorExpressionBuilder::create(
+                        BinaryOperatorBuilder::create("dot"),
+                        vec![acc, LiteralExpressionBuilder::create(id)],
                     )
                 })
             } else {
@@ -190,7 +190,7 @@ peg::parser! {
         }
 
         rule function_call() -> Box<dyn ExpressionBuilder> = id:identifier() _ "(" _ args:expression_list() _ ")" {
-            OperatorExpressionBuilder::new(FunctionOperatorBuilder::new(id), args)
+            OperatorExpressionBuilder::create(FunctionOperatorBuilder::create(id), args)
         }
 
         /// `some_id` or `a.b.c`
@@ -233,13 +233,13 @@ peg::parser! {
             = v:$("true" / "false") {? v.parse().or(Err("bool")).map(|v: bool| v.into()) }
 
         rule string_lit() -> Value
-            = "\"" chars:(char()*) "\"" { return chars.join("").into() }
+            = "\"" chars:(char()*) "\"" { chars.join("").into() }
 
         rule char() -> String
-            = c:(unescaped() / escape_sequence()) { return c.to_string() }
+            = c:(unescaped() / escape_sequence()) { c.to_string() }
 
         rule escape_sequence() -> String
-            = "\\" c:$("\"" / "\\" / "n" / "r" / "t") { return match c {
+            = "\\" c:$("\"" / "\\" / "n" / "r" / "t") { match c {
                 "\"" => "\"",
                 "\\" => "\\",
                 "r" => "\r",
@@ -249,12 +249,12 @@ peg::parser! {
             }.to_string() }
 
         rule unescaped() -> String
-            = c:$([^ '\0'..='\x1F' | '\x22' |'\x5C']) { return c.to_string() }
+            = c:$([^ '\0'..='\x1F' | '\x22' |'\x5C']) { c.to_string() }
 
         rule DIGIT() -> String
-            = c:$(['0'..='9']) { return c.to_string() }
+            = c:$(['0'..='9']) { c.to_string() }
         rule HEXDIG() -> String
-            = c:$(['0'..='9' | 'a'..='f' | 'A'..='F']) { return c.to_string() }
+            = c:$(['0'..='9' | 'a'..='f' | 'A'..='F']) { c.to_string() }
 
         rule reserved_words()
             = "null" / "true" / "false" / "and" / "or" / "not" / "is" / "as" / "int" / "long" / "float" / "double" / "array" / "object" / "dynamic" / "PI" / "E" / "TAU"

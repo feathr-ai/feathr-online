@@ -5,7 +5,7 @@ mod function;
 mod lookup;
 mod operator;
 mod parser;
-mod pipeline;
+mod pipelines;
 mod transformation;
 mod value;
 
@@ -15,5 +15,5 @@ pub use dataset::{
 };
 pub use errors::PiperError;
 pub use lookup::dump_lookup_sources;
-pub use pipeline::Pipeline;
+pub use pipelines::Pipeline;
 pub use value::{Value, ValueType};

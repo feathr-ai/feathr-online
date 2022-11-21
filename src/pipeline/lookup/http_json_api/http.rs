@@ -64,7 +64,7 @@ pub struct HttpJsonApi {
 }
 
 impl HttpJsonApi {
-    async fn do_lookup(&self, k: &Value, fields: &Vec<String>) -> Result<Vec<Value>, PiperError> {
+    async fn do_lookup(&self, k: &Value, fields: &[String]) -> Result<Vec<Value>, PiperError> {
         // The key string will be used in url, header, and query param, but not in request body.
         let key = k
             .clone()
@@ -75,14 +75,14 @@ impl HttpJsonApi {
             Some(s) => format!(
                 "{}{}",
                 get_secret(Some(&self.url_base)).unwrap_or_default(),
-                s.to_owned().replace("$", &key)
+                s.to_owned().replace('$', &key)
             ),
             None => get_secret(Some(&self.url_base)).unwrap_or_default(),
         };
-        let m = self.method.clone().unwrap_or("GET".to_string());
+        let m = self.method.clone().unwrap_or_else(|| "GET".to_string());
         let method = Method::from_bytes(m.to_uppercase().as_bytes())
             .map_err(|_| PiperError::InvalidMethod(m))?;
-        let client = self.client.get_or_init(|| Client::new());
+        let client = self.client.get_or_init(Client::new);
         let req = self.auth.auth(client.request(method, url)).await?;
         let req = self.additional_headers.iter().fold(req, |req, (k, v)| {
             // Use `get_secret` in case there something like API key in the header.
@@ -108,7 +108,7 @@ impl HttpJsonApi {
                 Some(ref p) => {
                     let t = t.clone();
                     // We use original key value here, not the stringified one.
-                    let t = jsonpath_lib::replace_with(t, &p, &mut |_| Some(k.clone().into()))
+                    let t = jsonpath_lib::replace_with(t, p, &mut |_| Some(k.clone().into()))
                         .map_err(|e| PiperError::InvalidJsonPath(e.to_string()))?;
                     req.json(&t)
                 }
@@ -131,23 +131,21 @@ impl HttpJsonApi {
                 let path = self
                     .result_path
                     .get(f)
-                    .ok_or(PiperError::ColumnNotFound(f.clone()))?;
-                let v = jsonpath_lib::select(&resp, &path)
+                    .ok_or_else(|| PiperError::ColumnNotFound(f.clone()))?;
+                let v = jsonpath_lib::select(&resp, path)
                     .map_err(|e| PiperError::InvalidJsonPath(e.to_string()))?;
                 if v.is_empty() {
                     debug!("JSONPath selected no elements");
                     Ok(Value::Null)
+                } else if !self.result_is_array.contains(f) && v.len() == 1 {
+                    // The result should not be an array, and there is only one element.
+                    // Treat it as single value.
+                    Ok(v[0].clone().into())
                 } else {
-                    if !self.result_is_array.contains(f) && v.len() == 1 {
-                        // The result should not be an array, and there is only one element.
-                        // Treat it as single value.
-                        Ok(v[0].clone().into())
-                    } else {
-                        debug!("JSONPath selected array with {} elements", v.len());
-                        Ok(Value::Array(
-                            v.into_iter().map(|v| v.clone().into()).collect(),
-                        ))
-                    }
+                    debug!("JSONPath selected array with {} elements", v.len());
+                    Ok(Value::Array(
+                        v.into_iter().map(|v| v.clone().into()).collect(),
+                    ))
                 }
             })
             .collect()
@@ -157,7 +155,7 @@ impl HttpJsonApi {
 #[async_trait]
 impl LookupSource for HttpJsonApi {
     #[instrument(level = "trace", skip(self))]
-    async fn lookup(&self, k: &Value, fields: &Vec<String>) -> Vec<Value> {
+    async fn lookup(&self, k: &Value, fields: &[String]) -> Vec<Value> {
         let ret = self.do_lookup(k, fields).await;
         match ret {
             Ok(v) => v,
@@ -191,7 +189,7 @@ mod tests {
         "#;
         let source: HttpJsonApi = serde_json::from_str(src).unwrap();
         let result = source
-            .lookup(&Value::Int(107), &vec!["name".to_owned(), "id".to_owned()])
+            .lookup(&Value::Int(107), &["name".to_owned(), "id".to_owned()])
             .await;
         assert_eq!(result.len(), 2);
         assert_eq!(

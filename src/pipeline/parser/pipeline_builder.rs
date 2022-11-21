@@ -1,4 +1,4 @@
-use crate::pipeline::{Schema, pipeline::{Pipeline, Stage}, PiperError};
+use crate::pipeline::{Schema, pipelines::{Pipeline, Stage}, PiperError};
 
 use super::transformation_builder::TransformationBuilder;
 

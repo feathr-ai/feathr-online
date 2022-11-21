@@ -31,10 +31,10 @@ impl Operator for PositiveOperator {
         }
 
         match arguments.as_slice() {
-            [Value::Int(a)] => (a.clone()).into(),
-            [Value::Long(a)] => (a.clone()).into(),
-            [Value::Float(a)] => (a.clone()).into(),
-            [Value::Double(a)] => (a.clone()).into(),
+            [Value::Int(a)] => (*a).into(),
+            [Value::Long(a)] => (*a).into(),
+            [Value::Float(a)] => (*a).into(),
+            [Value::Double(a)] => (*a).into(),
 
             // All other combinations are invalid
             [a] => Value::Error(PiperError::InvalidOperandType(
@@ -82,10 +82,10 @@ impl Operator for NegativeOperator {
         }
 
         match arguments.as_slice() {
-            [Value::Int(a)] => (-a.clone()).into(),
-            [Value::Long(a)] => (-a.clone()).into(),
-            [Value::Float(a)] => (-a.clone()).into(),
-            [Value::Double(a)] => (-a.clone()).into(),
+            [Value::Int(a)] => (-*a).into(),
+            [Value::Long(a)] => (-*a).into(),
+            [Value::Float(a)] => (-*a).into(),
+            [Value::Double(a)] => (-*a).into(),
 
             [a] => Value::Error(PiperError::InvalidOperandType(
                 "-".to_string(),
@@ -130,7 +130,7 @@ impl Operator for NotOperator {
         }
 
         match arguments.as_slice() {
-            [Value::Bool(a)] => (!a.clone()).into(),
+            [Value::Bool(a)] => (!*a).into(),
             [a] => Value::Error(PiperError::InvalidOperandType(
                 "not".to_string(),
                 a.value_type(),

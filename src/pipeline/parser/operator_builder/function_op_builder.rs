@@ -1,7 +1,6 @@
-use crate::pipeline::{operator::*, PiperError, function::get_function};
+use crate::pipeline::{function::get_function, operator::*, PiperError};
 
 use super::OperatorBuilder;
-
 
 #[derive(Clone, Debug)]
 pub struct FunctionOperatorBuilder {
@@ -9,7 +8,7 @@ pub struct FunctionOperatorBuilder {
 }
 
 impl FunctionOperatorBuilder {
-    pub fn new<T>(name: T) -> Box<dyn OperatorBuilder>
+    pub fn create<T>(name: T) -> Box<dyn OperatorBuilder>
     where
         T: ToString,
     {
@@ -22,7 +21,10 @@ impl FunctionOperatorBuilder {
 impl OperatorBuilder for FunctionOperatorBuilder {
     fn build(&self) -> Result<Box<dyn Operator>, PiperError> {
         match get_function(&self.name) {
-            Some((name, function)) => Ok(Box::new(FunctionOperator { name, function })),
+            Some((name, function)) => Ok(Box::new(FunctionOperator {
+                name,
+                function,
+            })),
             None => Err(PiperError::UnknownFunction(self.name.clone())),
         }
     }
@@ -30,17 +32,23 @@ impl OperatorBuilder for FunctionOperatorBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::pipeline::{parser::{expression_builders::{OperatorExpressionBuilder, LiteralExpressionBuilder}, operator_builder::FunctionOperatorBuilder}, Schema};
+    use crate::pipeline::{
+        parser::{
+            expression_builders::{LiteralExpressionBuilder, OperatorExpressionBuilder},
+            operator_builder::FunctionOperatorBuilder,
+        },
+        Schema,
+    };
 
     #[test]
     fn test_build() {
         let schema = Schema::new();
-        let operator = FunctionOperatorBuilder::new("bucket");
-        let expression = OperatorExpressionBuilder::new(
+        let operator = FunctionOperatorBuilder::create("bucket");
+        let expression = OperatorExpressionBuilder::create(
             operator,
             vec![
-                LiteralExpressionBuilder::new(1),
-                LiteralExpressionBuilder::new(2),
+                LiteralExpressionBuilder::create(1),
+                LiteralExpressionBuilder::create(2),
             ],
         );
         let _ = expression.build(&schema).unwrap();

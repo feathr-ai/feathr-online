@@ -36,7 +36,7 @@ impl Column {
 /**
  * Schema is a collection of columns
  */
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Schema {
     pub columns: Vec<Column>,
 }
@@ -62,7 +62,7 @@ impl FromIterator<Column> for Schema {
 
 impl Schema {
     pub fn new() -> Self {
-        Schema { columns: vec![] }
+        Default::default()
     }
 
     pub fn get_column_types(&self) -> Vec<ValueType> {
@@ -119,7 +119,7 @@ pub trait DataSet: Sync + Send {
         ret.push('\n');
         ret.push_str("-".repeat(s.len()).as_str());
         ret.push('\n');
-        for row in self.next().await {
+        self.next().await.into_iter().for_each(|row| {
             ret.push_str(
                 row.iter()
                     .map(|v| v.dump())
@@ -128,7 +128,7 @@ pub trait DataSet: Sync + Send {
                     .as_str(),
             );
             ret.push('\n');
-        }
+        });
         ret
     }
 }
@@ -185,8 +185,8 @@ impl DataSet for ValidatedDataSet {
                         v
                     } else {
                         match self.mode {
-                            ValidationMode::Strict => v.cast_to(column_type).into(),
-                            ValidationMode::Lenient => v.convert_to(column_type).into(),
+                            ValidationMode::Strict => v.cast_to(column_type),
+                            ValidationMode::Lenient => v.convert_to(column_type),
                         }
                     }
                 })

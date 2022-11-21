@@ -8,7 +8,7 @@ pub struct BinaryOperatorBuilder {
 }
 
 impl BinaryOperatorBuilder {
-    pub fn new<T>(op: T) -> Box<dyn OperatorBuilder>
+    pub fn create<T>(op: T) -> Box<dyn OperatorBuilder>
     where
         T: ToString,
     {

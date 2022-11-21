@@ -1,5 +1,5 @@
 use crate::pipeline::{
-    parser::expression_builders::ExpressionBuilder, transformation::ProjectTransformation,
+    parser::expression_builders::ExpressionBuilder, transformation::{ProjectTransformation, Transformation}, Schema, PiperError,
 };
 
 use super::TransformationBuilder;
@@ -9,7 +9,7 @@ pub struct ProjectTransformationBuilder {
 }
 
 impl ProjectTransformationBuilder {
-    pub fn new(
+    pub fn create(
         columns: Vec<(String, Box<dyn ExpressionBuilder>)>,
     ) -> Box<dyn TransformationBuilder> {
         Box::new(Self { columns })
@@ -19,10 +19,10 @@ impl ProjectTransformationBuilder {
 impl TransformationBuilder for ProjectTransformationBuilder {
     fn build(
         &self,
-        input_schema: &crate::pipeline::Schema,
-    ) -> Result<Box<dyn crate::pipeline::transformation::Transformation>, crate::pipeline::PiperError>
+        input_schema: &Schema,
+    ) -> Result<Box<dyn Transformation>, PiperError>
     {
-        ProjectTransformation::new(
+        ProjectTransformation::create(
             input_schema,
             self.columns
                 .iter()

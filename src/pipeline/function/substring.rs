@@ -46,7 +46,7 @@ impl Function for SubstringFunction {
         }
         let length = match arguments
             .remove(2)
-            .convert_to(super::ValueType::Long)
+            .convert_to(ValueType::Long)
             .get_long()
         {
             Ok(string) => string,
@@ -54,7 +54,7 @@ impl Function for SubstringFunction {
         };
         let start = match arguments
             .remove(1)
-            .convert_to(super::ValueType::Long)
+            .convert_to(ValueType::Long)
             .get_long()
         {
             Ok(string) => string,

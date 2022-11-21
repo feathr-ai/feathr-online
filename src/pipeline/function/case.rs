@@ -11,8 +11,8 @@ impl Function for CaseFunction {
     fn get_output_type(
         &self,
         argument_types: &[ValueType],
-    ) -> Result<crate::pipeline::ValueType, crate::pipeline::PiperError> {
-        if argument_types.len() == 0 {
+    ) -> Result<ValueType, PiperError> {
+        if argument_types.is_empty() {
             return Err(PiperError::InvalidArgumentCount(1, 9));
         }
         let last_result_type = argument_types.last().unwrap();
@@ -33,7 +33,7 @@ impl Function for CaseFunction {
                 return Ok(ValueType::Dynamic);
             }
         }
-        Ok(last_result_type.clone())
+        Ok(*last_result_type)
     }
 
     #[instrument(level = "trace", skip(self))]

@@ -94,7 +94,7 @@ impl Expression for OperatorExpression {
                 return arg.clone();
             }
         }
-        self.operator.eval(args).into()
+        self.operator.eval(args)
     }
 
     fn dump(&self) -> String {

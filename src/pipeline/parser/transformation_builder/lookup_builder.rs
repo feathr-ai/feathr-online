@@ -18,7 +18,7 @@ impl LookupTransformationBuilder {
         fields: Vec<(String, Option<String>, ValueType)>,
         source: String,
         key: Box<dyn ExpressionBuilder>,
-    ) -> Box<dyn TransformationBuilder> {
+    ) -> Box<Self> {
         Box::new(Self {
             fields,
             source,
@@ -29,12 +29,12 @@ impl LookupTransformationBuilder {
 
 impl TransformationBuilder for LookupTransformationBuilder {
     fn build(&self, input_schema: &Schema) -> Result<Box<dyn Transformation>, PiperError> {
-        LookupTransformation::new(
+        LookupTransformation::create(
             input_schema,
             self.source.clone(),
             get_lookup_source(&self.source)?,
             self.fields.clone(),
             self.key.build(input_schema)?,
-        )
+        ) as Result<Box<dyn Transformation>, PiperError>
     }
 }

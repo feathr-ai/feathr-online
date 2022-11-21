@@ -17,7 +17,7 @@ use http_json_api::HttpJsonApi;
 
 #[async_trait]
 pub trait LookupSource: Sync + Send + Debug {
-    async fn lookup(&self, key: &Value, fields: &Vec<String>) -> Vec<Value>;
+    async fn lookup(&self, key: &Value, fields: &[String]) -> Vec<Value>;
 
     fn dump(&self) -> serde_json::Value;
 }
@@ -30,7 +30,7 @@ pub fn get_lookup_source(name: &str) -> Result<Arc<dyn LookupSource>, PiperError
         .get_or_init(|| init_lookup_source_repo(None))
         .get(name)
         .cloned()
-        .ok_or(PiperError::LookupSourceNotFound(name.to_string()))?;
+        .ok_or_else(|| PiperError::LookupSourceNotFound(name.to_string()))?;
     Ok(repo)
 }
 
@@ -80,7 +80,7 @@ enum LookupSourceType {
 
 #[async_trait]
 impl LookupSource for LookupSourceType {
-    async fn lookup(&self, key: &Value, fields: &Vec<String>) -> Vec<Value> {
+    async fn lookup(&self, key: &Value, fields: &[String]) -> Vec<Value> {
         match self {
             LookupSourceType::HttpJsonApi(s) => s.lookup(key, fields).await,
             LookupSourceType::FeathrOnlineStore(s) => s.lookup(key, fields).await,
@@ -117,7 +117,6 @@ where
             let re = Regex::new(r"^\$\{([^}]+)\}$").unwrap();
             match re.captures(p.as_ref()) {
                 Some(cap) => Ok(env::var(cap.get(1).unwrap().as_str())
-                    .map(|s| s.to_string())
                     .map_err(|_| {
                         PiperError::EnvVarNotSet(cap.get(1).unwrap().as_str().to_string())
                     })?),

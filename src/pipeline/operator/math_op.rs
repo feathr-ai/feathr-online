@@ -56,24 +56,24 @@ impl Operator for PlusOperator {
         match arguments.as_slice() {
             // Float + Non-Float always promote to Double
             [Value::Int(a), Value::Int(b)] => (a + b).into(),
-            [Value::Int(a), Value::Long(b)] => (a.clone() as i64 + b).into(),
-            [Value::Int(a), Value::Float(b)] => (a.clone() as f64 + b.clone() as f64).into(),
-            [Value::Int(a), Value::Double(b)] => (a.clone() as f64 + b).into(),
+            [Value::Int(a), Value::Long(b)] => (*a as i64 + b).into(),
+            [Value::Int(a), Value::Float(b)] => (*a as f64 + *b as f64).into(),
+            [Value::Int(a), Value::Double(b)] => (*a as f64 + b).into(),
 
-            [Value::Long(a), Value::Int(b)] => (a + b.clone() as i64).into(),
+            [Value::Long(a), Value::Int(b)] => (a + *b as i64).into(),
             [Value::Long(a), Value::Long(b)] => (a + b).into(),
-            [Value::Long(a), Value::Float(b)] => (a.clone() as f64 + b.clone() as f64).into(),
-            [Value::Long(a), Value::Double(b)] => (a.clone() as f64 + b).into(),
+            [Value::Long(a), Value::Float(b)] => (*a as f64 + *b as f64).into(),
+            [Value::Long(a), Value::Double(b)] => (*a as f64 + b).into(),
 
-            [Value::Float(a), Value::Int(b)] => (a.clone() as f64 + b.clone() as f64).into(),
-            [Value::Float(a), Value::Long(b)] => (a.clone() as f64 + b.clone() as f64).into(),
+            [Value::Float(a), Value::Int(b)] => (*a as f64 + *b as f64).into(),
+            [Value::Float(a), Value::Long(b)] => (*a as f64 + *b as f64).into(),
             [Value::Float(a), Value::Float(b)] => (a + b).into(),
-            [Value::Float(a), Value::Double(b)] => (a.clone() as f64 + b.clone() as f64).into(),
+            [Value::Float(a), Value::Double(b)] => (*a as f64 + *b as f64).into(),
 
-            [Value::Double(a), Value::Int(b)] => (a + b.clone() as f64).into(),
-            [Value::Double(a), Value::Long(b)] => (a + b.clone() as f64).into(),
-            [Value::Double(a), Value::Float(b)] => (a + b.clone() as f64).into(),
-            [Value::Double(a), Value::Double(b)] => (a + b.clone() as f64).into(),
+            [Value::Double(a), Value::Int(b)] => (a + *b as f64).into(),
+            [Value::Double(a), Value::Long(b)] => (a + *b as f64).into(),
+            [Value::Double(a), Value::Float(b)] => (a + *b as f64).into(),
+            [Value::Double(a), Value::Double(b)] => (a + *b as f64).into(),
 
             // String concat
             [Value::String(a), Value::String(b)] => (format!("{}{}", a, b)).into(),

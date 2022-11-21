@@ -7,7 +7,7 @@ pub struct TakeTransformationBuilder {
 }
 
 impl TakeTransformationBuilder {
-    pub fn new(count: usize) -> Box<dyn TransformationBuilder> {
+    pub fn create(count: usize) -> Box<dyn TransformationBuilder> {
         Box::new(Self { count })
     }
 }

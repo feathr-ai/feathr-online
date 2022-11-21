@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use async_trait::async_trait;
 
-use crate::pipeline::{DataSet, PiperError, Value};
+use crate::pipeline::{DataSet, PiperError, Schema, Value};
 
 use super::Transformation;
 
@@ -14,7 +14,7 @@ pub struct ProjectRemoveTransformation {
 }
 
 impl ProjectRemoveTransformation {
-    pub fn new(
+    pub fn create(
         input_schema: &crate::pipeline::Schema,
         columns: Vec<String>,
     ) -> Result<Box<dyn Transformation>, PiperError> {
@@ -40,17 +40,11 @@ impl ProjectRemoveTransformation {
 }
 
 impl Transformation for ProjectRemoveTransformation {
-    fn get_output_schema(
-        &self,
-        _input_schema: &crate::pipeline::Schema,
-    ) -> crate::pipeline::Schema {
+    fn get_output_schema(&self, _input_schema: &Schema) -> Schema {
         self.output_schema.clone()
     }
 
-    fn transform(
-        &self,
-        dataset: Box<dyn crate::pipeline::DataSet>,
-    ) -> Result<Box<dyn crate::pipeline::DataSet>, crate::pipeline::PiperError> {
+    fn transform(&self, dataset: Box<dyn DataSet>) -> Result<Box<dyn DataSet>, PiperError> {
         Ok(Box::new(ProjectRemovedDataSet {
             input: dataset,
             output_schema: self.output_schema.clone(),
@@ -64,27 +58,24 @@ impl Transformation for ProjectRemoveTransformation {
 }
 
 struct ProjectRemovedDataSet {
-    output_schema: crate::pipeline::Schema,
-    input: Box<dyn crate::pipeline::DataSet>,
+    output_schema: Schema,
+    input: Box<dyn DataSet>,
     remove_set: HashSet<usize>,
 }
 
 #[async_trait]
 impl DataSet for ProjectRemovedDataSet {
-    fn schema(&self) -> &crate::pipeline::Schema {
+    fn schema(&self) -> &Schema {
         &self.output_schema
     }
 
     async fn next(&mut self) -> Option<Vec<Value>> {
-        match self.input.next().await {
-            Some(row) => Some(
-                row.into_iter()
-                    .enumerate()
-                    .filter(|(i, _)| !self.remove_set.contains(i))
-                    .map(|(_, v)| v)
-                    .collect(),
-            ),
-            None => None,
-        }
+        self.input.next().await.map(|row| {
+            row.into_iter()
+                .enumerate()
+                .filter(|(i, _)| !self.remove_set.contains(i))
+                .map(|(_, v)| v)
+                .collect()
+        })
     }
 }

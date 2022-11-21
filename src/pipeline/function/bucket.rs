@@ -14,7 +14,7 @@ impl Function for BucketFunction {
     fn get_output_type(
         &self,
         argument_types: &[ValueType],
-    ) -> Result<crate::pipeline::ValueType, crate::pipeline::PiperError> {
+    ) -> Result<ValueType, PiperError> {
         if argument_types.len() < 2 {
             return Err(PiperError::InvalidArgumentCount(2, argument_types.len()));
         }
@@ -27,11 +27,11 @@ impl Function for BucketFunction {
                 return Err(PiperError::InvalidArgumentType(
                     "bucket".to_string(),
                     idx,
-                    pivot_type.clone(),
+                    *pivot_type,
                 ));
             }
         }
-        Ok(crate::pipeline::ValueType::Long)
+        Ok(ValueType::Long)
     }
 
     #[instrument(level = "trace", skip(self))]

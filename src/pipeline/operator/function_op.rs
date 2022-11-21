@@ -6,7 +6,7 @@ use super::Operator;
 #[derive(Clone, Debug)]
 pub struct FunctionOperator {
     pub name: &'static str,
-    pub function: &'static Box<dyn Function>,
+    pub function: &'static dyn Function,
 }
 
 impl Operator for FunctionOperator {

@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use async_trait::async_trait;
 use rust_heap::BoundedBinaryHeap;
 
-use crate::pipeline::{expression::Expression, DataSet, Schema, Value};
+use crate::pipeline::{expression::Expression, DataSet, Schema, Value, PiperError};
 
 use super::Transformation;
 
@@ -45,7 +45,7 @@ impl TopTransformation {
         criteria: Box<dyn Expression>,
         sort_order: Option<SortOrder>,
         null_pos: Option<NullPos>,
-    ) -> Box<dyn Transformation> {
+    ) -> Box<Self> {
         Box::new(TopTransformation {
             count,
             criteria,
@@ -56,14 +56,14 @@ impl TopTransformation {
 }
 
 impl Transformation for TopTransformation {
-    fn get_output_schema(&self, input_schema: &crate::pipeline::Schema) -> crate::pipeline::Schema {
+    fn get_output_schema(&self, input_schema: &Schema) -> Schema {
         input_schema.clone()
     }
 
     fn transform(
         &self,
-        dataset: Box<dyn crate::pipeline::DataSet>,
-    ) -> Result<Box<dyn crate::pipeline::DataSet>, crate::pipeline::PiperError> {
+        dataset: Box<dyn DataSet>,
+    ) -> Result<Box<dyn DataSet>, PiperError> {
         Ok(Box::new(TopDataSet {
             input: dataset,
             count: self.count,
@@ -92,7 +92,7 @@ impl Transformation for TopTransformation {
 }
 
 struct TopDataSet {
-    input: Box<dyn crate::pipeline::DataSet>,
+    input: Box<dyn DataSet>,
     count: usize,
     criteria: Box<dyn Expression>,
     sort_order: SortOrder,
@@ -193,7 +193,7 @@ impl TopDataSet {
 #[cfg(test)]
 mod tests {
     use crate::pipeline::{
-        expression::ColumnExpression, Column, DataSetCreator, Schema, Value, ValueType,
+        expression::ColumnExpression, Column, DataSetCreator, Schema, Value, ValueType, transformation::Transformation,
     };
 
     use super::{NullPos, SortOrder, TopTransformation};
@@ -229,7 +229,7 @@ mod tests {
             Some(NullPos::First),
         );
         let (_, rows) = transform.transform(dataset).unwrap().eval().await;
-        let rows = rows.into_iter().map(|x| x).collect::<Vec<_>>();
+        let rows = rows.into_iter().collect::<Vec<_>>();
         println!("{:?}", rows);
         assert_eq!(rows.len(), 5);
         assert_eq!(rows[0][0], Value::Int(9));

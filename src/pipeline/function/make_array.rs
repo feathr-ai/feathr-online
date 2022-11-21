@@ -1,4 +1,4 @@
-use crate::pipeline::{Value, ValueType};
+use crate::pipeline::{PiperError, Value, ValueType};
 
 use super::Function;
 
@@ -8,12 +8,12 @@ pub struct MakeArray;
 impl Function for MakeArray {
     fn get_output_type(
         &self,
-        _argument_types: &[crate::pipeline::ValueType],
-    ) -> Result<crate::pipeline::ValueType, crate::pipeline::PiperError> {
+        _argument_types: &[ValueType],
+    ) -> Result<ValueType, PiperError> {
         Ok(ValueType::Array)
     }
 
-    fn eval(&self, arguments: Vec<crate::pipeline::Value>) -> crate::pipeline::Value {
+    fn eval(&self, arguments: Vec<Value>) -> Value {
         Value::Array(arguments)
     }
 }

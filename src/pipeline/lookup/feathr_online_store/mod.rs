@@ -77,7 +77,7 @@ impl RedisConnectionPool {
 
 impl FeathrOnlineStore {
     #[instrument(level = "trace", skip(self))]
-    async fn do_lookup(&self, key: &Value, fields: &Vec<String>) -> Result<Vec<Value>, PiperError> {
+    async fn do_lookup(&self, key: &Value, fields: &[String]) -> Result<Vec<Value>, PiperError> {
         let client = self
             .client
             .get_or_try_init(|| async {
@@ -104,9 +104,11 @@ impl FeathrOnlineStore {
         }
 
         debug!("Executing HMGET command");
+        // TODO: Handle errors
         let resp: Vec<String> = cmd.query_async(&mut *conn).await.log().unwrap();
         // .unwrap_or(vec![Default::default(); fields.len()]);
-        let features = resp
+        
+        let ret: Vec<_> = resp
             .into_iter()
             .map(|s| {
                 base64::decode(s)
@@ -117,9 +119,6 @@ impl FeathrOnlineStore {
                             .map_err(|e| PiperError::ProtobufError(e.to_string()))
                     })
             })
-            .collect::<Vec<_>>();
-        let ret: Vec<_> = features
-            .into_iter()
             .map(|f| f.map(|f| feature_to_value(f).unwrap_or_default()))
             .map(|f| f.unwrap_or_default())
             .collect();
@@ -129,7 +128,7 @@ impl FeathrOnlineStore {
 
 #[async_trait]
 impl LookupSource for FeathrOnlineStore {
-    async fn lookup(&self, key: &Value, fields: &Vec<String>) -> Vec<Value> {
+    async fn lookup(&self, key: &Value, fields: &[String]) -> Vec<Value> {
         match self.do_lookup(key, fields).await {
             Ok(v) => v,
             Err(e) => {

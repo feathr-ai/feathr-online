@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 
-use crate::pipeline::{Column, DataSet, PiperError, Value};
+use crate::pipeline::{Column, DataSet, PiperError, Schema, Value};
 
 use super::Transformation;
 
@@ -13,7 +13,7 @@ pub struct ProjectRenameTransformation {
 }
 
 impl ProjectRenameTransformation {
-    pub fn new(
+    pub fn create(
         input_schema: &crate::pipeline::Schema,
         renames: HashMap<String, String>,
     ) -> Result<Box<dyn Transformation>, PiperError> {
@@ -34,15 +34,15 @@ impl ProjectRenameTransformation {
 impl Transformation for ProjectRenameTransformation {
     fn get_output_schema(
         &self,
-        _input_schema: &crate::pipeline::Schema,
+        _input_schema: &Schema,
     ) -> crate::pipeline::Schema {
         self.output_schema.clone()
     }
 
     fn transform(
         &self,
-        dataset: Box<dyn crate::pipeline::DataSet>,
-    ) -> Result<Box<dyn crate::pipeline::DataSet>, PiperError> {
+        dataset: Box<dyn DataSet>,
+    ) -> Result<Box<dyn DataSet>, PiperError> {
         Ok(Box::new(ProjectRenamedDataSet {
             input: dataset,
             output_schema: self.output_schema.clone(),
@@ -62,13 +62,13 @@ impl Transformation for ProjectRenameTransformation {
 }
 
 struct ProjectRenamedDataSet {
-    output_schema: crate::pipeline::Schema,
-    input: Box<dyn crate::pipeline::DataSet>,
+    output_schema: Schema,
+    input: Box<dyn DataSet>,
 }
 
 #[async_trait]
 impl DataSet for ProjectRenamedDataSet {
-    fn schema(&self) -> &crate::pipeline::Schema {
+    fn schema(&self) -> &Schema {
         &self.output_schema
     }
     async fn next(&mut self) -> Option<Vec<Value>> {

@@ -10,7 +10,7 @@ impl Function for ToJsonStringFunction {
         if argument_types.len() != 1 {
             return Err(PiperError::InvalidArgumentCount(1, argument_types.len()));
         }
-        return Ok(ValueType::String);
+        Ok(ValueType::String)
     }
 
     fn eval(&self, mut arguments: Vec<Value>) -> Value {

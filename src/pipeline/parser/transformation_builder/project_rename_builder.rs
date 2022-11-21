@@ -9,7 +9,7 @@ pub struct ProjectRenameTransformationBuilder {
 }
 
 impl ProjectRenameTransformationBuilder {
-    pub fn new(renames: Vec<(String, String)>) -> Box<dyn TransformationBuilder> {
+    pub fn create(renames: Vec<(String, String)>) -> Box<dyn TransformationBuilder> {
         Box::new(Self {
             renames: renames.into_iter().collect(),
         })
@@ -18,6 +18,6 @@ impl ProjectRenameTransformationBuilder {
 
 impl TransformationBuilder for ProjectRenameTransformationBuilder {
     fn build(&self, input_schema: &Schema) -> Result<Box<dyn Transformation>, PiperError> {
-        Ok(ProjectRenameTransformation::new(input_schema, self.renames.clone())?)
+        ProjectRenameTransformation::create(input_schema, self.renames.clone())
     }
 }

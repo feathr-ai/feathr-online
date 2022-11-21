@@ -8,7 +8,7 @@ pub struct WhereTransformationBuilder {
 }
 
 impl WhereTransformationBuilder {
-    pub fn new(expression: Box<dyn ExpressionBuilder>) -> Box<dyn TransformationBuilder> {
+    pub fn create(expression: Box<dyn ExpressionBuilder>) -> Box<dyn TransformationBuilder> {
         Box::new(Self { expression })
     }
 }

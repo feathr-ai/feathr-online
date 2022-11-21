@@ -15,7 +15,7 @@ pub struct ExplodeTransformation {
 }
 
 impl ExplodeTransformation {
-    pub fn new(
+    pub fn create(
         input_schema: &Schema,
         column_idx: usize,
         exploded_type: ValueType,
@@ -115,7 +115,7 @@ impl ExplodedDataSet {
             );
             Some(row)
         } else {
-            return None;
+            None
         }
     }
 }

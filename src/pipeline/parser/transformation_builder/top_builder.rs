@@ -13,7 +13,7 @@ pub struct TopTransformationBuilder {
 }
 
 impl TopTransformationBuilder {
-    pub fn new(
+    pub fn create(
         count: usize,
         criteria: Box<dyn ExpressionBuilder>,
         sort_order: Option<SortOrder>,

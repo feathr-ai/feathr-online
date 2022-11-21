@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::pipeline::{expression::Expression, Column, DataSet, PiperError, Value};
+use crate::pipeline::{expression::Expression, Column, DataSet, PiperError, Value, Schema};
 
 use super::Transformation;
 
@@ -12,8 +12,8 @@ pub struct ProjectTransformation {
 }
 
 impl ProjectTransformation {
-    pub fn new(
-        input_schema: &crate::pipeline::Schema,
+    pub fn create(
+        input_schema: &Schema,
         columns: Vec<(String, Box<dyn Expression>)>,
     ) -> Result<Box<dyn Transformation>, PiperError> {
         let column_names = columns.iter().map(|(c, _)| c.clone()).collect();
@@ -38,11 +38,9 @@ impl ProjectTransformation {
                 }) as Box<dyn Expression>
             })
             .collect::<Vec<_>>();
-        let addition_col_expr = columns
+        col_expr.extend(columns
             .iter()
-            .map(|(_, exp)| exp.clone())
-            .collect::<Vec<_>>();
-        col_expr.extend(addition_col_expr.into_iter());
+            .map(|(_, exp)| exp.clone()));
         let output_schema = input_schema
             .columns
             .clone()
@@ -60,15 +58,15 @@ impl ProjectTransformation {
 impl Transformation for ProjectTransformation {
     fn get_output_schema(
         &self,
-        _input_schema: &crate::pipeline::Schema,
-    ) -> crate::pipeline::Schema {
+        _input_schema: &Schema,
+    ) -> Schema {
         self.output_schema.clone()
     }
 
     fn transform(
         &self,
-        dataset: Box<dyn crate::pipeline::DataSet>,
-    ) -> Result<Box<dyn crate::pipeline::DataSet>, crate::pipeline::PiperError> {
+        dataset: Box<dyn DataSet>,
+    ) -> Result<Box<dyn DataSet>, PiperError> {
         Ok(Box::new(ProjectedDataSet {
             input_dataset: dataset,
             output_schema: self.output_schema.clone(),
@@ -94,14 +92,14 @@ impl Transformation for ProjectTransformation {
 }
 
 struct ProjectedDataSet {
-    input_dataset: Box<dyn crate::pipeline::DataSet>,
-    output_schema: crate::pipeline::Schema,
+    input_dataset: Box<dyn DataSet>,
+    output_schema: Schema,
     columns: Vec<Box<dyn Expression>>,
 }
 
 #[async_trait]
 impl DataSet for ProjectedDataSet {
-    fn schema(&self) -> &crate::pipeline::Schema {
+    fn schema(&self) -> &Schema {
         &self.output_schema
     }
 

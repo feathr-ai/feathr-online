@@ -19,7 +19,7 @@ pub struct LookupTransformation {
 }
 
 impl LookupTransformation {
-    pub fn new(
+    pub fn create(
         input_schema: &Schema,
         lookup_source_name: String,
         lookup_source: Arc<dyn LookupSource>,
@@ -38,13 +38,13 @@ impl LookupTransformation {
             .clone()
             .columns
             .into_iter()
-            .chain(lookup_fields.clone().into_iter().map(|(name, _, ty)| {
+            .chain(lookup_fields.into_iter().map(|(name, _, ty)| {
                 Column::new(rename_map.get(&name).unwrap_or(&name).clone(), ty)
             }))
             .collect();
         Ok(Box::new(Self {
             lookup_source_name,
-            lookup_source: lookup_source.into(),
+            lookup_source,
             key,
             lookup_fields: lookup_schema,
             output_schema,
@@ -59,8 +59,8 @@ impl Transformation for LookupTransformation {
 
     fn transform(
         &self,
-        dataset: Box<dyn crate::pipeline::DataSet>,
-    ) -> Result<Box<dyn crate::pipeline::DataSet>, crate::pipeline::PiperError> {
+        dataset: Box<dyn DataSet>,
+    ) -> Result<Box<dyn DataSet>, PiperError> {
         let lookup_field_names = self
             .lookup_fields
             .columns

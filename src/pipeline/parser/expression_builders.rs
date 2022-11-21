@@ -17,7 +17,7 @@ pub struct ColumnExpressionBuilder {
 }
 
 impl ColumnExpressionBuilder {
-    pub fn new<T>(column_name: T) -> Box<dyn ExpressionBuilder>
+    pub fn create<T>(column_name: T) -> Box<dyn ExpressionBuilder>
     where
         T: ToString,
     {
@@ -45,7 +45,7 @@ pub struct LiteralExpressionBuilder {
 }
 
 impl LiteralExpressionBuilder {
-    pub fn new<T>(value: T) -> Box<dyn ExpressionBuilder>
+    pub fn create<T>(value: T) -> Box<dyn ExpressionBuilder>
     where
         Value: From<T>,
     {
@@ -70,7 +70,7 @@ pub struct OperatorExpressionBuilder {
 }
 
 impl OperatorExpressionBuilder {
-    pub fn new(
+    pub fn create(
         operator: Box<dyn OperatorBuilder>,
         arguments: Vec<Box<dyn ExpressionBuilder>>,
     ) -> Box<dyn ExpressionBuilder> {

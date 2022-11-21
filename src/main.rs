@@ -164,9 +164,9 @@ async fn process(req: Json<Request>) -> poem::Result<Json<Response>> {
 async fn process_single_request(req: SingleRequest) -> Result<SingleResponse, PiperError> {
     let pipeline = PIPELINES
         .get()
-        .ok_or(PiperError::PipelineNotFound(req.pipeline.clone()))?
+        .ok_or_else(|| PiperError::PipelineNotFound(req.pipeline.clone()))?
         .get(&req.pipeline)
-        .ok_or(PiperError::PipelineNotFound(req.pipeline.clone()))?;
+        .ok_or_else(|| PiperError::PipelineNotFound(req.pipeline.clone()))?;
     debug!("Processing request to pipeline {}", pipeline.name);
 
     let schema = &pipeline.input_schema;

@@ -1,7 +1,7 @@
 mod expression_builders;
 mod operator_builder;
-mod parser;
+mod dsl_parser;
 mod transformation_builder;
 mod pipeline_builder;
 
-pub use parser::{parse_pipeline, parse_script};
+pub use dsl_parser::{parse_pipeline, parse_script};

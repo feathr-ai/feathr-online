@@ -37,11 +37,11 @@ pub trait Function: Send + Sync + Debug {
 
 static FUNCTION_REPO: OnceCell<HashMap<String, Box<dyn Function + 'static>>> = OnceCell::new();
 
-pub fn get_function(name: &str) -> Option<(&'static str, &'static Box<dyn Function>)> {
+pub fn get_function(name: &str) -> Option<(&'static str, &'static dyn Function)> {
     FUNCTION_REPO
-        .get_or_init(|| init_built_in_functions())
+        .get_or_init(init_built_in_functions)
         .get_key_value(name)
-        .map(|(name, f)| (name.as_str(), f))
+        .map(|(name, f)| (name.as_str(), f.as_ref()))
 }
 
 fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {

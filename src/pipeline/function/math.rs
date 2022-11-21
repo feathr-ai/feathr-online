@@ -146,10 +146,10 @@ impl Function for Abs {
             return Value::Error(PiperError::InvalidArgumentCount(1, arguments.len()));
         }
         match arguments[0] {
-            Value::Int(v) => Value::Int(v.abs()).into(),
-            Value::Long(v) => Value::Long(v.abs()).into(),
-            Value::Float(v) => Value::Float(v.abs()).into(),
-            Value::Double(v) => Value::Double(v.abs()).into(),
+            Value::Int(v) => Value::Int(v.abs()),
+            Value::Long(v) => Value::Long(v.abs()),
+            Value::Float(v) => Value::Float(v.abs()),
+            Value::Double(v) => Value::Double(v.abs()),
             _ => unreachable!(),
         }
     }

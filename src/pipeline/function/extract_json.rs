@@ -92,7 +92,7 @@ mod tests {
         }"#;
         let v: serde_json::Value = serde_json::from_str(s).unwrap();
         let path = "$.a[*].c";
-        let ret = jsonpath_lib::select(&v, &path).unwrap();
+        let ret = jsonpath_lib::select(&v, path).unwrap();
         println!("{:?}", ret);
     }
 }

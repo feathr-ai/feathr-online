@@ -35,10 +35,7 @@ impl ValueType {
      * True if the value type is numeric, including int, long, float, and double.
      */
     pub fn is_numeric(&self) -> bool {
-        match self {
-            ValueType::Int | ValueType::Long | ValueType::Float | ValueType::Double => true,
-            _ => false,
-        }
+        matches!(self, ValueType::Int | ValueType::Long | ValueType::Float | ValueType::Double)
     }
 }
 
@@ -95,9 +92,9 @@ impl PartialEq for Value {
     }
 }
 
-impl Into<serde_json::Value> for Value {
-    fn into(self) -> serde_json::Value {
-        match self {
+impl From<Value> for serde_json::Value {
+    fn from(val: Value) -> Self {
+        match val {
             Value::Null => serde_json::Value::Null,
             Value::Bool(v) => serde_json::Value::Bool(v),
             Value::Int(v) => serde_json::Value::Number(v.into()),
@@ -110,6 +107,15 @@ impl Into<serde_json::Value> for Value {
                 serde_json::Value::Object(v.into_iter().map(|(k, v)| (k, v.into())).collect())
             }
             Value::Error(e) => serde_json::Value::Null,
+        }
+    }
+}
+
+impl From<Value> for Result<Value, PiperError> {
+    fn from(val: Value) -> Self {
+        match val {
+            Value::Error(e) => Err(e),
+            _ => Ok(val),
         }
     }
 }
@@ -269,6 +275,120 @@ where
     }
 }
 
+impl TryInto<bool> for Value {
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<bool, PiperError> {
+        self.get_bool()
+    }
+}
+
+impl TryInto<i32> for Value {
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<i32, PiperError> {
+        self.get_int()
+    }
+}
+
+impl TryInto<u32> for Value {
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<u32, PiperError> {
+        self.get_int().map(|v| v as u32)
+    }
+}
+
+impl TryInto<i64> for Value {
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<i64, PiperError> {
+        self.get_long()
+    }
+}
+
+impl TryInto<u64> for Value {
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<u64, PiperError> {
+        self.get_long().map(|v| v as u64)
+    }
+}
+
+impl TryInto<isize> for Value {
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<isize, PiperError> {
+        self.get_long().map(|v| v as isize)
+    }
+}
+
+impl TryInto<usize> for Value {
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<usize, PiperError> {
+        self.get_long().map(|v| v as usize)
+    }
+}
+
+impl TryInto<f32> for Value {
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<f32, PiperError> {
+        self.get_float()
+    }
+}
+
+impl TryInto<f64> for Value {
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<f64, PiperError> {
+        self.get_double()
+    }
+}
+
+impl TryInto<String> for Value {
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<String, PiperError> {
+        self.get_string().map(|s| s.to_string())
+    }
+}
+
+impl<T> TryInto<Vec<T>> for Value
+where
+    T: TryFrom<Value, Error = PiperError>,
+{
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<Vec<T>, PiperError> {
+        match self.get_array() {
+            Ok(array) => array
+                .iter()
+                .map(|v| v.clone().try_into())
+                .collect::<Result<Vec<T>, PiperError>>(),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+impl<T> TryInto<HashMap<String, T>> for Value
+where
+    T: TryFrom<Value, Error = PiperError>,
+{
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<HashMap<String, T>, PiperError> {
+        match self.get_object() {
+            Ok(array) => array
+                .iter()
+                .map(|(k, v)| v.clone().try_into().map(|v| (k.clone(), v)))
+                .collect::<Result<HashMap<String, T>, PiperError>>(),
+            Err(e) => Err(e),
+        }
+    }
+}
+
 impl Value {
     /**
      * Get the type of the value
@@ -292,20 +412,14 @@ impl Value {
      * True if the value is null
      */
     pub fn is_null(&self) -> bool {
-        match self {
-            Value::Null => true,
-            _ => false,
-        }
+        matches!(self, Value::Null)
     }
 
     /**
      * True if the value is null
      */
     pub fn is_error(&self) -> bool {
-        match self {
-            Value::Error(_) => true,
-            _ => false,
-        }
+        matches!(self, Value::Error(_))
     }
 
     /**
@@ -463,10 +577,10 @@ impl Value {
                 if self.is_null() {
                     Value::Null
                 } else {
-                    return Value::Error(PiperError::InvalidTypeCast(
+                    Value::Error(PiperError::InvalidTypeCast(
                         self.value_type(),
                         value_type,
-                    ));
+                    ))
                 }
             }
             Value::Bool(v) => match value_type {
@@ -533,8 +647,8 @@ impl Value {
             Value::Null => false.into(),
             Value::Bool(v) => match value_type {
                 ValueType::Bool => self.clone(),
-                ValueType::Int => (if v { 1i32 } else { 0i32 }).into(),
-                ValueType::Long => (if v { 1i64 } else { 0i64 }).into(),
+                ValueType::Int => i32::from(v).into(),
+                ValueType::Long => i64::from(v).into(),
                 ValueType::Float => (if v { 1f32 } else { 0f32 }).into(),
                 ValueType::Double => (if v { 1f64 } else { 0f64 }).into(),
                 ValueType::String => (if v { "true" } else { "false" }).into(),
@@ -616,16 +730,16 @@ impl Value {
                 )),
             },
             Value::Array(v) => match value_type {
-                ValueType::Bool => (v.len() > 0).into(),
-                ValueType::Array => v.clone().into(),
+                ValueType::Bool => (!v.is_empty()).into(),
+                ValueType::Array => v.into(),
                 _ => Value::Error(PiperError::InvalidTypeConversion(
                     ValueType::Array,
                     value_type,
                 )),
             },
             Value::Object(v) => match value_type {
-                ValueType::Bool => (v.len() > 0).into(),
-                ValueType::Object => v.clone().into(),
+                ValueType::Bool => (!v.is_empty()).into(),
+                ValueType::Object => v.into(),
                 _ => Value::Error(PiperError::InvalidTypeConversion(
                     ValueType::Object,
                     value_type,
@@ -653,7 +767,7 @@ impl Value {
                     }
                     s.push_str(&e.dump());
                 }
-                s.push_str("]");
+                s.push(']');
                 s
             }
             Value::Object(v) => {
@@ -664,7 +778,7 @@ impl Value {
                     }
                     s.push_str(&format!("{}: {}", k, e.dump()));
                 }
-                s.push_str("}");
+                s.push('}');
                 s
             }
             Value::Error(e) => format!("{:?}", e),
@@ -727,10 +841,7 @@ mod tests {
                 .unwrap(),
             1f64
         );
-        assert_eq!(
-            v.clone().convert_to(ValueType::Bool).get_bool().unwrap(),
-            true
-        );
+        assert!(v.clone().convert_to(ValueType::Bool).get_bool().unwrap());
         assert_eq!(
             v.clone()
                 .convert_to(ValueType::String)
@@ -739,6 +850,6 @@ mod tests {
             "1"
         );
         assert!(v.clone().convert_to(ValueType::Array).is_error());
-        assert!(v.clone().convert_to(ValueType::Object).is_error());
+        assert!(v.convert_to(ValueType::Object).is_error());
     }
 }
