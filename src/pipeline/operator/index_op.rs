@@ -23,19 +23,19 @@ impl Operator for ArrayIndexOperator {
         Ok(ValueType::Dynamic)
     }
 
-    fn eval(&self, mut arguments: Vec<Value>) -> Result<Value, PiperError> {
+    fn eval(&self, mut arguments: Vec<Value>) -> Value {
         if arguments.len() != 2 {
-            return Err(PiperError::ArityError("[]".to_string(), arguments.len()));
+            return Value::Error(PiperError::ArityError("[]".to_string(), arguments.len()));
         }
 
         let b = arguments.remove(1);
         let a = arguments.remove(0);
         match [a, b] {
-            [Value::Array(mut a), Value::Int(b)] => Ok(a.remove(b as usize)),
-            [Value::Array(mut a), Value::Long(b)] => Ok(a.remove(b as usize)),
+            [Value::Array(mut a), Value::Int(b)] => a.remove(b as usize),
+            [Value::Array(mut a), Value::Long(b)] => a.remove(b as usize),
 
             // All other combinations are invalid
-            _ => Err(PiperError::TypeMismatch(
+            _ => Value::Error(PiperError::TypeMismatch(
                 "[]".to_string(),
                 arguments[0].value_type(),
                 arguments[1].value_type(),
@@ -76,20 +76,18 @@ impl Operator for MapIndexOperator {
         Ok(ValueType::Dynamic)
     }
 
-    fn eval(&self, mut arguments: Vec<Value>) -> Result<Value, PiperError> {
+    fn eval(&self, mut arguments: Vec<Value>) -> Value {
         if arguments.len() != 2 {
-            return Err(PiperError::ArityError(".".to_string(), arguments.len()));
+            return Value::Error(PiperError::ArityError(".".to_string(), arguments.len()));
         }
 
         let b = arguments.remove(1);
         let a = arguments.remove(0);
         match [a, b] {
-            [Value::Object(mut a), Value::String(b)] => {
-                Ok(a.remove(b.as_ref()).unwrap_or(Value::Null))
-            }
+            [Value::Object(mut a), Value::String(b)] => a.remove(b.as_ref()).unwrap_or(Value::Null),
 
             // All other combinations are invalid
-            _ => Err(PiperError::TypeMismatch(
+            _ => Value::Error(PiperError::TypeMismatch(
                 ".".to_string(),
                 arguments[0].value_type(),
                 arguments[1].value_type(),

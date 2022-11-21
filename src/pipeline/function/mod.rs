@@ -32,7 +32,7 @@ use type_conv::TypeConverterFunction;
 pub trait Function: Send + Sync + Debug {
     fn get_output_type(&self, argument_types: &[ValueType]) -> Result<ValueType, PiperError>;
 
-    fn eval(&self, arguments: Vec<Value>) -> Result<Value, PiperError>;
+    fn eval(&self, arguments: Vec<Value>) -> Value;
 }
 
 static FUNCTION_REPO: OnceCell<HashMap<String, Box<dyn Function + 'static>>> = OnceCell::new();

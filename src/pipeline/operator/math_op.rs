@@ -1,7 +1,6 @@
-use crate::pipeline::{ValueType, PiperError, Value};
+use crate::pipeline::{PiperError, Value, ValueType};
 
 use super::Operator;
-
 
 #[derive(Clone, Debug)]
 pub struct PlusOperator;
@@ -49,12 +48,12 @@ impl Operator for PlusOperator {
         }
     }
 
-    fn eval(&self, arguments: Vec<Value>) -> Result<Value, PiperError> {
+    fn eval(&self, arguments: Vec<Value>) -> Value {
         if arguments.len() != 2 {
-            return Err(PiperError::ArityError("+".to_string(), arguments.len()));
+            return Value::Error(PiperError::ArityError("+".to_string(), arguments.len()));
         }
 
-        Ok(match arguments.as_slice() {
+        match arguments.as_slice() {
             // Float + Non-Float always promote to Double
             [Value::Int(a), Value::Int(b)] => (a + b).into(),
             [Value::Int(a), Value::Long(b)] => (a.clone() as i64 + b).into(),
@@ -80,15 +79,15 @@ impl Operator for PlusOperator {
             [Value::String(a), Value::String(b)] => (format!("{}{}", a, b)).into(),
 
             // All other combinations are invalid
-            [a, b] => Err(PiperError::TypeMismatch(
+            [a, b] => Value::Error(PiperError::TypeMismatch(
                 "+".to_string(),
                 a.value_type(),
                 b.value_type(),
-            ))?,
+            )),
 
             // Shouldn't reach here
             _ => unreachable!("Unknown error."),
-        })
+        }
     }
 
     fn dump(&self, arguments: Vec<String>) -> String {
@@ -139,12 +138,12 @@ macro_rules! binary_math_op {
                 }
             }
 
-            fn eval(&self, arguments: Vec<Value>) -> Result<Value, PiperError> {
+            fn eval(&self, arguments: Vec<Value>) -> Value {
                 if arguments.len() != 2 {
-                    return Err(PiperError::ArityError("+".to_string(), arguments.len()));
+                    return Value::Error(PiperError::ArityError("+".to_string(), arguments.len()));
                 }
 
-                Ok(match arguments.as_slice() {
+                match arguments.as_slice() {
                     [Value::Int(a), Value::Int(b)] => (a $op b).into(),
                     [Value::Int(a), Value::Long(b)] => (a.clone() as i64 $op b).into(),
                     [Value::Int(a), Value::Float(b)] => (a.clone() as f64 $op b.clone() as f64).into(),
@@ -169,15 +168,15 @@ macro_rules! binary_math_op {
                     [Value::Null, Value::Null] => Value::Null,
 
                     // All other combinations are invalid
-                    [a, b] => Err(PiperError::TypeMismatch(
+                    [a, b] => Value::Error(PiperError::TypeMismatch(
                         stringify!($op).to_string(),
                         a.value_type(),
                         b.value_type(),
-                    ))?,
+                    )),
 
                     // Shouldn't reach here
                     _ => unreachable!("Unknown error."),
-                })
+                }
             }
 
             fn dump(&self, arguments: Vec<String>) -> String {

@@ -1,4 +1,4 @@
-use crate::pipeline::{ValueType, PiperError, Value};
+use crate::pipeline::{PiperError, Value, ValueType};
 
 use super::Operator;
 
@@ -25,26 +25,26 @@ impl Operator for PositiveOperator {
             _ => unreachable!("Unknown error."),
         }
     }
-    fn eval(&self, arguments: Vec<Value>) -> Result<Value, PiperError> {
+    fn eval(&self, arguments: Vec<Value>) -> Value {
         if arguments.len() != 1 {
-            return Err(PiperError::ArityError("+".to_string(), arguments.len()));
+            return Value::Error(PiperError::ArityError("+".to_string(), arguments.len()));
         }
 
-        Ok(match arguments.as_slice() {
+        match arguments.as_slice() {
             [Value::Int(a)] => (a.clone()).into(),
             [Value::Long(a)] => (a.clone()).into(),
             [Value::Float(a)] => (a.clone()).into(),
             [Value::Double(a)] => (a.clone()).into(),
 
             // All other combinations are invalid
-            [a] => Err(PiperError::InvalidOperandType(
+            [a] => Value::Error(PiperError::InvalidOperandType(
                 "+".to_string(),
                 a.value_type(),
-            ))?,
+            )),
 
             // Shouldn't reach here
             _ => unreachable!("Unknown error."),
-        })
+        }
     }
 
     fn dump(&self, arguments: Vec<String>) -> String {
@@ -76,25 +76,25 @@ impl Operator for NegativeOperator {
         }
     }
 
-    fn eval(&self, arguments: Vec<Value>) -> Result<Value, PiperError> {
+    fn eval(&self, arguments: Vec<Value>) -> Value {
         if arguments.len() != 1 {
-            return Err(PiperError::ArityError("-".to_string(), arguments.len()));
+            return Value::Error(PiperError::ArityError("-".to_string(), arguments.len()));
         }
 
-        Ok(match arguments.as_slice() {
+        match arguments.as_slice() {
             [Value::Int(a)] => (-a.clone()).into(),
             [Value::Long(a)] => (-a.clone()).into(),
             [Value::Float(a)] => (-a.clone()).into(),
             [Value::Double(a)] => (-a.clone()).into(),
 
-            [a] => Err(PiperError::InvalidOperandType(
+            [a] => Value::Error(PiperError::InvalidOperandType(
                 "-".to_string(),
                 a.value_type(),
-            ))?,
+            )),
 
             // Shouldn't reach here
             _ => unreachable!("Unknown error."),
-        })
+        }
     }
 
     fn dump(&self, arguments: Vec<String>) -> String {
@@ -124,21 +124,21 @@ impl Operator for NotOperator {
         }
     }
 
-    fn eval(&self, arguments: Vec<Value>) -> Result<Value, PiperError> {
+    fn eval(&self, arguments: Vec<Value>) -> Value {
         if arguments.len() != 1 {
-            return Err(PiperError::ArityError("not".to_string(), arguments.len()));
+            return Value::Error(PiperError::ArityError("not".to_string(), arguments.len()));
         }
 
-        Ok(match arguments.as_slice() {
+        match arguments.as_slice() {
             [Value::Bool(a)] => (!a.clone()).into(),
-            [a] => Err(PiperError::InvalidOperandType(
+            [a] => Value::Error(PiperError::InvalidOperandType(
                 "not".to_string(),
                 a.value_type(),
-            ))?,
+            )),
 
             // Shouldn't reach here
             _ => unreachable!("Unknown error."),
-        })
+        }
     }
 
     fn dump(&self, arguments: Vec<String>) -> String {
@@ -160,21 +160,21 @@ impl Operator for IsNullOperator {
         Ok(ValueType::Bool)
     }
 
-    fn eval(&self, arguments: Vec<Value>) -> Result<Value, PiperError> {
+    fn eval(&self, arguments: Vec<Value>) -> Value {
         if arguments.len() != 1 {
-            return Err(PiperError::ArityError(
+            return Value::Error(PiperError::ArityError(
                 "is null".to_string(),
                 arguments.len(),
             ));
         }
 
-        Ok(match arguments.as_slice() {
+        match arguments.as_slice() {
             [Value::Null] => true.into(),
             [_] => false.into(),
 
             // Shouldn't reach here
             _ => unreachable!("Unknown error."),
-        })
+        }
     }
 
     fn dump(&self, arguments: Vec<String>) -> String {
@@ -196,21 +196,21 @@ impl Operator for IsNotNullOperator {
         Ok(ValueType::Bool)
     }
 
-    fn eval(&self, arguments: Vec<Value>) -> Result<Value, PiperError> {
+    fn eval(&self, arguments: Vec<Value>) -> Value {
         if arguments.len() != 1 {
-            return Err(PiperError::ArityError(
+            return Value::Error(PiperError::ArityError(
                 "is not null".to_string(),
                 arguments.len(),
             ));
         }
 
-        Ok(match arguments.as_slice() {
+        match arguments.as_slice() {
             [Value::Null] => false.into(),
             [_] => true.into(),
 
             // Shouldn't reach here
             _ => unreachable!("Unknown error."),
-        })
+        }
     }
 
     fn dump(&self, arguments: Vec<String>) -> String {

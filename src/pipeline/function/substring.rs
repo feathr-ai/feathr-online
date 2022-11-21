@@ -40,33 +40,45 @@ impl Function for SubstringFunction {
     }
 
     #[instrument(level = "trace", skip(self))]
-    fn eval(&self, mut arguments: Vec<Value>) -> Result<Value, PiperError> {
+    fn eval(&self, mut arguments: Vec<Value>) -> Value {
         if arguments.len() != 3 {
-            return Err(PiperError::InvalidArgumentCount(3, arguments.len()));
+            return Value::Error(PiperError::InvalidArgumentCount(3, arguments.len()));
         }
-        let length = arguments
+        let length = match arguments
             .remove(2)
-            .try_convert(super::ValueType::Long)?
-            .get_long()?;
-        let start = arguments
+            .convert_to(super::ValueType::Long)
+            .get_long()
+        {
+            Ok(string) => string,
+            Err(err) => return Value::Error(err),
+        };
+        let start = match arguments
             .remove(1)
-            .try_convert(super::ValueType::Long)?
-            .get_long()?;
-        let string = arguments.remove(0);
+            .convert_to(super::ValueType::Long)
+            .get_long()
+        {
+            Ok(string) => string,
+            Err(err) => return Value::Error(err),
+        };
+        let arg0 = arguments.remove(0);
+        let string = match arg0.get_string() {
+            Ok(string) => string,
+            Err(err) => return Value::Error(err),
+        };
         let start = if start < 0 {
-            string.get_string()?.len() as i64 + start
+            string.len() as i64 + start
         } else {
             start
         };
         let length = if length < 0 {
-            string.get_string()?.len() as i64 + length - start
+            string.len() as i64 + length - start
         } else {
             length
         };
-        Ok(Value::String(
-            string.get_string()?[start as usize..(start + length) as usize]
+        Value::String(
+            string[start as usize..(start + length) as usize]
                 .to_string()
                 .into(),
-        ))
+        )
     }
 }

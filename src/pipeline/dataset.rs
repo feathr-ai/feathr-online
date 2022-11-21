@@ -185,8 +185,8 @@ impl DataSet for ValidatedDataSet {
                         v
                     } else {
                         match self.mode {
-                            ValidationMode::Strict => v.try_into(column_type).into(),
-                            ValidationMode::Lenient => v.try_convert(column_type).into(),
+                            ValidationMode::Strict => v.cast_to(column_type).into(),
+                            ValidationMode::Lenient => v.convert_to(column_type).into(),
                         }
                     }
                 })

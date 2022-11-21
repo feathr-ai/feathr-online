@@ -139,14 +139,11 @@ impl DataSet for LookupDataSet {
                     .lookup_source
                     .lookup(&v, &self.lookup_field_names)
                     .await;
-                let additional_fields =
-                    self.lookup_field_types
-                        .iter()
-                        .zip(fields.into_iter())
-                        .map(|(t, v)| match v.try_into(*t) {
-                            Ok(v) => v,
-                            Err(e) => e.into(),
-                        });
+                let additional_fields = self
+                    .lookup_field_types
+                    .iter()
+                    .zip(fields.into_iter())
+                    .map(|(t, v)| v.cast_to(*t));
                 row.extend(additional_fields);
                 Some(row)
             }

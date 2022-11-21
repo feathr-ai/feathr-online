@@ -13,17 +13,17 @@ impl Function for ToJsonStringFunction {
         return Ok(ValueType::String);
     }
 
-    fn eval(&self, mut arguments: Vec<Value>) -> Result<Value, PiperError> {
+    fn eval(&self, mut arguments: Vec<Value>) -> Value {
         if arguments.len() != 1 {
-            return Err(PiperError::InvalidArgumentCount(1, arguments.len()));
+            return Value::Error(PiperError::InvalidArgumentCount(1, arguments.len()));
         }
 
         if arguments[0].is_error() {
-            return Ok(arguments.pop().unwrap());
+            return arguments.pop().unwrap();
         }
 
         let value: serde_json::Value = arguments.pop().unwrap().into();
 
-        Ok(Value::String(serde_json::to_string(&value).unwrap().into()))
+        Value::String(serde_json::to_string(&value).unwrap().into())
     }
 }

@@ -14,7 +14,7 @@ impl Operator for FunctionOperator {
         self.function.get_output_type(argument_types)
     }
 
-    fn eval(&self, arguments: Vec<Value>) -> Result<Value, PiperError> {
+    fn eval(&self, arguments: Vec<Value>) -> Value {
         self.function.eval(arguments)
     }
 

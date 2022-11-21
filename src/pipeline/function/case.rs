@@ -37,20 +37,21 @@ impl Function for CaseFunction {
     }
 
     #[instrument(level = "trace", skip(self))]
-    fn eval(
-        &self,
-        arguments: Vec<Value>,
-    ) -> Result<crate::pipeline::Value, crate::pipeline::PiperError> {
+    fn eval(&self, arguments: Vec<Value>) -> Value {
         for pair in arguments.chunks(2) {
             if pair.len() == 1 {
                 // Default case
-                return Ok(pair[0].clone());
+                return pair[0].clone();
             }
-            if pair[0].get_bool()? {
-                return Ok(pair[1].clone());
+            let pred = pair[0].get_bool();
+            if pred.is_err() {
+                return pred.into();
+            }
+            if pred.unwrap() {
+                return pair[1].clone();
             }
         }
         // No default case, and no case matched
-        return Ok(Value::Null);
+        Value::Null
     }
 }

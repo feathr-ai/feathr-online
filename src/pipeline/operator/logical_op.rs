@@ -23,24 +23,24 @@ macro_rules! logical_op {
                 }
             }
 
-            fn eval(&self, arguments: Vec<Value>) -> Result<Value, PiperError> {
+            fn eval(&self, arguments: Vec<Value>) -> Value {
                 if arguments.len() != 2 {
-                    return Err(PiperError::ArityError("and".to_string(), arguments.len()));
+                    return Value::Error(PiperError::ArityError("and".to_string(), arguments.len()));
                 }
 
-                Ok(match arguments.as_slice() {
+                match arguments.as_slice() {
                     [Value::Bool(a), Value::Bool(b)] => (*a $op *b).into(),
 
                     // All other combinations are invalid
-                    [a, b] => Err(PiperError::TypeMismatch(
+                    [a, b] => Value::Error(PiperError::TypeMismatch(
                         stringify!($op).to_string(),
                         a.value_type(),
                         b.value_type(),
-                    ))?,
+                    )),
 
                     // Shouldn't reach here
                     _ => unreachable!("Unknown error."),
-                })
+                }
             }
 
             fn dump(&self, arguments: Vec<String>) -> String {

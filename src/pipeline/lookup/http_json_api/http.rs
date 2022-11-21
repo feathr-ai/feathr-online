@@ -68,7 +68,7 @@ impl HttpJsonApi {
         // The key string will be used in url, header, and query param, but not in request body.
         let key = k
             .clone()
-            .try_convert(ValueType::String)?
+            .convert_to(ValueType::String)
             .get_string()?
             .into_owned();
         let url = match &self.key_url_template {

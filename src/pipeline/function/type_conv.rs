@@ -21,10 +21,10 @@ impl Function for TypeConverterFunction {
     }
 
     #[instrument(level = "trace", skip(self))]
-    fn eval(&self, mut arguments: Vec<Value>) -> Result<Value, PiperError> {
+    fn eval(&self, mut arguments: Vec<Value>) -> Value {
         if arguments.len() != 1 {
-            return Err(PiperError::InvalidArgumentCount(1, arguments.len()));
+            return Value::Error(PiperError::InvalidArgumentCount(1, arguments.len()));
         }
-        arguments.remove(0).try_convert(self.to)
+        arguments.remove(0).convert_to(self.to)
     }
 }

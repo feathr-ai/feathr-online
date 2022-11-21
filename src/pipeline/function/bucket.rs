@@ -35,19 +35,19 @@ impl Function for BucketFunction {
     }
 
     #[instrument(level = "trace", skip(self))]
-    fn eval(
-        &self,
-        arguments: Vec<Value>,
-    ) -> Result<crate::pipeline::Value, crate::pipeline::PiperError> {
+    fn eval(&self, arguments: Vec<Value>) -> Value {
         for (bucket, pivot) in arguments.iter().enumerate().skip(1) {
-            if LessThanOperator
-                .eval(vec![arguments[0].clone(), pivot.clone()])?
-                .get_bool()?
-            {
-                return Ok(bucket.into());
+            let pred = LessThanOperator
+                .eval(vec![arguments[0].clone(), pivot.clone()])
+                .get_bool();
+            if pred.is_err() {
+                return pred.into();
+            }
+            if pred.unwrap() {
+                return bucket.into();
             }
         }
-        return Ok((arguments.len() - 1).into());
+        (arguments.len() - 1).into()
     }
 }
 

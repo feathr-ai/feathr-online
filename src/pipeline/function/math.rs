@@ -28,15 +28,15 @@ macro_rules! unary_impl_math_function {
                 Ok(ValueType::Double)
             }
 
-            fn eval(
-                &self,
-                arguments: Vec<crate::pipeline::Value>,
-            ) -> Result<crate::pipeline::Value, crate::pipeline::PiperError> {
+            fn eval(&self, arguments: Vec<crate::pipeline::Value>) -> Value {
                 if arguments.len() != 1 {
-                    return Err(PiperError::InvalidArgumentCount(1, arguments.len()));
+                    return Value::Error(PiperError::InvalidArgumentCount(1, arguments.len()));
                 }
-                let v = arguments[0].get_double()?;
-                Ok(Value::Double(v.$call()).into())
+                let v = match arguments[0].get_double() {
+                    Ok(v) => v,
+                    Err(e) => return Value::Error(e),
+                };
+                Value::Double(v.$call()).into()
             }
         }
     };
@@ -99,16 +99,19 @@ macro_rules! binary_impl_math_function {
                 Ok(ValueType::Double)
             }
 
-            fn eval(
-                &self,
-                arguments: Vec<crate::pipeline::Value>,
-            ) -> Result<crate::pipeline::Value, crate::pipeline::PiperError> {
+            fn eval(&self, arguments: Vec<crate::pipeline::Value>) -> Value {
                 if arguments.len() != 2 {
-                    return Err(PiperError::InvalidArgumentCount(2, arguments.len()));
+                    return Value::Error(PiperError::InvalidArgumentCount(2, arguments.len()));
                 }
-                let l = arguments[0].get_double()?;
-                let r = arguments[0].get_double()?;
-                Ok(Value::Double(l.$call(r)).into())
+                let l = match arguments[0].get_double() {
+                    Ok(v) => v,
+                    Err(e) => return Value::Error(e),
+                };
+                let r = match arguments[0].get_double() {
+                    Ok(v) => v,
+                    Err(e) => return Value::Error(e),
+                };
+                Value::Double(l.$call(r)).into()
             }
         }
     };
@@ -138,15 +141,15 @@ impl Function for Abs {
         Ok(argument_types[0])
     }
 
-    fn eval(&self, arguments: Vec<Value>) -> Result<Value, PiperError> {
+    fn eval(&self, arguments: Vec<Value>) -> Value {
         if arguments.len() != 1 {
-            return Err(PiperError::InvalidArgumentCount(1, arguments.len()));
+            return Value::Error(PiperError::InvalidArgumentCount(1, arguments.len()));
         }
         match arguments[0] {
-            Value::Int(v) => Ok(Value::Int(v.abs()).into()),
-            Value::Long(v) => Ok(Value::Long(v.abs()).into()),
-            Value::Float(v) => Ok(Value::Float(v.abs()).into()),
-            Value::Double(v) => Ok(Value::Double(v.abs()).into()),
+            Value::Int(v) => Value::Int(v.abs()).into(),
+            Value::Long(v) => Value::Long(v.abs()).into(),
+            Value::Float(v) => Value::Float(v.abs()).into(),
+            Value::Double(v) => Value::Double(v.abs()).into(),
             _ => unreachable!(),
         }
     }

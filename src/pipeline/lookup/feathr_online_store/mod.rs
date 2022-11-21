@@ -97,7 +97,7 @@ impl FeathrOnlineStore {
         cmd.arg(format!(
             "{}:{}",
             get_secret(Some(&self.table))?,
-            key.clone().try_convert(ValueType::String)?.get_string()?
+            key.clone().convert_to(ValueType::String).get_string()?
         ));
         for f in fields {
             cmd.arg(f);

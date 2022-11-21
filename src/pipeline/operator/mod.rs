@@ -22,7 +22,7 @@ pub use function_op::FunctionOperator;
 pub trait Operator: Clone + Debug + Send + Sync {
     fn get_output_type(&self, argument_types: &[ValueType]) -> Result<ValueType, PiperError>;
 
-    fn eval(&self, arguments: Vec<Value>) -> Result<Value, PiperError>;
+    fn eval(&self, arguments: Vec<Value>) -> Value;
 
     fn dump(&self, arguments: Vec<String>) -> String;
 }

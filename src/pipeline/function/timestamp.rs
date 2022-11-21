@@ -47,12 +47,9 @@ impl Function for TimestampFunction {
     }
 
     #[instrument(level = "trace", skip(self))]
-    fn eval(
-        &self,
-        arguments: Vec<Value>,
-    ) -> Result<crate::pipeline::Value, crate::pipeline::PiperError> {
+    fn eval(&self, arguments: Vec<Value>) -> Value {
         if arguments.is_empty() || arguments.len() > 3 {
-            return Err(PiperError::ArityError(
+            return Value::Error(PiperError::ArityError(
                 "timestamp".to_string(),
                 arguments.len(),
             ));
@@ -65,36 +62,36 @@ impl Function for TimestampFunction {
                 if let Ok(tz) = tz.parse::<Tz>() {
                     self.timestamp(s, &format, &tz)
                 } else {
-                    Ok(Value::Null)
+                    Value::Null
                 }
             }
 
-            [a] => Err(PiperError::InvalidArgumentType(
+            [a] => Value::Error(PiperError::InvalidArgumentType(
                 "timestamp".to_string(),
                 1,
                 a.value_type(),
-            ))?,
-            [_, b] => Err(PiperError::InvalidArgumentType(
+            )),
+            [_, b] => Value::Error(PiperError::InvalidArgumentType(
                 "timestamp".to_string(),
                 2,
                 b.value_type(),
-            ))?,
-            [_, _, c] => Err(PiperError::InvalidArgumentType(
+            )),
+            [_, _, c] => Value::Error(PiperError::InvalidArgumentType(
                 "timestamp".to_string(),
                 3,
                 c.value_type(),
-            ))?,
+            )),
             _ => unreachable!(),
         }
     }
 }
 
 impl TimestampFunction {
-    fn timestamp(&self, s: &str, format: &str, tz: &Tz) -> Result<Value, PiperError> {
+    fn timestamp(&self, s: &str, format: &str, tz: &Tz) -> Value {
         let timestamp = tz
             .datetime_from_str(s, format)
             .map(|ts| Value::Double(ts.timestamp() as f64));
-        Ok(timestamp.unwrap_or_default())
+        timestamp.unwrap_or_default()
     }
 }
 
@@ -109,8 +106,7 @@ mod tests {
         let f = TimestampFunction;
         // Default format
         assert_eq!(
-            f.eval(vec![Value::String("2020-01-01 00:00:00".into())])
-                .unwrap(),
+            f.eval(vec![Value::String("2020-01-01 00:00:00".into())]),
             Value::Double(1577836800.0)
         );
         // Customize format
@@ -118,8 +114,7 @@ mod tests {
             f.eval(vec![
                 Value::String("00:00:00-2020/01/01".into()),
                 Value::String("%H:%M:%S-%Y/%m/%d".into())
-            ])
-            .unwrap(),
+            ]),
             Value::Double(1577836800.0)
         );
         // Customize format and specified time zone
@@ -128,8 +123,7 @@ mod tests {
                 Value::String("00:00:00-2020/01/01".into()),
                 Value::String("%H:%M:%S-%Y/%m/%d".into()),
                 Value::String("Asia/Shanghai".into())
-            ])
-            .unwrap(),
+            ]),
             // 8 hours earlier than UTC
             Value::Double(1577836800.0 - 8.0 * 3600.0)
         );

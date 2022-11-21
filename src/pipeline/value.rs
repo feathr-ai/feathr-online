@@ -452,81 +452,84 @@ impl Value {
     /**
      * Type cast, number types can be auto casted to each others, others are not
      */
-    pub fn try_into(self, value_type: ValueType) -> Result<Value, PiperError> {
+    pub fn cast_to(self, value_type: ValueType) -> Value {
         // Dynamic means the value could be any type
         if value_type == ValueType::Dynamic {
-            return Ok(self);
+            return self;
         }
 
-        return Ok(match self {
+        match self {
             Value::Null => {
                 if self.is_null() {
                     Value::Null
                 } else {
-                    return Err(PiperError::InvalidTypeCast(self.value_type(), value_type));
+                    return Value::Error(PiperError::InvalidTypeCast(
+                        self.value_type(),
+                        value_type,
+                    ));
                 }
             }
             Value::Bool(v) => match value_type {
                 ValueType::Bool => self,
-                _ => Err(PiperError::InvalidTypeCast(self.value_type(), value_type))?,
+                _ => Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type)),
             },
             Value::Int(v) => match value_type {
                 ValueType::Int => (v as i32).into(),
                 ValueType::Long => (v as i64).into(),
                 ValueType::Float => (v as f32).into(),
                 ValueType::Double => (v as f64).into(),
-                _ => Err(PiperError::InvalidTypeCast(self.value_type(), value_type))?,
+                _ => Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type)),
             },
             Value::Long(v) => match value_type {
                 ValueType::Int => (v as i32).into(),
                 ValueType::Long => (v as i64).into(),
                 ValueType::Float => (v as f32).into(),
                 ValueType::Double => (v as f64).into(),
-                _ => Err(PiperError::InvalidTypeCast(self.value_type(), value_type))?,
+                _ => Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type)),
             },
             Value::Float(v) => match value_type {
                 ValueType::Int => (v as i32).into(),
                 ValueType::Long => (v as i64).into(),
                 ValueType::Float => (v as f32).into(),
                 ValueType::Double => (v as f64).into(),
-                _ => Err(PiperError::InvalidTypeCast(self.value_type(), value_type))?,
+                _ => Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type)),
             },
             Value::Double(v) => match value_type {
                 ValueType::Int => (v as i32).into(),
                 ValueType::Long => (v as i64).into(),
                 ValueType::Float => (v as f32).into(),
                 ValueType::Double => (v as f64).into(),
-                _ => Err(PiperError::InvalidTypeCast(self.value_type(), value_type))?,
+                _ => Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type)),
             },
             Value::String(v) => match value_type {
                 ValueType::String => v.into(),
-                _ => Err(PiperError::InvalidTypeCast(ValueType::String, value_type))?,
+                _ => Value::Error(PiperError::InvalidTypeCast(ValueType::String, value_type)),
             },
             Value::Array(v) => match value_type {
                 ValueType::Array => v.into(),
-                _ => Err(PiperError::InvalidTypeCast(ValueType::Array, value_type))?,
+                _ => Value::Error(PiperError::InvalidTypeCast(ValueType::Array, value_type)),
             },
             Value::Object(v) => match value_type {
                 ValueType::Object => v.into(),
-                _ => Err(PiperError::InvalidTypeCast(ValueType::Object, value_type))?,
+                _ => Value::Error(PiperError::InvalidTypeCast(ValueType::Object, value_type)),
             },
-            Value::Error(e) => Err(e)?,
-        });
+            Value::Error(e) => Value::Error(e),
+        }
     }
 
     /**
      * Type conversion
      */
-    pub fn try_convert(self, value_type: ValueType) -> Result<Value, PiperError> {
+    pub fn convert_to(self, value_type: ValueType) -> Value {
         if value_type == ValueType::Dynamic {
-            return Ok(self);
+            return self;
         }
 
         if self.value_type() == value_type {
-            return Ok(self);
+            return self;
         }
 
-        return Ok(match self {
+        match self {
             Value::Null => false.into(),
             Value::Bool(v) => match value_type {
                 ValueType::Bool => self.clone(),
@@ -535,10 +538,10 @@ impl Value {
                 ValueType::Float => (if v { 1f32 } else { 0f32 }).into(),
                 ValueType::Double => (if v { 1f64 } else { 0f64 }).into(),
                 ValueType::String => (if v { "true" } else { "false" }).into(),
-                _ => Err(PiperError::InvalidTypeConversion(
+                _ => Value::Error(PiperError::InvalidTypeConversion(
                     self.value_type(),
                     value_type,
-                ))?,
+                )),
             },
             Value::Int(v) => match value_type {
                 ValueType::Bool => (v != 0).into(),
@@ -547,10 +550,10 @@ impl Value {
                 ValueType::Float => (v as f32).into(),
                 ValueType::Double => (v as f64).into(),
                 ValueType::String => Cow::from(v.to_string()).into(),
-                _ => Err(PiperError::InvalidTypeConversion(
+                _ => Value::Error(PiperError::InvalidTypeConversion(
                     self.value_type(),
                     value_type,
-                ))?,
+                )),
             },
             Value::Long(v) => match value_type {
                 ValueType::Bool => (v != 0).into(),
@@ -559,10 +562,10 @@ impl Value {
                 ValueType::Float => (v as f32).into(),
                 ValueType::Double => (v as f64).into(),
                 ValueType::String => Cow::from(v.to_string()).into(),
-                _ => Err(PiperError::InvalidTypeConversion(
+                _ => Value::Error(PiperError::InvalidTypeConversion(
                     self.value_type(),
                     value_type,
-                ))?,
+                )),
             },
             Value::Float(v) => match value_type {
                 ValueType::Bool => (v != 0f32).into(),
@@ -571,10 +574,10 @@ impl Value {
                 ValueType::Float => (v as f32).into(),
                 ValueType::Double => (v as f64).into(),
                 ValueType::String => Cow::from(v.to_string()).into(),
-                _ => Err(PiperError::InvalidTypeConversion(
+                _ => Value::Error(PiperError::InvalidTypeConversion(
                     self.value_type(),
                     value_type,
-                ))?,
+                )),
             },
             Value::Double(v) => match value_type {
                 ValueType::Bool => (v != 0f64).into(),
@@ -583,53 +586,53 @@ impl Value {
                 ValueType::Float => (v as f32).into(),
                 ValueType::Double => (v as f64).into(),
                 ValueType::String => Cow::from(v.to_string()).into(),
-                _ => Err(PiperError::InvalidTypeConversion(
+                _ => Value::Error(PiperError::InvalidTypeConversion(
                     self.value_type(),
                     value_type,
-                ))?,
+                )),
             },
             Value::String(v) => match value_type {
                 ValueType::Bool => (v == "true").into(),
                 ValueType::Int => v
                     .parse::<i32>()
-                    .map_err(|_| PiperError::FormatError(v.to_string(), value_type))?
+                    .map_err(|_| PiperError::FormatError(v.to_string(), value_type))
                     .into(),
                 ValueType::Long => v
                     .parse::<i32>()
-                    .map_err(|_| PiperError::FormatError(v.to_string(), value_type))?
+                    .map_err(|_| PiperError::FormatError(v.to_string(), value_type))
                     .into(),
                 ValueType::Float => v
                     .parse::<i32>()
-                    .map_err(|_| PiperError::FormatError(v.to_string(), value_type))?
+                    .map_err(|_| PiperError::FormatError(v.to_string(), value_type))
                     .into(),
                 ValueType::Double => v
                     .parse::<i32>()
-                    .map_err(|_| PiperError::FormatError(v.to_string(), value_type))?
+                    .map_err(|_| PiperError::FormatError(v.to_string(), value_type))
                     .into(),
                 ValueType::String => (v.to_string()).into(),
-                _ => Err(PiperError::InvalidTypeConversion(
+                _ => Value::Error(PiperError::InvalidTypeConversion(
                     ValueType::String,
                     value_type,
-                ))?,
+                )),
             },
             Value::Array(v) => match value_type {
                 ValueType::Bool => (v.len() > 0).into(),
                 ValueType::Array => v.clone().into(),
-                _ => Err(PiperError::InvalidTypeConversion(
+                _ => Value::Error(PiperError::InvalidTypeConversion(
                     ValueType::Array,
                     value_type,
-                ))?,
+                )),
             },
             Value::Object(v) => match value_type {
                 ValueType::Bool => (v.len() > 0).into(),
                 ValueType::Object => v.clone().into(),
-                _ => Err(PiperError::InvalidTypeConversion(
+                _ => Value::Error(PiperError::InvalidTypeConversion(
                     ValueType::Object,
                     value_type,
-                ))?,
+                )),
             },
-            Value::Error(e) => Err(e)?,
-        });
+            Value::Error(e) => Value::Error(e),
+        }
     }
 
     pub fn dump(&self) -> String {
@@ -706,54 +709,36 @@ mod tests {
         use super::*;
         let v = Value::Int(1);
         assert_eq!(
-            v.clone()
-                .try_convert(ValueType::Int)
-                .unwrap()
-                .get_int()
-                .unwrap(),
+            v.clone().convert_to(ValueType::Int).get_int().unwrap(),
             1i32
         );
         assert_eq!(
-            v.clone()
-                .try_convert(ValueType::Long)
-                .unwrap()
-                .get_long()
-                .unwrap(),
+            v.clone().convert_to(ValueType::Long).get_long().unwrap(),
             1i64
         );
         assert_eq!(
-            v.clone()
-                .try_convert(ValueType::Float)
-                .unwrap()
-                .get_float()
-                .unwrap(),
+            v.clone().convert_to(ValueType::Float).get_float().unwrap(),
             1f32
         );
         assert_eq!(
             v.clone()
-                .try_convert(ValueType::Double)
-                .unwrap()
+                .convert_to(ValueType::Double)
                 .get_double()
                 .unwrap(),
             1f64
         );
         assert_eq!(
-            v.clone()
-                .try_convert(ValueType::Bool)
-                .unwrap()
-                .get_bool()
-                .unwrap(),
+            v.clone().convert_to(ValueType::Bool).get_bool().unwrap(),
             true
         );
         assert_eq!(
             v.clone()
-                .try_convert(ValueType::String)
-                .unwrap()
+                .convert_to(ValueType::String)
                 .get_string()
                 .unwrap(),
             "1"
         );
-        assert!(v.clone().try_convert(ValueType::Array).is_err());
-        assert!(v.clone().try_convert(ValueType::Object).is_err());
+        assert!(v.clone().convert_to(ValueType::Array).is_error());
+        assert!(v.clone().convert_to(ValueType::Object).is_error());
     }
 }

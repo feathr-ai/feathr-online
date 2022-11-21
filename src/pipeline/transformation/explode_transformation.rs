@@ -90,21 +90,12 @@ impl DataSet for ExplodedDataSet {
             return None;
         }
         let mut row = self.current_row.clone().unwrap();
-        match self
+        row[self.column_idx] = self
             .current_exploded_column
             .pop_front()
             .unwrap()
-            .try_into(self.exploded_type)
-        {
-            Ok(v) => {
-                row[self.column_idx] = v;
-                Some(row)
-            }
-            Err(e) => {
-                row[self.column_idx] = e.into();
-                Some(row)
-            }
-        }
+            .cast_to(self.exploded_type);
+        Some(row)
     }
 }
 
