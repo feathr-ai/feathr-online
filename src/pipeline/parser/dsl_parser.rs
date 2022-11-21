@@ -67,6 +67,7 @@ peg::parser! {
                 / project_transformation()
                 / project_rename_transformation()
                 / project_remove_transformation()
+                / project_keep_transformation()
                 / explode_transformation()
                 / lookup_transformation()
                 / top_transformation()
@@ -90,6 +91,10 @@ peg::parser! {
         pub rule project_remove_transformation() -> Box<dyn TransformationBuilder>
             = "project-remove" _ columns:(identifier() **<1,> list_sep()) {
                 ProjectRemoveTransformationBuilder::create(columns)
+            }
+        pub rule project_keep_transformation() -> Box<dyn TransformationBuilder>
+            = "project-keep" _ columns:(identifier() **<1,> list_sep()) {
+                ProjectKeepTransformationBuilder::create(columns)
             }
         pub rule explode_transformation() ->  Box<dyn TransformationBuilder>
             = ("explode" / "mv-expand") _ column:identifier() _ exploded_type:("as" _ vt:value_type() {vt})? {

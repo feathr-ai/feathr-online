@@ -45,10 +45,10 @@ impl DataSet for WhereDataSet {
             let predicate = self.predicate.eval(&row);
             match predicate.get_bool() {
                 Ok(true) => return Some(row),
+                // Filtered out
                 Ok(false) => continue,
                 // Skip predicate error
                 Err(_) => continue,
-                // Err(e) => return Some(vec![e.into(); self.input.schema().columns.len()]),
             }
         }
     }
