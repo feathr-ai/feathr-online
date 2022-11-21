@@ -80,7 +80,15 @@ impl Expression for OperatorExpression {
 
     fn eval(&self, row: &[Value]) -> Value {
         // All errors will be propagated to the caller
-        let args: Vec<Value> = self.arguments.iter().map(|e| e.eval(row)).collect();
+        let mut args: Vec<Value> = Vec::with_capacity(self.arguments.len());
+        for arg in &self.arguments {
+            let arg_value = arg.eval(row);
+            if arg_value.is_error() {
+                // Shortcut on sub-expression error
+                return arg_value;
+            }
+            args.push(arg_value);
+        }
         for arg in args.iter() {
             if arg.is_error() {
                 return arg.clone();

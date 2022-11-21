@@ -116,7 +116,7 @@ impl ExplodedDataSet {
             self.current_row = Some(row.clone());
             self.current_exploded_column = match row[self.column_idx].get_array() {
                 Ok(array) => array.clone().into_iter().collect(),
-                Err(e) => return Some(vec![Value::Error(e); self.output_schema.columns.len()]),
+                Err(e) => return Some(vec![Value::Error(e)]),
             };
             debug!(
                 "Exploded column has {} elements",

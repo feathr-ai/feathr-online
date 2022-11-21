@@ -1,9 +1,8 @@
 use async_trait::async_trait;
 
-use crate::pipeline::{expression::Expression, Schema, PiperError, DataSet, Value};
+use crate::pipeline::{expression::Expression, DataSet, PiperError, Schema, Value};
 
 use super::Transformation;
-
 
 #[derive(Clone, Debug)]
 pub struct WhereTransformation {
@@ -15,10 +14,7 @@ impl Transformation for WhereTransformation {
         input_schema.clone()
     }
 
-    fn transform(
-        &self,
-        dataset: Box<dyn DataSet>,
-    ) -> Result<Box<dyn DataSet>, PiperError> {
+    fn transform(&self, dataset: Box<dyn DataSet>) -> Result<Box<dyn DataSet>, PiperError> {
         Ok(Box::new(WhereDataSet {
             input: dataset,
             predicate: self.predicate.clone(),
@@ -48,7 +44,9 @@ impl DataSet for WhereDataSet {
             match predicate.get_bool() {
                 Ok(true) => return Some(row),
                 Ok(false) => continue,
-                Err(e) => return Some(vec![e.into(); self.input.schema().columns.len()]),
+                // Skip predicate error
+                Err(_) => continue,
+                // Err(e) => return Some(vec![e.into(); self.input.schema().columns.len()]),
             }
         }
     }

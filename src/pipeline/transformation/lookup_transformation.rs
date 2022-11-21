@@ -131,6 +131,7 @@ impl DataSet for LookupDataSet {
             Some(mut row) => {
                 let v = self.key.eval(&row);
                 if v.is_error() {
+                    // Return all error row if key is error
                     row.extend(vec![v; self.lookup_field_names.len()]);
                     return Some(row);
                 }

@@ -314,6 +314,7 @@ impl Value {
             Value::Long(v) => Ok(*v as i32),
             Value::Float(v) => Ok(*v as i32),
             Value::Double(v) => Ok(*v as i32),
+            Value::Error(e) => Err(e.clone())?,
             _ => Err(PiperError::InvalidValueType(
                 self.value_type(),
                 ValueType::Int,
@@ -331,6 +332,7 @@ impl Value {
             Value::Long(v) => Ok(*v as i64),
             Value::Float(v) => Ok(*v as i64),
             Value::Double(v) => Ok(*v as i64),
+            Value::Error(e) => Err(e.clone())?,
             _ => Err(PiperError::InvalidValueType(
                 self.value_type(),
                 ValueType::Long,
@@ -348,6 +350,7 @@ impl Value {
             Value::Long(v) => Ok(*v as f32),
             Value::Float(v) => Ok(*v as f32),
             Value::Double(v) => Ok(*v as f32),
+            Value::Error(e) => Err(e.clone())?,
             _ => Err(PiperError::InvalidValueType(
                 self.value_type(),
                 ValueType::Float,
@@ -365,6 +368,7 @@ impl Value {
             Value::Long(v) => Ok(*v as f64),
             Value::Float(v) => Ok(*v as f64),
             Value::Double(v) => Ok(*v as f64),
+            Value::Error(e) => Err(e.clone())?,
             _ => Err(PiperError::InvalidValueType(
                 self.value_type(),
                 ValueType::Double,
@@ -378,6 +382,7 @@ impl Value {
     pub fn get_string(&self) -> Result<Cow<str>, PiperError> {
         match self {
             Value::String(v) => Ok(v.clone()),
+            Value::Error(e) => Err(e.clone())?,
             _ => Err(PiperError::InvalidValueType(
                 self.value_type(),
                 ValueType::String,
@@ -391,6 +396,7 @@ impl Value {
     pub fn get_array(&self) -> Result<&Vec<Value>, PiperError> {
         match self {
             Value::Array(v) => Ok(v),
+            Value::Error(e) => Err(e.clone())?,
             _ => Err(PiperError::InvalidValueType(
                 self.value_type(),
                 ValueType::Array,
@@ -404,6 +410,7 @@ impl Value {
     pub fn get_object(&self) -> Result<&HashMap<String, Value>, PiperError> {
         match self {
             Value::Object(v) => Ok(v),
+            Value::Error(e) => Err(e.clone())?,
             _ => Err(PiperError::InvalidValueType(
                 self.value_type(),
                 ValueType::Object,
@@ -479,11 +486,11 @@ impl Value {
             },
             Value::Array(v) => match value_type {
                 ValueType::Array => v.into(),
-                _ => Err(PiperError::InvalidTypeCast(ValueType::String, value_type))?,
+                _ => Err(PiperError::InvalidTypeCast(ValueType::Array, value_type))?,
             },
             Value::Object(v) => match value_type {
                 ValueType::Object => v.into(),
-                _ => Err(PiperError::InvalidTypeCast(ValueType::String, value_type))?,
+                _ => Err(PiperError::InvalidTypeCast(ValueType::Object, value_type))?,
             },
             Value::Error(e) => Err(e)?,
         });
