@@ -83,6 +83,10 @@ pub enum PiperError {
     InvalidMethod(String),
 
     // Invalid JSON path
+    #[error("Invalid JSON string {0}")]
+    InvalidJsonString(String),
+
+    // Invalid JSON path
     #[error("Invalid JSONPath {0}")]
     InvalidJsonPath(String),
 

@@ -251,6 +251,24 @@ where
     }
 }
 
+impl<T> From<&T> for Value
+where
+    T: Into<Value> + Clone,
+{
+    fn from(v: &T) -> Self {
+        v.clone().into()
+    }
+}
+
+impl<T> FromIterator<T> for Value
+where
+    T: Into<Value>,
+{
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        Value::Array(iter.into_iter().map(|v| v.into()).collect())
+    }
+}
+
 impl Value {
     /**
      * Get the type of the value

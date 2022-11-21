@@ -5,25 +5,29 @@ use once_cell::sync::OnceCell;
 
 use super::{PiperError, Value, ValueType};
 
-mod type_conv;
-mod substring;
-mod split;
-mod case;
 mod bucket;
-mod timestamp;
-mod math;
-mod make_array;
+mod case;
+mod extract_json;
 mod len;
+mod make_array;
+mod math;
+mod split;
+mod substring;
+mod timestamp;
+mod to_json;
+mod type_conv;
 
-use type_conv::TypeConverterFunction;
-use substring::SubstringFunction;
-use split::SplitFunction;
-use case::CaseFunction;
 use bucket::BucketFunction;
-use timestamp::TimestampFunction;
-use math::*;
-use make_array::MakeArray;
+use case::CaseFunction;
+use extract_json::{ExtractJsonArray, ExtractJsonObject};
 use len::Len;
+use make_array::MakeArray;
+use math::*;
+use split::SplitFunction;
+use substring::SubstringFunction;
+use timestamp::TimestampFunction;
+use to_json::ToJsonStringFunction;
+use type_conv::TypeConverterFunction;
 
 pub trait Function: Send + Sync + Debug {
     fn get_output_type(&self, argument_types: &[ValueType]) -> Result<ValueType, PiperError>;
@@ -77,6 +81,9 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     function_map.insert("timestamp".to_string(), Box::new(TimestampFunction));
     function_map.insert("make_array".to_string(), Box::new(MakeArray));
     function_map.insert("len".to_string(), Box::new(Len));
+    function_map.insert("extract_json".to_string(), Box::new(ExtractJsonObject));
+    function_map.insert("extract_json_array".to_string(), Box::new(ExtractJsonArray));
+    function_map.insert("to_json".to_string(), Box::new(ToJsonStringFunction));
     function_map.insert(
         "to_bool".to_string(),
         Box::new(TypeConverterFunction {
@@ -113,4 +120,3 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     );
     function_map
 }
-
