@@ -15,7 +15,7 @@ pub struct LookupTransformation {
     lookup_source: Arc<dyn LookupSource>,
     key: Arc<dyn Expression>,
     lookup_fields: Schema,
-    output_schema: Schema,
+    output_schema: Arc<Schema>,
 }
 
 impl LookupTransformation {
@@ -34,14 +34,14 @@ impl LookupTransformation {
             .iter()
             .filter_map(|(name, new_name, _)| new_name.clone().map(|n| (name.clone(), n)))
             .collect();
-        let output_schema: Schema = input_schema
+        let output_schema = Arc::new(input_schema
             .clone()
             .columns
             .into_iter()
             .chain(lookup_fields.into_iter().map(|(name, _, ty)| {
                 Column::new(rename_map.get(&name).unwrap_or(&name).clone(), ty)
             }))
-            .collect();
+            .collect());
         Ok(Box::new(Self {
             lookup_source_name,
             lookup_source,
@@ -54,7 +54,7 @@ impl LookupTransformation {
 
 impl Transformation for LookupTransformation {
     fn get_output_schema(&self, _input_schema: &Schema) -> Schema {
-        self.output_schema.clone()
+        self.output_schema.as_ref().clone()
     }
 
     fn transform(&self, dataset: Box<dyn DataSet>) -> Result<Box<dyn DataSet>, PiperError> {
@@ -112,7 +112,7 @@ struct LookupDataSet {
     input: Box<dyn DataSet>,
     lookup_source: Arc<dyn LookupSource>,
     key: Arc<dyn Expression>,
-    output_schema: Schema,
+    output_schema: Arc<Schema>,
     lookup_field_names: Vec<String>,
     lookup_field_types: Vec<ValueType>,
 }

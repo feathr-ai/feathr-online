@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use crate::pipeline::{expression::Expression, Column, DataSet, PiperError, Schema, Value};
+use crate::pipeline::{expression::{Expression, ColumnExpression}, Column, DataSet, PiperError, Schema, Value};
 
 use super::Transformation;
 
 #[derive(Debug)]
 pub struct ProjectTransformation {
-    output_schema: crate::pipeline::Schema,
+    output_schema: Arc<Schema>,
     columns: Arc<Vec<Box<dyn Expression>>>,
     column_names: Vec<String>,
 }
@@ -34,19 +34,19 @@ impl ProjectTransformation {
             .iter()
             .enumerate()
             .map(|(i, c)| {
-                Box::new(crate::pipeline::expression::ColumnExpression {
+                Box::new(ColumnExpression {
                     column_index: i,
                     column_name: c.name.clone(),
                 }) as Box<dyn Expression>
             })
             .collect::<Vec<_>>();
         col_expr.extend(columns.into_iter().map(|(_, exp)| exp));
-        let output_schema = input_schema
+        let output_schema = Arc::new(input_schema
             .columns
             .clone()
             .into_iter()
             .chain(addition_columns)
-            .collect();
+            .collect());
         Ok(Box::new(Self {
             output_schema,
             columns: Arc::new(col_expr),
@@ -57,7 +57,7 @@ impl ProjectTransformation {
 
 impl Transformation for ProjectTransformation {
     fn get_output_schema(&self, _input_schema: &Schema) -> Schema {
-        self.output_schema.clone()
+        self.output_schema.as_ref().clone()
     }
 
     fn transform(&self, dataset: Box<dyn DataSet>) -> Result<Box<dyn DataSet>, PiperError> {
@@ -87,7 +87,7 @@ impl Transformation for ProjectTransformation {
 
 struct ProjectedDataSet {
     input_dataset: Box<dyn DataSet>,
-    output_schema: Schema,
+    output_schema: Arc<Schema>,
     columns: Arc<Vec<Box<dyn Expression>>>,
 }
 

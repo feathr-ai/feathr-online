@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, sync::Arc};
 
 use async_trait::async_trait;
 use tracing::{debug, instrument};
@@ -11,7 +11,7 @@ use super::Transformation;
 pub struct ExplodeTransformation {
     column_idx: usize,
     exploded_type: ValueType,
-    output_schema: Schema,
+    output_schema: Arc<Schema>,
 }
 
 impl ExplodeTransformation {
@@ -25,14 +25,14 @@ impl ExplodeTransformation {
         Box::new(Self {
             column_idx,
             exploded_type,
-            output_schema,
+            output_schema: Arc::new(output_schema),
         })
     }
 }
 
 impl Transformation for ExplodeTransformation {
     fn get_output_schema(&self, _input_schema: &Schema) -> Schema {
-        self.output_schema.clone()
+        self.output_schema.as_ref().clone()
     }
 
     fn transform(&self, dataset: Box<dyn DataSet>) -> Result<Box<dyn DataSet>, PiperError> {
@@ -56,7 +56,7 @@ impl Transformation for ExplodeTransformation {
 
 struct ExplodedDataSet {
     input: Box<dyn DataSet>,
-    output_schema: Schema,
+    output_schema: Arc<Schema>,
     column_idx: usize,
     exploded_type: ValueType,
     current_row: Option<Vec<Value>>,

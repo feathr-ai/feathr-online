@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 use async_trait::async_trait;
 
@@ -8,7 +8,7 @@ use super::Transformation;
 
 #[derive(Debug)]
 pub struct ProjectKeepTransformation {
-    output_schema: Schema,
+    output_schema: Arc<Schema>,
     kept_columns: Vec<String>,
     keep_set: HashSet<usize>,
 }
@@ -23,7 +23,7 @@ impl ProjectKeepTransformation {
             columns.push(input_schema.columns[index].clone());
         }
         Box::new(ProjectKeepTransformation {
-            output_schema: Schema::from(columns),
+            output_schema: Arc::new(Schema::from(columns)),
             kept_columns,
             keep_set,
         })
@@ -32,7 +32,7 @@ impl ProjectKeepTransformation {
 
 impl Transformation for ProjectKeepTransformation {
     fn get_output_schema(&self, _input_schema: &Schema) -> Schema {
-        self.output_schema.clone()
+        self.output_schema.as_ref().clone()
     }
 
     fn transform(&self, dataset: Box<dyn DataSet>) -> Result<Box<dyn DataSet>, PiperError> {
@@ -50,7 +50,7 @@ impl Transformation for ProjectKeepTransformation {
 
 struct ProjectKeepDataSet {
     input: Box<dyn DataSet>,
-    output_schema: Schema,
+    output_schema: Arc<Schema>,
     keep_set: HashSet<usize>,
 }
 
@@ -70,7 +70,7 @@ impl DataSet for ProjectKeepDataSet {
                 .enumerate()
                 .filter(|(idx, _)| self.keep_set.contains(idx))
                 .map(|(_, value)| value)
-                .collect()
+                .collect(),
         )
     }
 }

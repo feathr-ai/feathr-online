@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
 
@@ -8,24 +8,24 @@ use super::Transformation;
 
 #[derive(Debug, Clone)]
 pub struct ProjectRenameTransformation {
-    output_schema: crate::pipeline::Schema,
+    output_schema: Arc<Schema>,
     renames: HashMap<String, String>,
 }
 
 impl ProjectRenameTransformation {
     pub fn create(
-        input_schema: &crate::pipeline::Schema,
+        input_schema: &Schema,
         renames: HashMap<String, String>,
     ) -> Result<Box<dyn Transformation>, PiperError> {
         Ok(Box::new(Self {
-            output_schema: input_schema
+            output_schema: Arc::new(input_schema
                 .columns
                 .iter()
                 .map(|c| Column {
                     name: renames.get(&c.name).unwrap_or(&c.name).to_owned(),
                     column_type: c.column_type,
                 })
-                .collect(),
+                .collect()),
             renames,
         }))
     }
@@ -35,8 +35,8 @@ impl Transformation for ProjectRenameTransformation {
     fn get_output_schema(
         &self,
         _input_schema: &Schema,
-    ) -> crate::pipeline::Schema {
-        self.output_schema.clone()
+    ) -> Schema {
+        self.output_schema.as_ref().clone()
     }
 
     fn transform(
@@ -62,7 +62,7 @@ impl Transformation for ProjectRenameTransformation {
 }
 
 struct ProjectRenamedDataSet {
-    output_schema: Schema,
+    output_schema: Arc<Schema>,
     input: Box<dyn DataSet>,
 }
 
