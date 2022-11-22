@@ -83,7 +83,7 @@ impl Transformation for LookupTransformation {
             output_schema: self.output_schema.clone(),
             lookup_field_names,
             lookup_field_types,
-            buffer: VecDeque::new(),
+            buffer: VecDeque::with_capacity(self.lookup_source.batch_size()),
         }))
     }
 
