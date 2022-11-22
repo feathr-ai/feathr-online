@@ -15,8 +15,15 @@ mod http_json_api;
 use feathr_online_store::FeathrOnlineStore;
 use http_json_api::HttpJsonApi;
 
+// 5 seems to be a reasonable default number
+const DEFAULT_CONCURRENCY: usize = 5;
+
 #[async_trait]
 pub trait LookupSource: Sync + Send + Debug {
+    fn batch_size(&self) -> usize {
+        DEFAULT_CONCURRENCY
+    }
+
     async fn lookup(&self, key: &Value, fields: &[String]) -> Vec<Value>;
 
     fn dump(&self) -> serde_json::Value;

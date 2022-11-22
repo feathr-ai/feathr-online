@@ -22,6 +22,9 @@ pub mod generated {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FeathrOnlineStore {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    concurrency: Option<usize>,
+
     host: String,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     user: Option<String>,
@@ -141,6 +144,10 @@ impl LookupSource for FeathrOnlineStore {
 
     fn dump(&self) -> serde_json::Value {
         serde_json::to_value(self).unwrap()
+    }
+
+    fn batch_size(&self) -> usize {
+        self.concurrency.unwrap_or(super::DEFAULT_CONCURRENCY)
     }
 }
 

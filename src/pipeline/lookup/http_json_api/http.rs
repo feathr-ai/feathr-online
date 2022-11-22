@@ -16,9 +16,11 @@ use super::{
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HttpJsonApi {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    concurrency: Option<usize>,
     // Fixed part
     url_base: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     method: Option<String>,
     #[serde(skip_serializing_if = "HashMap::is_empty", default)]
     additional_headers: HashMap<String, String>,
@@ -167,6 +169,10 @@ impl LookupSource for HttpJsonApi {
 
     fn dump(&self) -> serde_json::Value {
         serde_json::to_value(self).unwrap()
+    }
+
+    fn batch_size(&self) -> usize {
+        self.concurrency.unwrap_or(super::super::DEFAULT_CONCURRENCY)
     }
 }
 
