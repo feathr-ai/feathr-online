@@ -85,15 +85,17 @@ impl DataSet for ExplodedDataSet {
             }
         }
 
-        if self.current_row.is_none() {
-            debug!("Data set is exhausted");
-            return None;
-        }
-        let mut row = self.current_row.clone().unwrap();
+        let mut row = match &self.current_row {
+            Some(row) => row.clone(),
+            None => {
+                debug!("Data set is exhausted");
+                return None;
+            }
+        };
         row[self.column_idx] = self
             .current_exploded_column
             .pop_front()
-            .unwrap()
+            .unwrap() // This won't fail as `get_next_row` ensures that the deque is not empty
             .cast_to(self.exploded_type);
         Some(row)
     }
@@ -102,20 +104,25 @@ impl DataSet for ExplodedDataSet {
 impl ExplodedDataSet {
     #[instrument(level = "trace", skip(self))]
     async fn get_next_row(&mut self) -> Option<Vec<Value>> {
-        if let Some(row) = self.input.next().await {
+        while let Some(row) = self.input.next().await {
             debug!("Fetched 1 row from upstream");
             self.current_row = Some(row.clone());
             self.current_exploded_column = match row[self.column_idx].get_array() {
                 Ok(array) => array.clone().into_iter().collect(),
+                // Keep an error row when the exploded column is not an array so downstream can know what happened
                 Err(e) => return Some(vec![Value::Error(e)]),
             };
             debug!(
                 "Exploded column has {} elements",
                 self.current_exploded_column.len()
             );
-            Some(row)
-        } else {
-            None
+            if self.current_exploded_column.is_empty() {
+                debug!("Exploded column is empty, fetching next row from upstream");
+                continue;
+            } else {
+                return Some(row);
+            }
         }
+        None
     }
 }

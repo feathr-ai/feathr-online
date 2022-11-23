@@ -17,9 +17,6 @@ impl ProjectKeepTransformationBuilder {
 
 impl TransformationBuilder for ProjectKeepTransformationBuilder {
     fn build(&self, input_schema: &Schema) -> Result<Box<dyn Transformation>, PiperError> {
-        Ok(ProjectKeepTransformation::create(
-            input_schema,
-            self.keeps.clone(),
-        ))
+        ProjectKeepTransformation::create(input_schema, self.keeps.clone())
     }
 }

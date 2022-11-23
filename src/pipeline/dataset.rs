@@ -358,7 +358,7 @@ impl FromIterator<Vec<Value>> for Box<EagerDataSet> {
             rows.push(row);
         }
         Box::new(EagerDataSet {
-            schema: schema.unwrap(),
+            schema: schema.unwrap_or_default(), // In case nothing is provided
             rows: rows.into(),
         })
     }

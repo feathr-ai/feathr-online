@@ -147,7 +147,7 @@ async fn process(req: Json<Request>) -> poem::Result<Json<Response>> {
                 Ok(r) => r,
                 Err(e) => SingleResponse {
                     pipeline,
-                    status: format!("ERROR: {:?}", e),
+                    status: format!("ERROR: {}", e),
                     time: None,
                     count: None,
                     data: None,

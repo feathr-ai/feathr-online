@@ -14,16 +14,13 @@ impl Function for ToJsonStringFunction {
     }
 
     fn eval(&self, mut arguments: Vec<Value>) -> Value {
-        if arguments.len() != 1 {
-            return Value::Error(PiperError::InvalidArgumentCount(1, arguments.len()));
+        match arguments.as_slice() {
+            [Value::Error(e)] => e.into(),
+            [_] => {
+                let j: serde_json::Value = arguments.pop().into();
+                Value::String(serde_json::to_string(&j).unwrap().into())
+            }
+            _ => Value::Error(PiperError::InvalidArgumentCount(1, arguments.len())),
         }
-
-        if arguments[0].is_error() {
-            return arguments.pop().unwrap();
-        }
-
-        let value: serde_json::Value = arguments.pop().unwrap().into();
-
-        Value::String(serde_json::to_string(&value).unwrap().into())
     }
 }

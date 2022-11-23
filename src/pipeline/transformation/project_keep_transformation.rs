@@ -14,19 +14,24 @@ pub struct ProjectKeepTransformation {
 }
 
 impl ProjectKeepTransformation {
-    pub fn create(input_schema: &Schema, kept_columns: Vec<String>) -> Box<dyn Transformation> {
+    pub fn create(
+        input_schema: &Schema,
+        kept_columns: Vec<String>,
+    ) -> Result<Box<dyn Transformation>, PiperError> {
         let mut keep_set = HashSet::new();
         let mut columns = vec![];
         for column in &kept_columns {
-            let index = input_schema.get_column_index(column).unwrap();
+            let index = input_schema
+                .get_column_index(column)
+                .ok_or_else(|| PiperError::ColumnNotFound(column.to_string()))?;
             keep_set.insert(index);
             columns.push(input_schema.columns[index].clone());
         }
-        Box::new(ProjectKeepTransformation {
+        Ok(Box::new(ProjectKeepTransformation {
             output_schema: Arc::new(Schema::from(columns)),
             kept_columns,
             keep_set,
-        })
+        }))
     }
 }
 

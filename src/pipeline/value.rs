@@ -35,7 +35,10 @@ impl ValueType {
      * True if the value type is numeric, including int, long, float, and double.
      */
     pub fn is_numeric(&self) -> bool {
-        matches!(self, ValueType::Int | ValueType::Long | ValueType::Float | ValueType::Double)
+        matches!(
+            self,
+            ValueType::Int | ValueType::Long | ValueType::Float | ValueType::Double
+        )
     }
 }
 
@@ -121,15 +124,19 @@ impl ValueTypeOf for f64 {
     }
 }
 
-impl ValueTypeOf for String
-{
+impl ValueTypeOf for String {
     fn value_type() -> ValueType {
         ValueType::String
     }
 }
 
-impl<'a> ValueTypeOf for Cow<'a, str>
-{
+impl<'a> ValueTypeOf for Cow<'a, str> {
+    fn value_type() -> ValueType {
+        ValueType::String
+    }
+}
+
+impl<'a> ValueTypeOf for &'a str {
     fn value_type() -> ValueType {
         ValueType::String
     }
@@ -673,10 +680,7 @@ impl Value {
                 if self.is_null() {
                     Value::Null
                 } else {
-                    Value::Error(PiperError::InvalidTypeCast(
-                        self.value_type(),
-                        value_type,
-                    ))
+                    Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type))
                 }
             }
             Value::Bool(v) => match value_type {
