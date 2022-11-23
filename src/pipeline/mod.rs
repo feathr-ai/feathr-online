@@ -16,4 +16,4 @@ pub use dataset::{
 pub use errors::PiperError;
 pub use lookup::dump_lookup_sources;
 pub use pipelines::Pipeline;
-pub use value::{Value, ValueType};
+pub use value::{Value, ValueType, ValueTypeOf};

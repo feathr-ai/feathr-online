@@ -3,7 +3,7 @@ use std::collections::{HashMap, VecDeque};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use super::{Value, ValueType};
+use super::{PiperError, Value, ValueType};
 
 /**
  * The column definition
@@ -172,7 +172,11 @@ impl DataSet for ValidatedDataSet {
     }
 
     async fn next(&mut self) -> Option<Vec<Value>> {
-        self.data_set.next().await.map(|row| {
+        self.data_set.next().await.map(|mut row| {
+            // Make sure row is not longer than schema
+            row.truncate(self.schema().columns.len());
+            // Some fields may be missing
+            let missing = row.len()..self.schema().columns.len();
             row.into_iter()
                 .enumerate()
                 .map(|(idx, v)| {
@@ -186,6 +190,13 @@ impl DataSet for ValidatedDataSet {
                         }
                     }
                 })
+                .chain(missing.map(|idx| {
+                    // Fill missing fields with error
+                    Value::Error(PiperError::ValidationError(format!(
+                        "Column {} is missing in the input data set",
+                        self.schema().columns[idx].name,
+                    )))
+                }))
                 .collect()
         })
     }

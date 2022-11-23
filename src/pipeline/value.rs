@@ -57,6 +57,102 @@ impl Display for ValueType {
     }
 }
 
+pub trait ValueTypeOf {
+    fn value_type() -> ValueType;
+}
+
+impl ValueTypeOf for () {
+    fn value_type() -> ValueType {
+        ValueType::Null
+    }
+}
+
+impl ValueTypeOf for bool {
+    fn value_type() -> ValueType {
+        ValueType::Bool
+    }
+}
+
+impl ValueTypeOf for i32 {
+    fn value_type() -> ValueType {
+        ValueType::Int
+    }
+}
+
+impl ValueTypeOf for u32 {
+    fn value_type() -> ValueType {
+        ValueType::Int
+    }
+}
+
+impl ValueTypeOf for i64 {
+    fn value_type() -> ValueType {
+        ValueType::Long
+    }
+}
+
+impl ValueTypeOf for u64 {
+    fn value_type() -> ValueType {
+        ValueType::Long
+    }
+}
+
+impl ValueTypeOf for isize {
+    fn value_type() -> ValueType {
+        ValueType::Long
+    }
+}
+
+impl ValueTypeOf for usize {
+    fn value_type() -> ValueType {
+        ValueType::Long
+    }
+}
+
+impl ValueTypeOf for f32 {
+    fn value_type() -> ValueType {
+        ValueType::Float
+    }
+}
+
+impl ValueTypeOf for f64 {
+    fn value_type() -> ValueType {
+        ValueType::Double
+    }
+}
+
+impl ValueTypeOf for String
+{
+    fn value_type() -> ValueType {
+        ValueType::String
+    }
+}
+
+impl<'a> ValueTypeOf for Cow<'a, str>
+{
+    fn value_type() -> ValueType {
+        ValueType::String
+    }
+}
+
+impl<T> ValueTypeOf for Vec<T>
+where
+    T: ValueTypeOf,
+{
+    fn value_type() -> ValueType {
+        ValueType::Array
+    }
+}
+
+impl<T> ValueTypeOf for HashMap<String, T>
+where
+    T: ValueTypeOf,
+{
+    fn value_type() -> ValueType {
+        ValueType::Object
+    }
+}
+
 /**
  * Value is the type of a value in the pipeline.
  */

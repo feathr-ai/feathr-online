@@ -16,6 +16,9 @@ pub enum PiperError {
     #[error("{0}")]
     SyntaxError(String),
 
+    #[error("{0}")]
+    ValidationError(String),
+
     // Row has incorrect number of fields
     #[error("Expecting row with {1} columns, but got {0}")]
     InvalidRowLength(usize, usize),
