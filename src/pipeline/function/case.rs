@@ -43,12 +43,10 @@ impl Function for CaseFunction {
                 // Default case
                 return pair[0].clone();
             }
-            let pred = pair[0].get_bool();
-            if pred.is_err() {
-                return pred.into();
-            }
-            if pred.unwrap() {
-                return pair[1].clone();
+            match pair[0].get_bool() {
+                Ok(true) => return pair[1].clone(),
+                Ok(false) => continue,
+                Err(e) => return e.into(),
             }
         }
         // No default case, and no case matched

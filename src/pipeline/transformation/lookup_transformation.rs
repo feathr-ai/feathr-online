@@ -138,6 +138,11 @@ impl DataSet for LookupDataSet {
             return Some(row);
         }
 
+        // Disable batch when batch_size is 1, no need to go through buffer
+        if self.lookup_source.batch_size() == 1 {
+            return self.input.next().await
+        }
+
         // Now nothing is in the buffer, so we need to fetch the next batch
         let mut buffered_input = Vec::new();
         while buffered_input.len() < self.lookup_source.batch_size() {

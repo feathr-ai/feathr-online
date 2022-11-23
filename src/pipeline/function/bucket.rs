@@ -40,11 +40,10 @@ impl Function for BucketFunction {
             let pred = LessThanOperator
                 .eval(vec![arguments[0].clone(), pivot.clone()])
                 .get_bool();
-            if pred.is_err() {
-                return pred.into();
-            }
-            if pred.unwrap() {
-                return bucket.into();
+            match pred {
+                Ok(true) => return bucket.into(),
+                Ok(false) => continue,
+                Err(e) => return e.into(),
             }
         }
         (arguments.len() - 1).into()
