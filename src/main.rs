@@ -1,5 +1,7 @@
 use std::{collections::HashMap, fmt::Debug, time::Instant};
 
+use azure_core::auth::TokenCredential;
+use azure_identity::{DefaultAzureCredential, DefaultAzureCredentialBuilder};
 use clap::Parser;
 use futures::future::join_all;
 use once_cell::sync::OnceCell;
@@ -39,6 +41,9 @@ struct Args {
 
     #[arg(long, default_value_t = 8000, env = "LISTENING_PORT")]
     port: u16,
+
+    #[arg(long, default_value_t = false, env = "ENABLE_MANAGED_IDENTITY")]
+    enable_managed_identity: bool,
 }
 
 static PIPELINES: OnceCell<HashMap<String, Pipeline>> = OnceCell::new();
@@ -205,10 +210,48 @@ async fn process_single_request(req: SingleRequest) -> Result<SingleResponse, Pi
     })
 }
 
-async fn load_file(path: &str) -> Result<String, PiperError> {
+async fn make_request(
+    url: &str,
+    enable_managed_identity: bool,
+) -> Result<reqwest::RequestBuilder, PiperError> {
+    let client = reqwest::Client::new();
+    if url.starts_with("https://") && url.contains(".blob.core.windows.net/") {
+        // It's on Azure Storage Blob
+        let credential = if enable_managed_identity {
+            DefaultAzureCredential::default()
+        } else {
+            DefaultAzureCredentialBuilder::new()
+                .exclude_managed_identity_credential()
+                .build()
+        };
+        let token = credential
+            .get_token("https://storage.azure.com/")
+            .await
+            .log()
+            .map_err(|e| PiperError::AuthError(format!("{:?}", e)))
+            .map(|t| t.token.secret().to_string())
+            .ok();
+        match token {
+            // Acquired token and use it
+            Some(t) => Ok(client
+                .get(url)
+                // @see: https://learn.microsoft.com/en-us/azure/storage/common/storage-auth-aad-app?tabs=dotnet#create-a-block-blob
+                .header("x-ms-version", "2017-11-09")
+                .bearer_auth(t)),
+            // We don't have token, assume it's public accessible
+            None => Ok(client.get(url)),
+        }
+    } else {
+        Ok(client.get(url))
+    }
+}
+
+async fn load_file(path: &str, enable_managed_identity: bool) -> Result<String, PiperError> {
     debug!("Reading file at {}", path);
     Ok(if path.starts_with("http:") || path.starts_with("https:") {
-        let resp = reqwest::get(path)
+        let resp = make_request(path, enable_managed_identity)
+            .await?
+            .send()
             .await
             .log()
             .map_err(|e| PiperError::Unknown(e.to_string()))?;
@@ -244,8 +287,8 @@ async fn main() -> Result<(), PiperError> {
     info!("Piper is starting...");
     let args = Args::parse();
 
-    let pipeline_def = load_file(&args.pipeline).await?;
-    let lookup_def = load_file(&args.lookup).await?;
+    let pipeline_def = load_file(&args.pipeline, args.enable_managed_identity).await?;
+    let lookup_def = load_file(&args.lookup, args.enable_managed_identity).await?;
 
     let mut pipelines = Pipeline::load(&pipeline_def, &lookup_def).log()?;
     // Use invalid identifier as the name, avoid clashes with user-defined pipelines
