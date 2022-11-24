@@ -1,7 +1,8 @@
 #![allow(dead_code, unused_variables)]
 
-use std::{borrow::Cow, collections::HashMap, fmt::Display};
+use std::{borrow::Cow, collections::HashMap, convert::Infallible, fmt::Display};
 
+use chrono::{NaiveDate, NaiveDateTime};
 use serde_json::Number;
 
 use super::PiperError;
@@ -62,6 +63,12 @@ impl Display for ValueType {
 
 pub trait ValueTypeOf {
     fn value_type() -> ValueType;
+}
+
+impl ValueTypeOf for Value {
+    fn value_type() -> ValueType {
+        ValueType::Dynamic
+    }
 }
 
 impl ValueTypeOf for () {
@@ -142,6 +149,24 @@ impl<'a> ValueTypeOf for &'a str {
     }
 }
 
+impl ValueTypeOf for NaiveDate {
+    fn value_type() -> ValueType {
+        ValueType::String
+    }
+}
+
+impl ValueTypeOf for NaiveDateTime {
+    fn value_type() -> ValueType {
+        ValueType::String
+    }
+}
+
+impl ValueTypeOf for PiperError {
+    fn value_type() -> ValueType {
+        ValueType::Error
+    }
+}
+
 impl<T> ValueTypeOf for Vec<T>
 where
     T: ValueTypeOf,
@@ -157,6 +182,15 @@ where
 {
     fn value_type() -> ValueType {
         ValueType::Object
+    }
+}
+
+impl<T, E> ValueTypeOf for Result<T, E>
+where
+    T: ValueTypeOf,
+{
+    fn value_type() -> ValueType {
+        T::value_type()
     }
 }
 
@@ -324,9 +358,42 @@ impl From<&'static str> for Value {
     }
 }
 
+impl From<NaiveDate> for Value {
+    fn from(value: NaiveDate) -> Self {
+        Value::String(value.format("%Y-%m-%d").to_string().into())
+    }
+}
+
+impl From<NaiveDateTime> for Value {
+    fn from(value: NaiveDateTime) -> Self {
+        Value::String(value.format("%Y-%m-%d %H:%M:%S").to_string().into())
+    }
+}
+
 impl From<PiperError> for Value {
     fn from(value: PiperError) -> Self {
         Value::Error(value)
+    }
+}
+
+impl<T> From<Option<T>> for Value
+where
+    T: Into<Value>,
+{
+    fn from(value: Option<T>) -> Self {
+        match value {
+            Some(v) => v.into(),
+            None => Value::Null,
+        }
+    }
+}
+
+impl<T> From<Result<T, Infallible>> for Value
+where
+    T: Into<Value>,
+{
+    fn from(value: Result<T, Infallible>) -> Self {
+        value.unwrap().into()
     }
 }
 
@@ -455,6 +522,48 @@ impl TryInto<String> for Value {
 
     fn try_into(self) -> Result<String, PiperError> {
         self.get_string().map(|s| s.to_string())
+    }
+}
+
+impl TryInto<Vec<Value>> for Value {
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<Vec<Value>, PiperError> {
+        self.get_array().cloned()
+    }
+}
+
+impl TryInto<NaiveDate> for Value {
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<NaiveDate, PiperError> {
+        self.get_string().and_then(|s| {
+            NaiveDate::parse_from_str(s.as_ref(), "%Y-%m-%d")
+                .map_err(|e| PiperError::InvalidValue(e.to_string()))
+        })
+    }
+}
+
+impl TryInto<NaiveDateTime> for Value {
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<NaiveDateTime, PiperError> {
+        self.get_string().and_then(|s| {
+            NaiveDateTime::parse_from_str(s.as_ref(), "%Y-%m-%d %H:%M:%S")
+                .map_err(|e| PiperError::InvalidValue(e.to_string()))
+        })
+    }
+}
+
+impl TryInto<Option<String>> for Value
+{
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<Option<String>, PiperError> {
+        match self {
+            Value::Null => Ok(None),
+            v => Ok(Some(v.try_into()?)),
+        }
     }
 }
 

@@ -51,6 +51,10 @@ pub enum PiperError {
     #[error("Invalid type {2} of argument {1} for function {0}.")]
     InvalidArgumentType(String, usize, ValueType),
 
+    // Function has incorrect type of argument
+    #[error("{0}")]
+    InvalidValue(String),
+
     // Function has incorrect number of arguments
     #[error("Invalid argument count, expecting {0}, got {1}.")]
     InvalidArgumentCount(usize, usize),

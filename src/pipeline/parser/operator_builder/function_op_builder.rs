@@ -23,7 +23,7 @@ impl OperatorBuilder for FunctionOperatorBuilder {
         match get_function(&self.name) {
             Some((name, function)) => Ok(Box::new(FunctionOperator {
                 name,
-                function,
+                function: crate::common::IgnoreDebug { inner: function },
             })),
             None => Err(PiperError::UnknownFunction(self.name.clone())),
         }
