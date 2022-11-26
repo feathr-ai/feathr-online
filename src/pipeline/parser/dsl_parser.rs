@@ -140,10 +140,13 @@ peg::parser! {
             --
             x:(@) _ "*" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("*")), vec![x, y])) }
             x:(@) _ "/" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("/")), vec![x, y])) }
+            x:(@) _ "&" _ y:@ { (OperatorExpressionBuilder::create((FunctionOperatorBuilder::create("bit_and")), vec![x, y])) }
             x:(@) _ "and" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("and")), vec![x, y])) }
             --
             "+" _ x:(@) { (OperatorExpressionBuilder::create((UnaryOperatorBuilder::create("+")), vec![x])) }
             "-" _ x:(@) { (OperatorExpressionBuilder::create((UnaryOperatorBuilder::create("-")), vec![x])) }
+            "~" _ x:(@) { (OperatorExpressionBuilder::create((FunctionOperatorBuilder::create("bit_not")), vec![x])) }
+            "!" _ x:(@) { (OperatorExpressionBuilder::create((UnaryOperatorBuilder::create("not")), vec![x])) }
             "not" _ x:(@) { (OperatorExpressionBuilder::create((UnaryOperatorBuilder::create("not")), vec![x])) }
             --
             x:(@) _ "is" _ "null" { (OperatorExpressionBuilder::create((UnaryOperatorBuilder::create("is null")), vec![x])) }

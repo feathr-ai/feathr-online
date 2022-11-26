@@ -1279,6 +1279,7 @@ dependencies = [
  "poem",
  "protobuf",
  "protobuf-codegen",
+ "rand 0.7.3",
  "redis",
  "regex",
  "reqwest",

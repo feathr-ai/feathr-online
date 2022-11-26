@@ -41,26 +41,6 @@ pub fn ascii(s: String) -> Value {
     s.chars().next().map_or(Value::Null, |c| (c as u32).into())
 }
 
-pub struct Coalesce;
-
-impl Function for Coalesce {
-    fn get_output_type(
-        &self,
-        _argument_types: &[crate::pipeline::ValueType],
-    ) -> Result<crate::pipeline::ValueType, crate::pipeline::PiperError> {
-        Ok(ValueType::Dynamic)
-    }
-
-    fn eval(&self, arguments: Vec<Value>) -> Value {
-        for arg in arguments {
-            if !arg.is_null() {
-                return arg;
-            }
-        }
-        Value::Null
-    }
-}
-
 pub struct Concat;
 
 impl Function for Concat {

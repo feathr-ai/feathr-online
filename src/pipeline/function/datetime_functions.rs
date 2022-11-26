@@ -33,3 +33,7 @@ pub fn add_days(mut date: NaiveDate, days: i64) -> Result<NaiveDate, PiperError>
     date += Duration::days(days);
     Ok(date)
 }
+
+pub fn quarter(date: NaiveDate) -> u32 {
+    (date.month() - 1) / 3 + 1
+}

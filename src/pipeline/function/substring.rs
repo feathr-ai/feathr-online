@@ -44,19 +44,11 @@ impl Function for SubstringFunction {
         if arguments.len() != 3 {
             return Value::Error(PiperError::InvalidArgumentCount(3, arguments.len()));
         }
-        let length = match arguments
-            .remove(2)
-            .convert_to(ValueType::Long)
-            .get_long()
-        {
+        let length = match arguments.remove(2).convert_to(ValueType::Long).get_long() {
             Ok(string) => string,
             Err(err) => return Value::Error(err),
         };
-        let start = match arguments
-            .remove(1)
-            .convert_to(ValueType::Long)
-            .get_long()
-        {
+        let start = match arguments.remove(1).convert_to(ValueType::Long).get_long() {
             Ok(string) => string,
             Err(err) => return Value::Error(err),
         };
@@ -80,5 +72,125 @@ impl Function for SubstringFunction {
                 .to_string()
                 .into(),
         )
+    }
+}
+
+pub fn substring_index(string: String, delimiter: String, count: i64) -> String {
+    let mut count = count;
+    if count >= 0 {
+        let mut start = 0;
+        let mut end;
+        let mut ret_end = 0;
+        while count > 0 {
+            end = match string[start..].find(&delimiter) {
+                Some(index) => start + index,
+                None => string.len(),
+            };
+            ret_end = end;
+            start = end + delimiter.len();
+            if start >= string.len() {
+                ret_end = string.len();
+                break;
+            }
+            if count == 1 {
+                break;
+            } else {
+                ret_end += delimiter.len();
+            }
+            count -= 1;
+        }
+        string[..ret_end].to_string()
+    } else {
+        let mut start = string.len();
+        let mut end;
+        let mut ret_start = 0;
+        while count < 0 {
+            end = string[..start].rfind(&delimiter).unwrap_or(0);
+            ret_start = end;
+            start = end;
+            if start == 0 {
+                break;
+            }
+            if count == -1 {
+                ret_start += delimiter.len();
+                break;
+            }
+            if ret_start == 0 {
+                break;
+            }
+            count += 1;
+        }
+        string[ret_start..string.len()].to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_substring_index() {
+        assert_eq!(
+            super::substring_index("www.apache.org".to_string(), ".".to_string(), 2),
+            "www.apache"
+        );
+        assert_eq!(
+            super::substring_index("www.apache.org".to_string(), ".".to_string(), 3),
+            "www.apache.org"
+        );
+        assert_eq!(
+            super::substring_index("www.apache.org".to_string(), ".".to_string(), 4),
+            "www.apache.org"
+        );
+        assert_eq!(
+            super::substring_index("www.apache.org".to_string(), ".".to_string(), -1),
+            "org"
+        );
+        assert_eq!(
+            super::substring_index("www.apache.org".to_string(), ".".to_string(), -2),
+            "apache.org"
+        );
+        assert_eq!(
+            super::substring_index("www.apache.org".to_string(), ".".to_string(), -3),
+            "www.apache.org"
+        );
+        assert_eq!(
+            super::substring_index("www.apache.org".to_string(), ".".to_string(), -4),
+            "www.apache.org"
+        );
+        assert_eq!(
+            super::substring_index("www.apache.org".to_string(), ".".to_string(), 0),
+            ""
+        );
+        assert_eq!(
+            super::substring_index("www.apache.org".to_string(), ".".to_string(), 1),
+            "www"
+        );
+        assert_eq!(
+            super::substring_index("www.apache.org".to_string(), ".".to_string(), 2),
+            "www.apache"
+        );
+        assert_eq!(
+            super::substring_index("www.apache.org".to_string(), ".".to_string(), 3),
+            "www.apache.org"
+        );
+        assert_eq!(
+            super::substring_index("www.apache.org".to_string(), ".".to_string(), 4),
+            "www.apache.org"
+        );
+        assert_eq!(
+            super::substring_index("www.apache.org".to_string(), ".".to_string(), -1),
+            "org"
+        );
+        assert_eq!(
+            super::substring_index("www.apache.org".to_string(), ".".to_string(), -2),
+            "apache.org"
+        );
+        assert_eq!(
+            super::substring_index("www.apache.org".to_string(), ".".to_string(), -3),
+            "www.apache.org"
+        );
+        assert_eq!(
+            super::substring_index("www.apache.org".to_string(), ".".to_string(), -4),
+            "www.apache.org"
+        );
     }
 }

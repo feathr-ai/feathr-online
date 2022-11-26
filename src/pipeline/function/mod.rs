@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, Timelike, Utc};
 use once_cell::sync::OnceCell;
 
+use self::function_wrapper::var_fn;
+
 use super::{PiperError, Value, ValueType};
 
 mod array_functions;
@@ -14,6 +16,7 @@ mod function_wrapper;
 mod len;
 mod make_array;
 mod misc_functions;
+mod rand_functions;
 mod split;
 mod substring;
 mod timestamp;
@@ -25,7 +28,7 @@ use bucket::BucketFunction;
 use case::CaseFunction;
 use datetime_functions::*;
 use extract_json::{ExtractJsonArray, ExtractJsonObject};
-use function_wrapper::{binary_fn, nullary_fn, unary_fn};
+use function_wrapper::{binary_fn, nullary_fn, ternary_fn, unary_fn};
 use len::Len;
 use make_array::MakeArray;
 use misc_functions::*;
@@ -93,28 +96,29 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     function_map.insert("bigint".to_string(), Box::new(TypeConverterFunction {to: ValueType::Long}));
     // bin
     // binary
-    function_map.insert("bit_and".to_string(), binary_fn(|x: u64, y: u64| x & y));
+    function_map.insert("bit_and".to_string(), var_fn(|v: Vec<u64>| v.iter().fold(0, |acc, x| acc & x)));
     function_map.insert("bit_count".to_string(), unary_fn(u64::count_ones));
     function_map.insert("bit_get".to_string(), binary_fn(|x: u64, y: u64| (x >> y) & 1));
     // bit_length
-    function_map.insert("bit_or".to_string(), binary_fn(|x: u64, y: u64| x | y));
-    function_map.insert("bit_xor".to_string(), binary_fn(|x: u64, y: u64| x ^ y));
+    function_map.insert("bit_not".to_string(), unary_fn(|x: u64| !x));
+    function_map.insert("bit_or".to_string(), var_fn(|v: Vec<u64>| v.iter().fold(0, |acc, x| acc | x)));
+    function_map.insert("bit_xor".to_string(), var_fn(|v: Vec<u64>| v.iter().fold(0, |acc, x| acc ^ x)));
     // bool_and
     // bool_or
     function_map.insert("boolean".to_string(), Box::new(TypeConverterFunction {to: ValueType::Bool}));
     // function_map.insert("bround".to_string(), binary_fn(|x: f64, y: i64| bround(x, y)));
     function_map.insert("btrim".to_string(), unary_fn(|x: String| x.trim().to_string()));
     // cardinality
-    // case
+    // case, implemented in syntax
     // cast, this needs special syntax
     function_map.insert("cbrt".to_string(), unary_fn(f64::cbrt));
     function_map.insert("ceil".to_string(), unary_fn(f64::ceil));
     // ceiling
     function_map.insert("char".to_string(), unary_fn(|x: i64| char::from_u32((x % 256) as u32).unwrap().to_string()));
     function_map.insert("char_length".to_string(), unary_fn(|s: String| s.chars().count() as i64));
-    // character_length = char_length
-    // chr = char
-    function_map.insert("coalesce".to_string(), Box::new(Coalesce));
+    function_map.insert("character_length".to_string(), unary_fn(|s: String| s.chars().count() as i64));
+    function_map.insert("chr".to_string(), unary_fn(|x: i64| char::from_u32((x % 256) as u32).unwrap().to_string()));
+    function_map.insert("coalesce".to_string(), var_fn(|args: Vec<Value>| args.into_iter().find(|v| !v.is_null()).unwrap_or(Value::Null)));
     // collect_list
     // collect_set
     function_map.insert("concat".to_string(), Box::new(Concat));
@@ -289,14 +293,14 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // position
     // positive
     function_map.insert("pow".to_string(), binary_fn(f64::powf));
-    // power
+    function_map.insert("power".to_string(), binary_fn(f64::powf));
     // printf
-    // quarter
+    function_map.insert("quarter".to_string(), unary_fn(quarter));
     function_map.insert("radians".to_string(), unary_fn(|v: f64| v * std::f64::consts::PI / 180.0));
     // raise_error
-    // rand
+    function_map.insert("rand".to_string(), nullary_fn(rand_functions::rand));
     // randn
-    // random
+    function_map.insert("random".to_string(), nullary_fn(rand_functions::rand));
     // rank
     // reflect
     // regexp
@@ -332,6 +336,7 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // shiftright
     // shiftrightunsigned
     // shuffle
+    function_map.insert("shuffle".to_string(), unary_fn(rand_functions::shuffle));
     // sign
     // signum
     function_map.insert("sin".to_string(), unary_fn(f64::sin));
@@ -357,9 +362,8 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // str_to_map
     function_map.insert("string".to_string(), Box::new(TypeConverterFunction { to: ValueType::String }));
     // struct
-    // substr
     function_map.insert("substring".to_string(), Box::new(SubstringFunction));
-    // substring_index
+    function_map.insert("substring_index".to_string(), ternary_fn(substring::substring_index));
     // sum
     function_map.insert("tan".to_string(), unary_fn(f64::tan));
     function_map.insert("tanh".to_string(), unary_fn(f64::tanh));
