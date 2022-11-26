@@ -119,7 +119,7 @@ peg::parser! {
             = new:identifier() _ "=" _ old:identifier() {
                 (old.to_string(), new.to_string())
             }
-
+        
         rule rename_with_type() -> (String, Option<String>, ValueType)
             = (new_name:identifier() _ "=" _ name:identifier() _ "as" _ vt:value_type() { (name.to_string(), Some(new_name), vt) })
             / (new_name:identifier() _ "=" _ name:identifier() { (name.to_string(), Some(new_name), ValueType::Dynamic) })
@@ -149,6 +149,7 @@ peg::parser! {
             x:(@) _ "is" _ "null" { (OperatorExpressionBuilder::create((UnaryOperatorBuilder::create("is null")), vec![x])) }
             x:(@) _ "is" _ "not" _ "null" { (OperatorExpressionBuilder::create((UnaryOperatorBuilder::create("is not null")), vec![x])) }
             --
+            case:case_clause() { case }
             f:function_call() _ idx:(index() ** _) {
                 idx.into_iter().fold(f, |e, i| {
                     OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("index")), vec![e, i])
@@ -169,6 +170,26 @@ peg::parser! {
                 })
             }
         }
+
+        rule case_clause() -> Box<dyn ExpressionBuilder>
+            = "case"
+                _ when_then:(when_then() **<1,> _)
+                _ else_then:else_then()?
+                _ "end"
+            {
+                let args = when_then.into_iter().flat_map(|(w, t)| [w, t].into_iter()).chain(else_then.into_iter()).collect();
+                OperatorExpressionBuilder::create(FunctionOperatorBuilder::create("case"), args)
+            }
+        
+        rule when_then() -> (Box<dyn ExpressionBuilder>, Box<dyn ExpressionBuilder>)
+            = "when" _ condition:expression() _ "then" _ result:expression() {
+                (condition, result)
+            }
+        
+        rule else_then() -> Box<dyn ExpressionBuilder>
+            = "else" _ result:expression() {
+                result
+            }
 
         rule index() -> Box<dyn ExpressionBuilder>
             = "[" _ idx:expression() _ "]" { idx }
@@ -261,7 +282,7 @@ peg::parser! {
             = c:$(['0'..='9' | 'a'..='f' | 'A'..='F']) { c.to_string() }
 
         rule reserved_words()
-            = "null" / "true" / "false" / "and" / "or" / "not" / "is" / "as" / "dynamic" / "PI" / "E" / "TAU" 
+            = "null" / "true" / "false" / "and" / "or" / "not" / "is" / "as" / "dynamic" / "PI" / "E" / "TAU" / "case" / "when" / "then" / "else"
 
         rule _() = quiet!{ (whitespace_char() / "\n" / comment())* }
         rule whitespace_char() = ['\t' | ' ']
@@ -321,6 +342,14 @@ mod tests {
     #[test]
     fn test_array_index() {
         let input = "(f(12)+a[2] + x.y.z[78] -b)[12] [34][56]";
+        let result = pipeline_parser::expression(input);
+        println!("{:?}", result);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_case_clause() {
+        let input = "case when (a > 1) then (2) when a>2 then 2 else 4 end";
         let result = pipeline_parser::expression(input);
         println!("{:?}", result);
         assert!(result.is_ok());
