@@ -33,6 +33,8 @@ tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 rust_heap = "0.1"
 azure_core = "0.6"
 azure_identity = "0.7"
+levenshtein = "1.0.5"
+uuid = "1"
 
 [target.'cfg(target_env = "musl")'.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }

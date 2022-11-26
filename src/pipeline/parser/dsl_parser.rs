@@ -261,7 +261,7 @@ peg::parser! {
             = c:$(['0'..='9' | 'a'..='f' | 'A'..='F']) { c.to_string() }
 
         rule reserved_words()
-            = "null" / "true" / "false" / "and" / "or" / "not" / "is" / "as" / "int" / "long" / "float" / "double" / "array" / "object" / "dynamic" / "PI" / "E" / "TAU"
+            = "null" / "true" / "false" / "and" / "or" / "not" / "is" / "as" / "dynamic" / "PI" / "E" / "TAU" 
 
         rule _() = quiet!{ (whitespace_char() / "\n" / comment())* }
         rule whitespace_char() = ['\t' | ' ']

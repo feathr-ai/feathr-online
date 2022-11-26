@@ -2,10 +2,14 @@
 
 use std::{borrow::Cow, collections::HashMap, convert::Infallible, fmt::Display};
 
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use serde_json::Number;
 
 use super::PiperError;
+
+// These are the default formats used by SparkSQL
+const DEFAULT_DATETIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
+const DEFAULT_DATE_FORMAT: &str = "%Y-%m-%d";
 
 /**
  * The type of a value
@@ -21,6 +25,7 @@ pub enum ValueType {
     String,
     Array,
     Object,
+    DateTime,
     /**
      * Dynamic means the value is polymorphic, and can be any of the above types.
      */
@@ -55,6 +60,7 @@ impl Display for ValueType {
             ValueType::String => write!(f, "string"),
             ValueType::Array => write!(f, "array"),
             ValueType::Object => write!(f, "object"),
+            ValueType::DateTime => write!(f, "datetime"),
             ValueType::Dynamic => write!(f, "dynamic"),
             ValueType::Error => write!(f, "error"),
         }
@@ -149,15 +155,24 @@ impl<'a> ValueTypeOf for &'a str {
     }
 }
 
+impl<Tz> ValueTypeOf for DateTime<Tz>
+where
+    Tz: TimeZone,
+{
+    fn value_type() -> ValueType {
+        ValueType::DateTime
+    }
+}
+
 impl ValueTypeOf for NaiveDate {
     fn value_type() -> ValueType {
-        ValueType::String
+        ValueType::DateTime
     }
 }
 
 impl ValueTypeOf for NaiveDateTime {
     fn value_type() -> ValueType {
-        ValueType::String
+        ValueType::DateTime
     }
 }
 
@@ -208,6 +223,7 @@ pub enum Value {
     String(Cow<'static, str>),
     Array(Vec<Value>),
     Object(HashMap<String, Value>),
+    DateTime(DateTime<Utc>),
     Error(PiperError),
 }
 
@@ -223,8 +239,40 @@ impl PartialEq for Value {
             (Self::String(l0), Self::String(r0)) => l0 == r0,
             (Self::Array(l0), Self::Array(r0)) => l0 == r0,
             (Self::Object(l0), Self::Object(r0)) => l0 == r0,
+            (Self::DateTime(l0), Self::DateTime(r0)) => l0 == r0,
             (Self::Error(l0), Self::Error(r0)) => false,
             _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+        }
+    }
+}
+
+impl PartialOrd for Value {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (Value::Int(x), Value::Int(y)) => x.partial_cmp(y),
+            (Value::Int(x), Value::Long(y)) => (*x as i64).partial_cmp(y),
+            (Value::Int(x), Value::Float(y)) => (*x as f32).partial_cmp(y),
+            (Value::Int(x), Value::Double(y)) => (*x as f64).partial_cmp(y),
+
+            (Value::Long(x), Value::Int(y)) => x.partial_cmp(&(*y as i64)),
+            (Value::Long(x), Value::Long(y)) => x.partial_cmp(y),
+            (Value::Long(x), Value::Float(y)) => (*x as f64).partial_cmp(&(*y as f64)),
+            (Value::Long(x), Value::Double(y)) => (*x as f64).partial_cmp(y),
+
+            (Value::Float(x), Value::Int(y)) => x.partial_cmp(&(*y as f32)),
+            (Value::Float(x), Value::Long(y)) => (*x as f64).partial_cmp(&(*y as f64)),
+            (Value::Float(x), Value::Float(y)) => x.partial_cmp(y),
+            (Value::Float(x), Value::Double(y)) => (*x as f64).partial_cmp(y),
+
+            (Value::Double(x), Value::Int(y)) => x.partial_cmp(&(*y as f64)),
+            (Value::Double(x), Value::Long(y)) => x.partial_cmp(&(*y as f64)),
+            (Value::Double(x), Value::Float(y)) => x.partial_cmp(&(*y as f64)),
+            (Value::Double(x), Value::Double(y)) => x.partial_cmp(y),
+
+            (Value::String(x), Value::String(y)) => x.partial_cmp(y),
+            (Value::DateTime(x), Value::DateTime(y)) => x.partial_cmp(y),
+
+            _ => None,
         }
     }
 }
@@ -242,6 +290,9 @@ impl From<Value> for serde_json::Value {
             Value::Array(v) => serde_json::Value::Array(v.into_iter().map(|x| x.into()).collect()),
             Value::Object(v) => {
                 serde_json::Value::Object(v.into_iter().map(|(k, v)| (k, v.into())).collect())
+            }
+            Value::DateTime(v) => {
+                serde_json::Value::String(v.format(DEFAULT_DATETIME_FORMAT).to_string())
             }
             Value::Error(e) => serde_json::Value::Null,
         }
@@ -358,15 +409,24 @@ impl From<&'static str> for Value {
     }
 }
 
+impl From<DateTime<Utc>> for Value {
+    fn from(value: DateTime<Utc>) -> Self {
+        Value::DateTime(value)
+    }
+}
+
 impl From<NaiveDate> for Value {
     fn from(value: NaiveDate) -> Self {
-        Value::String(value.format("%Y-%m-%d").to_string().into())
+        Value::DateTime(
+            Utc.from_local_datetime(&value.and_hms_opt(0, 0, 0).unwrap())
+                .unwrap(),
+        )
     }
 }
 
 impl From<NaiveDateTime> for Value {
     fn from(value: NaiveDateTime) -> Self {
-        Value::String(value.format("%Y-%m-%d %H:%M:%S").to_string().into())
+        Value::DateTime(Utc.from_local_datetime(&value).unwrap())
     }
 }
 
@@ -525,11 +585,11 @@ impl TryInto<String> for Value {
     }
 }
 
-impl TryInto<Vec<Value>> for Value {
+impl TryInto<DateTime<Utc>> for Value {
     type Error = PiperError;
 
-    fn try_into(self) -> Result<Vec<Value>, PiperError> {
-        self.get_array().cloned()
+    fn try_into(self) -> Result<DateTime<Utc>, PiperError> {
+        self.get_datetime()
     }
 }
 
@@ -537,10 +597,7 @@ impl TryInto<NaiveDate> for Value {
     type Error = PiperError;
 
     fn try_into(self) -> Result<NaiveDate, PiperError> {
-        self.get_string().and_then(|s| {
-            NaiveDate::parse_from_str(s.as_ref(), "%Y-%m-%d")
-                .map_err(|e| PiperError::InvalidValue(e.to_string()))
-        })
+        self.get_datetime().map(|d| d.naive_utc().date())
     }
 }
 
@@ -548,15 +605,11 @@ impl TryInto<NaiveDateTime> for Value {
     type Error = PiperError;
 
     fn try_into(self) -> Result<NaiveDateTime, PiperError> {
-        self.get_string().and_then(|s| {
-            NaiveDateTime::parse_from_str(s.as_ref(), "%Y-%m-%d %H:%M:%S")
-                .map_err(|e| PiperError::InvalidValue(e.to_string()))
-        })
+        self.get_datetime().map(|d| d.naive_utc())
     }
 }
 
-impl TryInto<Option<String>> for Value
-{
+impl TryInto<Option<String>> for Value {
     type Error = PiperError;
 
     fn try_into(self) -> Result<Option<String>, PiperError> {
@@ -564,6 +617,14 @@ impl TryInto<Option<String>> for Value
             Value::Null => Ok(None),
             v => Ok(Some(v.try_into()?)),
         }
+    }
+}
+
+impl TryInto<Vec<Value>> for Value {
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<Vec<Value>, PiperError> {
+        self.get_array().cloned()
     }
 }
 
@@ -616,6 +677,7 @@ impl Value {
             Value::String(_) => ValueType::String,
             Value::Array(_) => ValueType::Array,
             Value::Object(_) => ValueType::Object,
+            Value::DateTime(_) => ValueType::DateTime,
             Value::Error(_) => ValueType::Error,
         }
     }
@@ -763,7 +825,22 @@ impl Value {
     }
 
     /**
-     * Get the object value, if the value is not an object, return PiperError::InvalidValueType
+     * Get the datetime value, if the value is not a datetime, return PiperError::InvalidValueType
+     */
+    pub fn get_datetime(&self) -> Result<DateTime<Utc>, PiperError> {
+        match self {
+            Value::String(v) => str_to_datetime(v.as_ref()),
+            Value::DateTime(v) => Ok(*v),
+            Value::Error(e) => Err(e.clone())?,
+            _ => Err(PiperError::InvalidValueType(
+                self.value_type(),
+                ValueType::DateTime,
+            )),
+        }
+    }
+
+    /**
+     * Get the error value, if the value is not an error, return PiperError::InvalidValueType
      */
     pub fn get_error(&self) -> Result<(), PiperError> {
         match self {
@@ -776,7 +853,7 @@ impl Value {
     }
 
     /**
-     * Type cast, number types can be auto casted to each others, others are not
+     * Type cast, number types can be auto casted to each others, string can be casted to datetime and vice versa.
      */
     pub fn cast_to(self, value_type: ValueType) -> Value {
         // Dynamic means the value could be any type
@@ -826,6 +903,7 @@ impl Value {
             },
             Value::String(v) => match value_type {
                 ValueType::String => v.into(),
+                ValueType::DateTime => str_to_datetime(v.as_ref()).into(),
                 _ => Value::Error(PiperError::InvalidTypeCast(ValueType::String, value_type)),
             },
             Value::Array(v) => match value_type {
@@ -835,6 +913,11 @@ impl Value {
             Value::Object(v) => match value_type {
                 ValueType::Object => v.into(),
                 _ => Value::Error(PiperError::InvalidTypeCast(ValueType::Object, value_type)),
+            },
+            Value::DateTime(v) => match value_type {
+                ValueType::String => v.format(DEFAULT_DATETIME_FORMAT).to_string().into(),
+                ValueType::DateTime => v.into(),
+                _ => Value::Error(PiperError::InvalidTypeCast(ValueType::DateTime, value_type)),
             },
             Value::Error(e) => Value::Error(e),
         }
@@ -933,8 +1016,17 @@ impl Value {
                     .map_err(|_| PiperError::FormatError(v.to_string(), value_type))
                     .into(),
                 ValueType::String => (v.to_string()).into(),
+                ValueType::DateTime => str_to_datetime(v.as_ref()).into(),
                 _ => Value::Error(PiperError::InvalidTypeConversion(
                     ValueType::String,
+                    value_type,
+                )),
+            },
+            Value::DateTime(v) => match value_type {
+                ValueType::String => v.format(DEFAULT_DATETIME_FORMAT).to_string().into(),
+                ValueType::DateTime => v.into(),
+                _ => Value::Error(PiperError::InvalidTypeConversion(
+                    ValueType::DateTime,
                     value_type,
                 )),
             },
@@ -968,6 +1060,7 @@ impl Value {
             Value::Float(v) => v.to_string(),
             Value::Double(v) => v.to_string(),
             Value::String(v) => format!("\"{}\"", v),
+            Value::DateTime(v) => format!("\"{}\"", v.format(DEFAULT_DATETIME_FORMAT)),
             Value::Array(v) => {
                 let mut s = "[".to_string();
                 for (i, e) in v.iter().enumerate() {
@@ -995,34 +1088,18 @@ impl Value {
     }
 }
 
-impl PartialOrd for Value {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        match (self, other) {
-            (Value::Int(x), Value::Int(y)) => x.partial_cmp(y),
-            (Value::Int(x), Value::Long(y)) => (*x as i64).partial_cmp(y),
-            (Value::Int(x), Value::Float(y)) => (*x as f32).partial_cmp(y),
-            (Value::Int(x), Value::Double(y)) => (*x as f64).partial_cmp(y),
-
-            (Value::Long(x), Value::Int(y)) => x.partial_cmp(&(*y as i64)),
-            (Value::Long(x), Value::Long(y)) => x.partial_cmp(y),
-            (Value::Long(x), Value::Float(y)) => (*x as f64).partial_cmp(&(*y as f64)),
-            (Value::Long(x), Value::Double(y)) => (*x as f64).partial_cmp(y),
-
-            (Value::Float(x), Value::Int(y)) => x.partial_cmp(&(*y as f32)),
-            (Value::Float(x), Value::Long(y)) => (*x as f64).partial_cmp(&(*y as f64)),
-            (Value::Float(x), Value::Float(y)) => x.partial_cmp(y),
-            (Value::Float(x), Value::Double(y)) => (*x as f64).partial_cmp(y),
-
-            (Value::Double(x), Value::Int(y)) => x.partial_cmp(&(*y as f64)),
-            (Value::Double(x), Value::Long(y)) => x.partial_cmp(&(*y as f64)),
-            (Value::Double(x), Value::Float(y)) => x.partial_cmp(&(*y as f64)),
-            (Value::Double(x), Value::Double(y)) => x.partial_cmp(y),
-
-            (Value::String(x), Value::String(y)) => x.partial_cmp(y),
-
-            _ => None,
-        }
-    }
+fn str_to_datetime(v: &str) -> Result<DateTime<Utc>, PiperError> {
+    let dt = if let Ok(dt) = NaiveDateTime::parse_from_str(v, DEFAULT_DATETIME_FORMAT) {
+        dt
+    } else if let Ok(d) = NaiveDate::parse_from_str(v, DEFAULT_DATE_FORMAT) {
+        d.and_hms_opt(0, 0, 0).unwrap()
+    } else {
+        return Err(PiperError::InvalidTypeCast(
+            ValueType::String,
+            ValueType::DateTime,
+        ));
+    };
+    Ok(Utc.from_local_datetime(&dt).unwrap())
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{Datelike, Duration, NaiveDate, Utc, NaiveDateTime, Timelike};
+use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, Timelike, Utc};
 use once_cell::sync::OnceCell;
 
 use super::{PiperError, Value, ValueType};
@@ -90,7 +90,7 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // avg
     // base64
     // between
-    // bigint
+    function_map.insert("bigint".to_string(), Box::new(TypeConverterFunction {to: ValueType::Long}));
     // bin
     // binary
     function_map.insert("bit_and".to_string(), binary_fn(|x: u64, y: u64| x & y));
@@ -136,16 +136,16 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // current_catalog
     // current_database
     function_map.insert("csc".to_string(), unary_fn(|x| 1.0 / f64::sin(x)));
-    function_map.insert("current_date".to_string(), nullary_fn(|| Utc::now().naive_utc().date()));
-    function_map.insert("current_timestamp".to_string(), nullary_fn(|| Utc::now().timestamp()));
+    function_map.insert("current_date".to_string(), nullary_fn(|| Utc::now().date_naive()));
+    function_map.insert("current_timestamp".to_string(), nullary_fn(Utc::now));
     // current_timezone
     // current_user
-    // date
+    function_map.insert("date".to_string(), Box::new(TypeConverterFunction {to: ValueType::DateTime}));
     function_map.insert("date_add".to_string(), binary_fn(add_days));
     // * date_format, need to figure out how to handle Spark format string
-    // * date_from_unix_date
+    function_map.insert("date_from_unix_date".to_string(), unary_fn(|x: i32| NaiveDate::from_num_days_from_ce_opt(x).unwrap()));
     // * date_part
-    // * date_sub
+    function_map.insert("date_sub".to_string(), binary_fn(|d: NaiveDate, n: i64| add_days(d, -n)));
     // * date_trunc
     // * date_diff
     function_map.insert("day".to_string(), unary_fn(|d: NaiveDate| d.day()));
@@ -154,22 +154,21 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // * dayofyear
     // decimal
     // decode
-    // * degrees
     function_map.insert("degrees".to_string(), unary_fn(|x: f64| x * 180.0 / std::f64::consts::PI));
     // dense_rank
     // * div, operator
-    // * double
+    function_map.insert("double".to_string(), Box::new(TypeConverterFunction {to: ValueType::Double}));
     // * e, we have E, need change parser
     // element_at
     // elt
     // encode
-    // endswith
+    function_map.insert("endswith".to_string(), binary_fn(|s: String, sub: String| s.ends_with(&sub)));
     // every
     // exists
     function_map.insert("exp".to_string(), unary_fn(f64::exp));
     // explode
     // explode_outer
-    // expm1
+    function_map.insert("expm1".to_string(), unary_fn(f64::exp_m1));
     // extract
     // factorial
     // filter
@@ -177,7 +176,7 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // first
     // first_value
     // flatten
-    // float
+    function_map.insert("float".to_string(), Box::new(TypeConverterFunction {to: ValueType::Float}));
     function_map.insert("floor".to_string(), unary_fn(f64::floor));
     // forall
     // format_number
@@ -208,7 +207,7 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // input_file_block_start
     // input_file_name
     function_map.insert("instr".to_string(), binary_fn(|s: String, sub: String| s.find(&sub).map(|x| x + 1).unwrap_or(0))); // 1-based
-    // int
+    function_map.insert("int".to_string(), Box::new(TypeConverterFunction {to: ValueType::Int}));
     function_map.insert("isnan".to_string(), unary_fn(f64::is_nan));
     function_map.insert("isnotnull".to_string(), unary_fn(|v: Value| !v.is_null()));
     function_map.insert("isnull".to_string(), unary_fn(|v: Value| v.is_null()));
@@ -226,7 +225,7 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // least
     // left
     function_map.insert("length".to_string(), Box::new(Len));  // Added
-    // levenshtein
+    function_map.insert("levenshtein".to_string(), binary_fn(|a: String, b: String| levenshtein::levenshtein(&a, &b)));
     // like
     function_map.insert("ln".to_string(), unary_fn(f64::ln));
     // locate
@@ -267,9 +266,10 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // named_struct
     // nanvl
     // negative
-    function_map.insert("next_day".to_string(), unary_fn(|v: NaiveDate| v + Duration::days(1)));
+    // next_day
     // not
     // now
+    function_map.insert("now".to_string(), nullary_fn(Utc::now));
     // nth_value
     // ntile
     function_map.insert("nullif".to_string(), binary_fn(|x: Value, y: Value| if x == y { Value::Null } else { x }));
@@ -343,7 +343,7 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // some
     // sort_array
     // soundex
-    // space
+    function_map.insert("space".to_string(), unary_fn(|n: usize| " ".repeat(n)));
     // spark_partition_id
     // split
     // split_part
@@ -355,7 +355,7 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // stddev_pop
     // stddev_samp
     // str_to_map
-    // string
+    function_map.insert("string".to_string(), Box::new(TypeConverterFunction { to: ValueType::String }));
     // struct
     // substr
     function_map.insert("substring".to_string(), Box::new(SubstringFunction));
@@ -401,7 +401,7 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // unix_seconds
     function_map.insert("unix_timestamp".to_string(), Box::new(TimestampFunction));  // TODO: support Java format
     function_map.insert("upper".to_string(), unary_fn(|s: String| s.to_uppercase()));
-    // uuid
+    function_map.insert("uuid".to_string(), nullary_fn(|| uuid::Uuid::new_v4().to_string()));
     // var_pop
     // var_samp
     // variance
@@ -422,6 +422,7 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // xpath_string
     // xxhash64
     // year
+    function_map.insert("year".to_string(), unary_fn(|s: NaiveDate| s.year()));
     // zip_with
     
 
@@ -432,11 +433,6 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     function_map.insert("bucket".to_string(), Box::new(BucketFunction));
     function_map.insert("timestamp".to_string(), Box::new(TimestampFunction));
     function_map.insert("len".to_string(), Box::new(Len));
-    function_map.insert("to_int".to_string(), Box::new(TypeConverterFunction { to: ValueType::Int }));
-    function_map.insert("to_long".to_string(), Box::new(TypeConverterFunction { to: ValueType::Long }));
-    function_map.insert("to_float".to_string(), Box::new(TypeConverterFunction { to: ValueType::Float }));
-    function_map.insert("to_double".to_string(), Box::new(TypeConverterFunction { to: ValueType::Double}));
-    function_map.insert("to_string".to_string(), Box::new(TypeConverterFunction { to: ValueType::String }));
 
     function_map
 }

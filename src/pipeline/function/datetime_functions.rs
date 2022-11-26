@@ -29,9 +29,7 @@ pub fn add_months(date: NaiveDate, num_months: u32) -> NaiveDate {
     NaiveDate::from_ymd_opt(year, month, day).unwrap()
 }
 
-pub fn add_days(date: String, days: i64) -> Result<String, PiperError> {
-    let mut date = NaiveDate::parse_from_str(&date, "%Y-%m-%d")
-        .map_err(|e| PiperError::InvalidValue(format!("Invalid date: {}", e)))?;
+pub fn add_days(mut date: NaiveDate, days: i64) -> Result<NaiveDate, PiperError> {
     date += Duration::days(days);
-    Ok(date.format("%Y-%m-%d").to_string())
+    Ok(date)
 }

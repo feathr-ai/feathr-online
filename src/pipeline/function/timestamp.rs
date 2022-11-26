@@ -22,13 +22,21 @@ impl Function for TimestampFunction {
                 argument_types.len(),
             ));
         }
-        if argument_types[0] != ValueType::String {
+        if argument_types[0] != ValueType::String && argument_types[0] != ValueType::DateTime {
             return Err(PiperError::InvalidArgumentType(
                 "timestamp".to_string(),
                 0,
                 argument_types[0],
             ));
         }
+
+        if argument_types[0] == ValueType::DateTime && argument_types.len() > 1 {
+            return Err(PiperError::ArityError(
+                "timestamp".to_string(),
+                argument_types.len(),
+            ));
+        }
+
         if argument_types.len() > 1 && argument_types[1] != ValueType::String {
             return Err(PiperError::InvalidArgumentType(
                 "timestamp".to_string(),
@@ -56,6 +64,7 @@ impl Function for TimestampFunction {
         }
 
         match arguments.as_slice() {
+            [Value::DateTime(t)] => t.timestamp().into(),
             [Value::String(s)] => self.timestamp(s, DEFAULT_FORMAT, &Tz::UTC),
             [Value::String(s), Value::String(format)] => self.timestamp(s, format, &Tz::UTC),
             [Value::String(s), Value::String(format), Value::String(tz)] => {
