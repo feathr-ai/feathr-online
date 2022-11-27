@@ -22,7 +22,7 @@ impl Function for TimestampFunction {
                 argument_types.len(),
             ));
         }
-        if argument_types[0] != ValueType::String && argument_types[0] != ValueType::DateTime {
+        if argument_types[0] != ValueType::String && argument_types[0] != ValueType::DateTime && argument_types[0] != ValueType::Dynamic {
             return Err(PiperError::InvalidArgumentType(
                 "timestamp".to_string(),
                 0,
@@ -30,21 +30,21 @@ impl Function for TimestampFunction {
             ));
         }
 
-        if argument_types[0] == ValueType::DateTime && argument_types.len() > 1 {
+        if argument_types[0] == ValueType::DateTime && argument_types[0] != ValueType::Dynamic && argument_types.len() > 1 {
             return Err(PiperError::ArityError(
                 "timestamp".to_string(),
                 argument_types.len(),
             ));
         }
 
-        if argument_types.len() > 1 && argument_types[1] != ValueType::String {
+        if argument_types.len() > 1 && argument_types[1] != ValueType::String && argument_types[1] != ValueType::Dynamic {
             return Err(PiperError::InvalidArgumentType(
                 "timestamp".to_string(),
                 1,
                 argument_types[1],
             ));
         }
-        if argument_types.len() > 2 && argument_types[2] != ValueType::String {
+        if argument_types.len() > 2 && argument_types[2] != ValueType::String && argument_types[2] != ValueType::Dynamic {
             return Err(PiperError::InvalidArgumentType(
                 "timestamp".to_string(),
                 2,

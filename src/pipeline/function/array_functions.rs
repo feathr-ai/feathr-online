@@ -46,6 +46,12 @@ impl Function for ArrayJoin {
         match argument_types {
             [ValueType::Array, ValueType::String] => Ok(ValueType::String),
             [ValueType::Array, ValueType::String, ValueType::String] => Ok(ValueType::String),
+            [ValueType::Dynamic, ValueType::String] => Ok(ValueType::String),
+            [ValueType::Dynamic, _] => Ok(ValueType::String),
+            [_, ValueType::Dynamic] => Ok(ValueType::String),
+            [ValueType::Dynamic, _, _] => Ok(ValueType::String),
+            [_, ValueType::Dynamic, _] => Ok(ValueType::String),
+            [_, _, ValueType::Dynamic] => Ok(ValueType::String),
             _ => Err(crate::pipeline::PiperError::InvalidArgumentCount(
                 2,
                 argument_types.len(),

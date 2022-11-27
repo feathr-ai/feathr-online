@@ -13,7 +13,7 @@ impl Function for Abs {
                 argument_types.len(),
             ));
         }
-        if !argument_types[0].is_numeric() {
+        if !argument_types[0].is_numeric() && argument_types[0] != ValueType::Dynamic {
             return Err(PiperError::InvalidArgumentType(
                 stringify!($op).to_string(),
                 0,
@@ -48,7 +48,11 @@ impl Function for Concat {
         if argument_types.len() < 2 {
             return Err(PiperError::InvalidArgumentCount(2, argument_types.len()));
         }
-        let init_type = argument_types[0];
+        let init_type = argument_types.iter().find(|t| **t != ValueType::Dynamic);
+        let init_type = match init_type {
+            Some(t) => *t,
+            None => return Ok(ValueType::Dynamic),      // All arguments are dynamic
+        };
         if init_type != ValueType::String && init_type != ValueType::Array {
             return Err(PiperError::InvalidArgumentType(
                 "concat".to_string(),
@@ -56,8 +60,8 @@ impl Function for Concat {
                 init_type,
             ));
         }
-        for (idx, vt) in argument_types.iter().skip(1).enumerate() {
-            if *vt != init_type {
+        for (idx, vt) in argument_types.iter().enumerate() {
+            if *vt != ValueType::Dynamic && *vt != init_type {
                 return Err(PiperError::InvalidArgumentType(
                     "concat".to_string(),
                     idx + 1,

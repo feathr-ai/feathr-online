@@ -15,14 +15,14 @@ impl Function for SplitFunction {
                 argument_types.len(),
             ));
         }
-        if argument_types[0] != ValueType::String {
+        if argument_types[0] != ValueType::String && argument_types[0] != ValueType::Dynamic {
             return Err(PiperError::InvalidArgumentType(
                 "split".to_string(),
                 0,
                 argument_types[0],
             ));
         }
-        if argument_types[1] != ValueType::String {
+        if argument_types[1] != ValueType::String && argument_types[1] != ValueType::Dynamic {
             return Err(PiperError::InvalidArgumentType(
                 "split".to_string(),
                 1,
@@ -64,21 +64,21 @@ impl Function for SubstringFunction {
                 argument_types.len(),
             ));
         }
-        if argument_types[0] != ValueType::String {
+        if argument_types[0] != ValueType::String && argument_types[0] != ValueType::Dynamic {
             return Err(PiperError::InvalidArgumentType(
                 "substring".to_string(),
                 0,
                 argument_types[0],
             ));
         }
-        if argument_types[1] != ValueType::Int {
+        if argument_types[1] != ValueType::Int && argument_types[1] != ValueType::Dynamic {
             return Err(PiperError::InvalidArgumentType(
                 "substring".to_string(),
                 1,
                 argument_types[1],
             ));
         }
-        if argument_types[2] != ValueType::Int {
+        if argument_types[2] != ValueType::Int && argument_types[2] != ValueType::Dynamic {
             return Err(PiperError::InvalidArgumentType(
                 "substring".to_string(),
                 2,

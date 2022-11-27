@@ -20,7 +20,7 @@ impl Function for CaseFunction {
             let case_type = if pair.len() == 1 {
                 pair[0]
             } else {
-                if pair[0] != ValueType::Bool {
+                if pair[0] != ValueType::Bool && pair[0] != ValueType::Dynamic {
                     return Err(PiperError::InvalidArgumentType(
                         "case".to_string(),
                         idx,

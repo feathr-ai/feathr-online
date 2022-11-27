@@ -13,6 +13,7 @@ impl Function for Len {
         match argument_types {
             [ValueType::Array] => Ok(ValueType::Int),
             [ValueType::String] => Ok(ValueType::Int),
+            [ValueType::Dynamic] => Ok(ValueType::Int),
             _ => Err(PiperError::InvalidArgumentType(
                 "len".to_owned(),
                 1,
