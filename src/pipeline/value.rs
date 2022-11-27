@@ -797,6 +797,7 @@ impl Value {
     pub fn get_string(&self) -> Result<Cow<str>, PiperError> {
         match self {
             Value::String(v) => Ok(v.clone()),
+            Value::DateTime(v) => Ok(v.format(DEFAULT_DATETIME_FORMAT).to_string().into()),
             Value::Error(e) => Err(e.clone())?,
             _ => Err(PiperError::InvalidValueType(
                 self.value_type(),
@@ -870,20 +871,17 @@ impl Value {
             return self;
         }
 
+        // If the value is already the same type, return the value directly
+        if self.value_type() == value_type {
+            return self;
+        }
+
         match self {
-            Value::Null => {
-                if self.is_null() {
-                    Value::Null
-                } else {
-                    Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type))
-                }
+            Value::Null => Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type)),
+            Value::Bool(v) => {
+                Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type))
             }
-            Value::Bool(v) => match value_type {
-                ValueType::Bool => self,
-                _ => Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type)),
-            },
             Value::Int(v) => match value_type {
-                ValueType::Int => (v as i32).into(),
                 ValueType::Long => (v as i64).into(),
                 ValueType::Float => (v as f32).into(),
                 ValueType::Double => (v as f64).into(),
@@ -891,7 +889,6 @@ impl Value {
             },
             Value::Long(v) => match value_type {
                 ValueType::Int => (v as i32).into(),
-                ValueType::Long => (v as i64).into(),
                 ValueType::Float => (v as f32).into(),
                 ValueType::Double => (v as f64).into(),
                 _ => Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type)),
@@ -899,7 +896,6 @@ impl Value {
             Value::Float(v) => match value_type {
                 ValueType::Int => (v as i32).into(),
                 ValueType::Long => (v as i64).into(),
-                ValueType::Float => (v as f32).into(),
                 ValueType::Double => (v as f64).into(),
                 _ => Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type)),
             },
@@ -907,25 +903,20 @@ impl Value {
                 ValueType::Int => (v as i32).into(),
                 ValueType::Long => (v as i64).into(),
                 ValueType::Float => (v as f32).into(),
-                ValueType::Double => (v as f64).into(),
                 _ => Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type)),
             },
             Value::String(v) => match value_type {
-                ValueType::String => v.into(),
                 ValueType::DateTime => str_to_datetime(v.as_ref()).into(),
                 _ => Value::Error(PiperError::InvalidTypeCast(ValueType::String, value_type)),
             },
-            Value::Array(v) => match value_type {
-                ValueType::Array => v.into(),
-                _ => Value::Error(PiperError::InvalidTypeCast(ValueType::Array, value_type)),
-            },
-            Value::Object(v) => match value_type {
-                ValueType::Object => v.into(),
-                _ => Value::Error(PiperError::InvalidTypeCast(ValueType::Object, value_type)),
-            },
+            Value::Array(v) => {
+                Value::Error(PiperError::InvalidTypeCast(ValueType::Array, value_type))
+            }
+            Value::Object(v) => {
+                Value::Error(PiperError::InvalidTypeCast(ValueType::Object, value_type))
+            }
             Value::DateTime(v) => match value_type {
                 ValueType::String => v.format(DEFAULT_DATETIME_FORMAT).to_string().into(),
-                ValueType::DateTime => v.into(),
                 _ => Value::Error(PiperError::InvalidTypeCast(ValueType::DateTime, value_type)),
             },
             Value::Error(e) => Value::Error(e),
@@ -940,14 +931,17 @@ impl Value {
             return self;
         }
 
+        // If the value is already the same type, return the value directly
         if self.value_type() == value_type {
             return self;
         }
 
         match self {
-            Value::Null => false.into(),
+            Value::Null => match value_type {
+                ValueType::Bool => false.into(),
+                _ => PiperError::InvalidTypeCast(self.value_type(), value_type).into(),
+            },
             Value::Bool(v) => match value_type {
-                ValueType::Bool => self.clone(),
                 ValueType::Int => i32::from(v).into(),
                 ValueType::Long => i64::from(v).into(),
                 ValueType::Float => (if v { 1f32 } else { 0f32 }).into(),
@@ -960,7 +954,6 @@ impl Value {
             },
             Value::Int(v) => match value_type {
                 ValueType::Bool => (v != 0).into(),
-                ValueType::Int => (v).into(),
                 ValueType::Long => (v as i64).into(),
                 ValueType::Float => (v as f32).into(),
                 ValueType::Double => (v as f64).into(),
@@ -973,7 +966,6 @@ impl Value {
             Value::Long(v) => match value_type {
                 ValueType::Bool => (v != 0).into(),
                 ValueType::Int => (v as i32).into(),
-                ValueType::Long => (v as i64).into(),
                 ValueType::Float => (v as f32).into(),
                 ValueType::Double => (v as f64).into(),
                 ValueType::String => Cow::from(v.to_string()).into(),
@@ -986,7 +978,6 @@ impl Value {
                 ValueType::Bool => (v != 0f32).into(),
                 ValueType::Int => (v as i32).into(),
                 ValueType::Long => (v as i64).into(),
-                ValueType::Float => (v as f32).into(),
                 ValueType::Double => (v as f64).into(),
                 ValueType::String => Cow::from(v.to_string()).into(),
                 _ => Value::Error(PiperError::InvalidTypeConversion(
@@ -999,7 +990,6 @@ impl Value {
                 ValueType::Int => (v as i32).into(),
                 ValueType::Long => (v as i64).into(),
                 ValueType::Float => (v as f32).into(),
-                ValueType::Double => (v as f64).into(),
                 ValueType::String => Cow::from(v.to_string()).into(),
                 _ => Value::Error(PiperError::InvalidTypeConversion(
                     self.value_type(),
@@ -1024,7 +1014,6 @@ impl Value {
                     .parse::<i32>()
                     .map_err(|_| PiperError::FormatError(v.to_string(), value_type))
                     .into(),
-                ValueType::String => (v.to_string()).into(),
                 ValueType::DateTime => str_to_datetime(v.as_ref()).into(),
                 _ => Value::Error(PiperError::InvalidTypeConversion(
                     ValueType::String,
@@ -1033,7 +1022,6 @@ impl Value {
             },
             Value::DateTime(v) => match value_type {
                 ValueType::String => v.format(DEFAULT_DATETIME_FORMAT).to_string().into(),
-                ValueType::DateTime => v.into(),
                 _ => Value::Error(PiperError::InvalidTypeConversion(
                     ValueType::DateTime,
                     value_type,
@@ -1041,7 +1029,6 @@ impl Value {
             },
             Value::Array(v) => match value_type {
                 ValueType::Bool => (!v.is_empty()).into(),
-                ValueType::Array => v.into(),
                 _ => Value::Error(PiperError::InvalidTypeConversion(
                     ValueType::Array,
                     value_type,
@@ -1049,7 +1036,6 @@ impl Value {
             },
             Value::Object(v) => match value_type {
                 ValueType::Bool => (!v.is_empty()).into(),
-                ValueType::Object => v.into(),
                 _ => Value::Error(PiperError::InvalidTypeConversion(
                     ValueType::Object,
                     value_type,
@@ -1060,7 +1046,6 @@ impl Value {
     }
 
     pub fn dump(&self) -> String {
-        // TODO: String escape
         match self {
             Value::Null => "null".to_string(),
             Value::Bool(v) => v.to_string(),
@@ -1068,7 +1053,7 @@ impl Value {
             Value::Long(v) => v.to_string(),
             Value::Float(v) => v.to_string(),
             Value::Double(v) => v.to_string(),
-            Value::String(v) => format!("\"{}\"", v),
+            Value::String(v) => format!("\"{}\"", escaped(v)),
             Value::DateTime(v) => format!("\"{}\"", v.format(DEFAULT_DATETIME_FORMAT)),
             Value::Array(v) => {
                 let mut s = "[".to_string();
@@ -1097,6 +1082,24 @@ impl Value {
     }
 }
 
+fn escaped<T>(s: T) -> String
+where
+    T: AsRef<str>,
+{
+    let mut r = String::new();
+    for c in s.as_ref().chars() {
+        match c {
+            '"' => r.push_str("\\\""),
+            '\\' => r.push_str("\\\\"),
+            '\t' => r.push_str("\\t"),
+            '\r' => r.push_str("\\r"),
+            '\n' => r.push_str("\\n"),
+            _ => r.push(c),
+        }
+    }
+    r
+}
+
 fn str_to_datetime(v: &str) -> Result<DateTime<Utc>, PiperError> {
     let dt = if let Ok(dt) = NaiveDateTime::parse_from_str(v, DEFAULT_DATETIME_FORMAT) {
         dt
@@ -1113,6 +1116,10 @@ fn str_to_datetime(v: &str) -> Result<DateTime<Utc>, PiperError> {
 
 #[cfg(test)]
 mod tests {
+    use chrono::NaiveDate;
+
+    use crate::pipeline::Value;
+
     #[test]
     fn value_conv() {
         use super::*;
@@ -1146,5 +1153,17 @@ mod tests {
         );
         assert!(v.clone().convert_to(ValueType::Array).is_error());
         assert!(v.convert_to(ValueType::Object).is_error());
+    }
+
+    #[test]
+    fn datetime_str_cast() {
+        // Auto-cast between string and datetime
+        let vs: Value = "2022-03-04".to_string().into();
+        let vd: Value = NaiveDate::from_ymd_opt(2022, 3, 4)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .into();
+        assert_eq!(vs.get_datetime().unwrap(), vd.get_datetime().unwrap());
+        assert_eq!(vd.get_string().unwrap(), "2022-03-04 00:00:00");
     }
 }

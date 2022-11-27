@@ -450,7 +450,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_strict_lenient() {
+    async fn test_lenient_validate() {
         let (schema, rows) = gen_ds().validated(ValidationMode::Lenient).eval().await;
         assert_eq!(schema, gen_schema());
         assert_eq!(rows.len(), 7);
