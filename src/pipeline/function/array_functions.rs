@@ -185,3 +185,64 @@ pub fn arrays_zip(array: Vec<Value>, other: Vec<Value>) -> Value {
     }
     Value::Array(result)
 }
+
+pub fn flatten(maybe_array: Value) -> Value {
+    match maybe_array {
+        Value::Array(array) => {
+            let mut result = Vec::new();
+            for item in array.into_iter() {
+                match item {
+                    Value::Array(array) => result.extend(array.into_iter()),
+                    _ => result.push(item),
+                }
+            }
+            result.into()
+        }
+        _ => maybe_array,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_flatten() {
+        use crate::pipeline::Value;
+        use super::flatten;
+        assert_eq!(
+            flatten(1.into()),
+            1.into(),
+        );
+        assert_eq!(
+            flatten(Value::Array(vec![
+                Value::Array(vec![1.into(), 2.into()]),
+                Value::Array(vec![3.into(), 4.into()]),
+            ])),
+            Value::Array(vec![1.into(), 2.into(), 3.into(), 4.into()])
+        );
+        assert_eq!(
+            flatten(Value::Array(vec![
+                Value::Array(vec![1.into(), 2.into()]),
+                Value::Array(vec![3.into(), 4.into()]),
+                5.into(),
+            ])),
+            Value::Array(vec![1.into(), 2.into(), 3.into(), 4.into(), 5.into()])
+        );
+        assert_eq!(
+            flatten(Value::Array(vec![
+                Value::Array(vec![1.into(), 2.into()]),
+                Value::Array(vec![3.into(), 4.into()]),
+                5.into(),
+                Value::Array(vec![6.into(), 7.into()]),
+            ])),
+            Value::Array(vec![
+                1.into(),
+                2.into(),
+                3.into(),
+                4.into(),
+                5.into(),
+                6.into(),
+                7.into()
+            ])
+        );
+    }
+}

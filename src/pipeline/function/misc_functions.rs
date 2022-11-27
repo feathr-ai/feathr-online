@@ -263,3 +263,35 @@ impl Function for Conv {
         }
     }
 }
+
+
+pub fn json_object_keys(json: Option<String>) -> Value {
+    match json {
+        Some(json) => {
+            let mut result: Vec<String> = Vec::new();
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(json.as_ref()) {
+                if let Some(map) = json.as_object() {
+                    for key in map.keys() {
+                        result.push(key.clone());
+                    }
+                }
+            }
+            result.into()
+        }
+        None => Value::Null,
+    }
+}
+
+pub fn json_array_length(json: Option<String>) -> Value {
+    match json {
+        Some(json) => {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(json.as_ref()) {
+                if let Some(array) = json.as_array() {
+                    return array.len().into();
+                }
+            }
+            0.into()
+        }
+        None => Value::Null,
+    }
+}

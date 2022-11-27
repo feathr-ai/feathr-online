@@ -200,6 +200,15 @@ where
     }
 }
 
+impl<T> ValueTypeOf for Option<T>
+where
+    T: ValueTypeOf,
+{
+    fn value_type() -> ValueType {
+        T::value_type()
+    }
+}
+
 impl<T, E> ValueTypeOf for Result<T, E>
 where
     T: ValueTypeOf,

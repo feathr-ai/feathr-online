@@ -1,4 +1,4 @@
-use chrono::TimeZone;
+use chrono::{TimeZone, NaiveDateTime, Utc};
 use chrono_tz::Tz;
 use tracing::instrument;
 
@@ -95,6 +95,14 @@ impl Function for TimestampFunction {
     }
 }
 
+pub fn to_utc_timestamp(dt: NaiveDateTime, tz: String) -> Value {
+    let tz =  match tz.parse::<Tz>() {
+        Ok(tz) => tz,
+        Err(e) => return PiperError::InvalidValue(e).into(),
+    };
+    tz.from_utc_datetime(&dt).with_timezone(&Utc).into()
+}
+
 impl TimestampFunction {
     fn timestamp(&self, s: &str, format: &str, tz: &Tz) -> Value {
         let timestamp = tz
@@ -103,7 +111,6 @@ impl TimestampFunction {
         timestamp.unwrap_or_default()
     }
 }
-
 #[cfg(test)]
 mod tests {
     #[test]
