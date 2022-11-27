@@ -36,6 +36,9 @@ impl Operator for PlusOperator {
 
             [ValueType::String, ValueType::String] => Ok(ValueType::String),
 
+            [ValueType::Dynamic, _] => Ok(ValueType::Dynamic),
+            [_, ValueType::Dynamic] => Ok(ValueType::Dynamic),
+
             // All other combinations are invalid
             [a, b] => Err(PiperError::TypeMismatch(
                 stringify!($op).to_string(),
@@ -125,6 +128,9 @@ macro_rules! binary_math_op {
                     [ValueType::Double, ValueType::Long] => Ok(ValueType::Double),
                     [ValueType::Double, ValueType::Float] => Ok(ValueType::Double),
                     [ValueType::Double, ValueType::Double] => Ok(ValueType::Double),
+            
+                    [ValueType::Dynamic, _] => Ok(ValueType::Dynamic),
+                    [_, ValueType::Dynamic] => Ok(ValueType::Dynamic),
 
                     // All other combinations are invalid
                     [a, b] => Err(PiperError::TypeMismatch(

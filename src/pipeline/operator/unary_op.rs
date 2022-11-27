@@ -14,6 +14,7 @@ impl Operator for PositiveOperator {
             ));
         }
         match argument_types {
+            [ValueType::Dynamic] => Ok(ValueType::Dynamic),
             [ValueType::Int] => Ok(ValueType::Int),
             [ValueType::Long] => Ok(ValueType::Long),
             [ValueType::Float] => Ok(ValueType::Float),
@@ -64,6 +65,7 @@ impl Operator for NegativeOperator {
             ));
         }
         match argument_types {
+            [ValueType::Dynamic] => Ok(ValueType::Dynamic),
             [ValueType::Int] => Ok(ValueType::Int),
             [ValueType::Long] => Ok(ValueType::Long),
             [ValueType::Float] => Ok(ValueType::Float),
@@ -114,6 +116,7 @@ impl Operator for NotOperator {
             ));
         }
         match argument_types {
+            [ValueType::Dynamic] => Ok(ValueType::Bool),
             [ValueType::Bool] => Ok(ValueType::Bool),
 
             [a] => Err(PiperError::InvalidOperandType(

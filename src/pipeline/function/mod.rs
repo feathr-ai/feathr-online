@@ -97,7 +97,7 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     function_map.insert("bit_and".to_string(), var_fn(|v: Vec<u64>| v.iter().fold(0, |acc, x| acc & x)));
     function_map.insert("bit_count".to_string(), unary_fn(u64::count_ones));
     function_map.insert("bit_get".to_string(), binary_fn(|x: u64, y: u64| (x >> y) & 1));
-    // bit_length
+    function_map.insert("bit_length".to_string(), unary_fn(|x: String| x.as_bytes().len() * 8));
     function_map.insert("bit_not".to_string(), unary_fn(|x: u64| !x));
     function_map.insert("bit_or".to_string(), var_fn(|v: Vec<u64>| v.iter().fold(0, |acc, x| acc | x)));
     function_map.insert("bit_xor".to_string(), var_fn(|v: Vec<u64>| v.iter().fold(0, |acc, x| acc ^ x)));
@@ -160,8 +160,8 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // * div, operator
     function_map.insert("double".to_string(), Box::new(TypeConverterFunction {to: ValueType::Double}));
     function_map.insert("e".to_string(), nullary_fn(|| std::f64::consts::E));
-    // element_at
-    // elt
+    function_map.insert("element_at".to_string(), binary_fn(misc_functions::element_at));
+    function_map.insert("elt".to_string(), var_fn(misc_functions::elt));
     // encode
     function_map.insert("endswith".to_string(), binary_fn(|s: String, sub: String| s.ends_with(&sub)));
     function_map.insert("every".to_string(), var_fn(|x: Vec<bool>| x.iter().all(|b| *b)));
@@ -185,7 +185,7 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // from_csv
     // from_json
     // from_unixtime
-    // from_utc_timestamp
+    function_map.insert("from_utc_timestamp".to_string(), binary_fn(datetime_functions::from_utc_timestamp));
     function_map.insert("get_json_array".to_string(), Box::new(ExtractJsonArray));  // Added
     function_map.insert("get_json_object".to_string(), Box::new(ExtractJsonObject));
     function_map.insert("getbit".to_string(), binary_fn(|x: u64, y: u64| (x >> y) & 1));
@@ -241,10 +241,10 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     function_map.insert("lower".to_string(), unary_fn(|s: String| s.to_lowercase()));
     // lpad
     function_map.insert("ltrim".to_string(), unary_fn(|s: String| s.trim_start().to_string()));
-    // make_date
+    function_map.insert("make_date".to_string(), ternary_fn(NaiveDate::from_ymd_opt));
     // make_dt_interval
     // make_interval
-    // make_timestamp
+    function_map.insert("make_timestamp".to_string(), var_fn(datetime_functions::make_timestamp));
     // make_ym_interval
     // map
     // map_concat
@@ -271,7 +271,7 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // nanvl
     // negative
     function_map.insert("next_day".to_string(), unary_fn(|d: NaiveDate| d + Duration::days(1)));
-    // not
+    // * not, implemented as operator so both `not x` and `not(x)` works
     function_map.insert("now".to_string(), nullary_fn(Utc::now));
     // nth_value
     // ntile
@@ -331,9 +331,9 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // sha
     // sha1
     // sha2
-    // shiftleft
-    // shiftright
-    // shiftrightunsigned
+    function_map.insert("shiftleft".to_string(), binary_fn(|x: i64, y: i64| x << y));
+    function_map.insert("shiftright".to_string(), binary_fn(|x: i64, y: i64| x >> y));
+    function_map.insert("shiftrightunsigned".to_string(), binary_fn(|x: u64, y: u64| x >> y));
     function_map.insert("shuffle".to_string(), unary_fn(rand_functions::shuffle));
     function_map.insert("sign".to_string(), unary_fn(|x: f64| if x==0.0 { 0.0 } else { x.signum() }));
     function_map.insert("signum".to_string(), unary_fn(|x: f64| if x==0.0 { 0.0 } else { x.signum() }));
@@ -341,7 +341,7 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     function_map.insert("sinh".to_string(), unary_fn(f64::sinh));
     function_map.insert("size".to_string(), unary_fn(|v: Vec<Value>| v.len()));
     // skewness
-    // slice
+    function_map.insert("slice".to_string(), ternary_fn(misc_functions::slice));
     // smallint
     // some
     // sort_array
@@ -349,10 +349,10 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     function_map.insert("space".to_string(), unary_fn(|n: usize| " ".repeat(n)));
     // spark_partition_id
     // split
-    // split_part
+    function_map.insert("split_part".to_string(), ternary_fn(string_functions::split_part));
     function_map.insert("sqrt".to_string(), unary_fn(f64::sqrt));
     // stack
-    // startswith
+    function_map.insert("startswith".to_string(), binary_fn(|s: String, sub: String| s.starts_with(&sub)));
     // std
     // stddev
     // stddev_pop
@@ -381,7 +381,7 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // transform
     // transform_keys
     // transform_values
-    // translate
+    function_map.insert("translate".to_string(), ternary_fn(string_functions::translate));
     function_map.insert("trim".to_string(), unary_fn(|s: String| s.trim().to_string()));
     // trunc
     // try_add

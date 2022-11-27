@@ -13,7 +13,7 @@ impl Operator for ArrayIndexOperator {
                 argument_types.len(),
             ));
         }
-        if argument_types[0] != ValueType::Array {
+        if argument_types[0] != ValueType::Array && argument_types[0] != ValueType::Dynamic {
             return Err(PiperError::InvalidArgumentType(
                 "[]]".to_string(),
                 0,
@@ -59,7 +59,7 @@ impl Operator for MapIndexOperator {
                 argument_types.len(),
             ));
         }
-        if argument_types[0] != ValueType::Object {
+        if argument_types[0] != ValueType::Object && argument_types[0] != ValueType::Dynamic {
             return Err(PiperError::InvalidArgumentType(
                 ".".to_string(),
                 0,

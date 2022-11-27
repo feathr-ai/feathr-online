@@ -12,7 +12,9 @@ macro_rules! logical_op {
                 if argument_types.len() != 2 {
                     return Err(PiperError::ArityError("and".to_string(), argument_types.len()));
                 }
-                if (argument_types[0] == ValueType::Bool && argument_types[1] == ValueType::Bool) {
+                if (argument_types[0] == ValueType::Dynamic || argument_types[1] == ValueType::Dynamic) {
+                    Ok(ValueType::Bool)
+                } else if (argument_types[0] == ValueType::Bool && argument_types[1] == ValueType::Bool) {
                     Ok(ValueType::Bool)
                 } else {
                     Err(PiperError::TypeMismatch(

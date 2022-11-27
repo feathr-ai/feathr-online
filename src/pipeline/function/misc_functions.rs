@@ -295,3 +295,62 @@ pub fn json_array_length(json: Option<String>) -> Value {
         None => Value::Null,
     }
 }
+
+pub fn element_at(container: Value, index: Value) -> Value {
+    match container {
+        Value::Array(array) => {
+            if let Value::Long(index) = index {
+                if index >= 0 && index < array.len() as i64 {
+                    return array[index as usize].clone();
+                }
+            }
+            Value::Null
+        }
+        Value::Object(map) => {
+            if let Value::String(index) = index {
+                if let Some(value) = map.get(index.as_ref()) {
+                    return value.clone();
+                }
+            }
+            Value::Null
+        }
+        _ => Value::Null,
+    }
+}
+
+pub fn elt(arguments: Vec<Value>) -> Value {
+    if arguments.len() < 2 {
+        return Value::Error(PiperError::InvalidArgumentCount(2, arguments.len()));
+    }
+    if let Value::Long(index) = arguments[0] {
+        if index >= 0 && index < arguments.len() as i64 {
+            return arguments[index as usize + 1].clone();
+        }
+    }
+    Value::Null
+}
+
+pub fn slice(array: Vec<Value>, start: i64, end: i64) -> Result<Value, PiperError> {
+    let start = if start<0 { array.len() as i64 + start } else { start };
+    let start = if start<0 { 0 } else { start as usize };
+    let end = if end<0 { array.len() as i64 + end } else { end };
+    let end = if end<0 { 0 } else { end as usize };
+    if start > end {
+        return Err(PiperError::InvalidValue(format!("start ({}) must be less than end ({})", start, end)));
+    }
+    Ok(Value::Array(array[start..end].to_vec()))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::pipeline::value::IntoValue;
+
+    #[test]
+    fn test_slice() {
+        use super::*;
+        let array = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].into_value().get_array().unwrap().clone();
+        assert_eq!(slice(array.clone(), 0, 5).unwrap(), vec![1i32, 2, 3, 4, 5].into_value());
+        assert_eq!(slice(array.clone(), 0, 0).unwrap(), Value::Array(vec![]));
+        assert_eq!(slice(array, 0, -1).unwrap(), vec![1i32, 2, 3, 4, 5, 6, 7, 8, 9].into_value());
+    }
+}

@@ -173,6 +173,36 @@ pub fn substring_index(string: String, delimiter: String, count: i64) -> String 
     }
 }
 
+pub fn split_part(s: String, delimiter: String, part: usize) -> Result<String, PiperError> {
+    let parts: Vec<&str> = s.split(&delimiter).collect();
+    if part == 0 || part > parts.len() {
+        Err(PiperError::InvalidValue(format!(
+            "split_part: part {} is out of range",
+            part
+        )))
+    } else {
+        Ok(parts[part - 1].to_string())
+    }
+}
+
+pub fn translate(s: String, from: String, to: String) -> Result<String, PiperError> {
+    if from.len() != to.len() {
+        return Err(PiperError::InvalidValue(
+            "translate: from and to must be the same length".to_string(),
+        ));
+    }
+    let mut result = String::new();
+    for c in s.chars() {
+        let index = from.find(c);
+        if let Some(index) = index {
+            result.push(to.chars().nth(index).unwrap());
+        } else {
+            result.push(c);
+        }
+    }
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     #[test]

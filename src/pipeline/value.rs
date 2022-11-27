@@ -286,6 +286,19 @@ impl PartialOrd for Value {
     }
 }
 
+pub trait IntoValue {
+    fn into_value(self) -> Value;
+}
+
+impl<T> IntoValue for T
+where
+    Value: From<T>
+{
+    fn into_value(self) -> Value {
+        Value::from(self)
+    }
+}
+
 impl From<Value> for serde_json::Value {
     fn from(val: Value) -> Self {
         match val {
@@ -1165,5 +1178,19 @@ mod tests {
             .into();
         assert_eq!(vs.get_datetime().unwrap(), vd.get_datetime().unwrap());
         assert_eq!(vd.get_string().unwrap(), "2022-03-04 00:00:00");
+    }
+
+    #[test]
+    fn test_into_value() {
+        use super::*;
+        assert_eq!(Option::<i32>::None.into_value(), Value::Null);
+        assert_eq!(42i32.into_value(), Value::Int(42));
+        assert_eq!(42i64.into_value(), Value::Long(42));
+        assert_eq!(42f32.into_value(), Value::Float(42f32));
+        assert_eq!(42f64.into_value(), Value::Double(42f64));
+        assert_eq!("foo".into_value(), Value::String("foo".into()));
+        assert_eq!(vec![1u32, 2u32, 3u32].into_value(), Value::Array(vec![Value::Int(1), Value::Int(2), Value::Int(3)]));
+        assert_eq!(str_to_datetime("2022-03-04") .into_value(), Value::DateTime(str_to_datetime("2022-03-04").unwrap()));
+
     }
 }
