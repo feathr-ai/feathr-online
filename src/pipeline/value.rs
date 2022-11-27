@@ -240,15 +240,47 @@ impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Null, Self::Null) => true,
+
             (Self::Bool(l0), Self::Bool(r0)) => l0 == r0,
+
             (Self::Int(l0), Self::Int(r0)) => l0 == r0,
+            (Self::Int(l0), Self::Long(r0)) => *l0 as i64 == *r0,
+            (Self::Int(l0), Self::Float(r0)) => *l0 as f64 == *r0 as f64,
+            (Self::Int(l0), Self::Double(r0)) => *l0 as f64 == *r0,
+
+            (Self::Long(l0), Self::Int(r0)) => *l0 == *r0 as i64,
             (Self::Long(l0), Self::Long(r0)) => l0 == r0,
+            (Self::Long(l0), Self::Float(r0)) => *l0 as f64 == *r0 as f64,
+            (Self::Long(l0), Self::Double(r0)) => *l0 as f64 == *r0 as f64,
+
+            (Self::Float(l0), Self::Int(r0)) => *l0 as f64 == *r0 as f64,
+            (Self::Float(l0), Self::Long(r0)) => *l0 as f64 == *r0 as f64,
             (Self::Float(l0), Self::Float(r0)) => l0 == r0,
+            (Self::Float(l0), Self::Double(r0)) => *l0 as f64 == *r0,
+
+            (Self::Double(l0), Self::Int(r0)) => *l0 == *r0 as f64,
+            (Self::Double(l0), Self::Long(r0)) => *l0 == *r0 as f64,
+            (Self::Double(l0), Self::Float(r0)) => *l0 == *r0 as f64,
             (Self::Double(l0), Self::Double(r0)) => l0 == r0,
+
             (Self::String(l0), Self::String(r0)) => l0 == r0,
             (Self::Array(l0), Self::Array(r0)) => l0 == r0,
             (Self::Object(l0), Self::Object(r0)) => l0 == r0,
+
             (Self::DateTime(l0), Self::DateTime(r0)) => l0 == r0,
+            (Self::DateTime(l0), Self::String(r0)) => {
+                *l0 == match str_to_datetime(r0) {
+                    Ok(dt) => dt,
+                    Err(_) => return false,
+                }
+            }
+            (Self::String(l0), Self::DateTime(r0)) => {
+                let l0 = match str_to_datetime(l0) {
+                    Ok(dt) => dt,
+                    Err(_) => return false,
+                };
+                l0 == *r0
+            }
             (Self::Error(l0), Self::Error(r0)) => false,
             _ => core::mem::discriminant(self) == core::mem::discriminant(other),
         }
@@ -280,6 +312,15 @@ impl PartialOrd for Value {
 
             (Value::String(x), Value::String(y)) => x.partial_cmp(y),
             (Value::DateTime(x), Value::DateTime(y)) => x.partial_cmp(y),
+            (Self::DateTime(x), Self::String(y)) => x.partial_cmp(&match str_to_datetime(y) {
+                Ok(dt) => dt,
+                Err(_) => return None,
+            }),
+            (Self::String(x), Self::DateTime(y)) => match str_to_datetime(x) {
+                Ok(dt) => dt,
+                Err(_) => return None,
+            }
+            .partial_cmp(y),
 
             _ => None,
         }
@@ -292,7 +333,7 @@ pub trait IntoValue {
 
 impl<T> IntoValue for T
 where
-    Value: From<T>
+    Value: From<T>,
 {
     fn into_value(self) -> Value {
         Value::from(self)
@@ -1131,7 +1172,7 @@ fn str_to_datetime(v: &str) -> Result<DateTime<Utc>, PiperError> {
 mod tests {
     use chrono::NaiveDate;
 
-    use crate::pipeline::Value;
+    use crate::pipeline::{Value, value::str_to_datetime};
 
     #[test]
     fn value_conv() {
@@ -1174,7 +1215,6 @@ mod tests {
         let vs: Value = "2022-03-04".to_string().into();
         let vd: Value = NaiveDate::from_ymd_opt(2022, 3, 4)
             .unwrap()
-            .and_hms_opt(0, 0, 0)
             .into();
         assert_eq!(vs.get_datetime().unwrap(), vd.get_datetime().unwrap());
         assert_eq!(vd.get_string().unwrap(), "2022-03-04 00:00:00");
@@ -1189,8 +1229,34 @@ mod tests {
         assert_eq!(42f32.into_value(), Value::Float(42f32));
         assert_eq!(42f64.into_value(), Value::Double(42f64));
         assert_eq!("foo".into_value(), Value::String("foo".into()));
-        assert_eq!(vec![1u32, 2u32, 3u32].into_value(), Value::Array(vec![Value::Int(1), Value::Int(2), Value::Int(3)]));
-        assert_eq!(str_to_datetime("2022-03-04") .into_value(), Value::DateTime(str_to_datetime("2022-03-04").unwrap()));
+        assert_eq!(
+            vec![1u32, 2u32, 3u32].into_value(),
+            Value::Array(vec![Value::Int(1), Value::Int(2), Value::Int(3)])
+        );
+        assert_eq!(
+            str_to_datetime("2022-03-04").into_value(),
+            Value::DateTime(str_to_datetime("2022-03-04").unwrap())
+        );
+    }
 
+    #[test]
+    fn test_cmp() {
+        assert_eq!(Value::Int(1), Value::Int(1));
+        assert_eq!(Value::Int(1), Value::Long(1));
+        assert_eq!(Value::Float(1f32), Value::Int(1));
+        assert_eq!(Value::Long(1), Value::Double(1f64));
+
+        assert!( Value::Int(1) < Value::Int(2));
+        assert!( Value::Long(1) < Value::Int(2));
+        assert!( Value::Float(1f32) < Value::Int(2));
+        assert!( Value::Int(1) < Value::Double(2f64));
+
+        assert!( Value::Bool(true) != Value::Double(2f64));
+
+        assert_eq!(Value::String("2022-03-04".into()), Value::DateTime(str_to_datetime("2022-03-04").unwrap()));
+
+        assert!(Value::String("2022-03-01".into()) < Value::DateTime(str_to_datetime("2022-03-04").unwrap()));
+
+        assert_eq!(Value::Array(vec![Value::Int(1), Value::Int(2)]), Value::Array(vec![Value::Int(1), Value::Int(2)]));
     }
 }
