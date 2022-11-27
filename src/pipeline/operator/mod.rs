@@ -2,19 +2,26 @@ use std::fmt::Debug;
 
 use super::{PiperError, Value, ValueType};
 
-mod math_op;
 mod comparison_op;
-mod logical_op;
-mod unary_op;
-mod index_op;
 mod function_op;
+mod index_op;
+mod logical_op;
+mod math_op;
+mod unary_op;
 
-pub use math_op::{PlusOperator, MinusOperator, MultiplyOperator, DivideOperator};
-pub use comparison_op::{GreaterThanOperator, LessThanOperator, GreaterEqualOperator, LessEqualOperator, EqualOperator, NotEqualOperator};
-pub use logical_op::{AndOperator, OrOperator};
-pub use unary_op::{NotOperator, NegativeOperator, PositiveOperator, IsNullOperator, IsNotNullOperator};
-pub use index_op::{ArrayIndexOperator, MapIndexOperator};
+pub use comparison_op::{
+    EqualOperator, GreaterEqualOperator, GreaterThanOperator, LessEqualOperator, LessThanOperator,
+    NotEqualOperator,
+};
 pub use function_op::FunctionOperator;
+pub use index_op::{ArrayIndexOperator, MapIndexOperator};
+pub use logical_op::{AndOperator, OrOperator};
+pub use math_op::{
+    DivOperator, DivideOperator, MinusOperator, ModOperator, MultiplyOperator, PlusOperator,
+};
+pub use unary_op::{
+    IsNotNullOperator, IsNullOperator, NegativeOperator, NotOperator, PositiveOperator,
+};
 
 pub trait Operator: Debug + Send + Sync {
     fn get_output_type(&self, argument_types: &[ValueType]) -> Result<ValueType, PiperError>;

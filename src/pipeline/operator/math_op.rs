@@ -189,3 +189,65 @@ macro_rules! binary_math_op {
 binary_math_op!(MinusOperator, -, -);
 binary_math_op!(MultiplyOperator, *, *);
 binary_math_op!(DivideOperator, /, /);
+
+#[derive(Clone, Debug)]
+pub struct DivOperator;
+
+impl Operator for DivOperator {
+    fn get_output_type(&self, argument_types: &[ValueType]) -> Result<ValueType, PiperError> {
+        if argument_types.len() != 2 {
+            return Err(PiperError::ArityError(
+                "div".to_string(),
+                argument_types.len(),
+            ));
+        }
+        Ok(ValueType::Long)
+    }
+
+    fn eval(&self, arguments: Vec<Value>) -> Value {
+        if arguments.len() != 2 {
+            return Value::Error(PiperError::ArityError("+".to_string(), arguments.len()));
+        }
+
+        match (arguments[0].get_long(), arguments[1].get_long()) {
+            (Ok(a), Ok(b)) => (a / b).into(),
+            (Err(e), _) => Value::Error(e),
+            (_, Err(e)) => Value::Error(e),
+        }
+    }
+
+    fn dump(&self, arguments: Vec<String>) -> String {
+        format!("({} div {})", arguments[0], arguments[1])
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ModOperator;
+
+impl Operator for ModOperator {
+    fn get_output_type(&self, argument_types: &[ValueType]) -> Result<ValueType, PiperError> {
+        if argument_types.len() != 2 {
+            return Err(PiperError::ArityError(
+                "div".to_string(),
+                argument_types.len(),
+            ));
+        }
+        Ok(ValueType::Long)
+    }
+
+    fn eval(&self, arguments: Vec<Value>) -> Value {
+        if arguments.len() != 2 {
+            return Value::Error(PiperError::ArityError("+".to_string(), arguments.len()));
+        }
+
+        match (arguments[0].get_long(), arguments[1].get_long()) {
+            (Ok(a), Ok(b)) => (a % b).into(),
+            (Err(e), _) => Value::Error(e),
+            (_, Err(e)) => Value::Error(e),
+        }
+    }
+
+    fn dump(&self, arguments: Vec<String>) -> String {
+        format!("({} % {})", arguments[0], arguments[1])
+    }
+}

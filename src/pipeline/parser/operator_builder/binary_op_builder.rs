@@ -23,6 +23,8 @@ impl OperatorBuilder for BinaryOperatorBuilder {
             "-" => Box::new(MinusOperator),
             "*" => Box::new(MultiplyOperator),
             "/" => Box::new(DivideOperator),
+            "%" => Box::new(ModOperator),
+            "div" => Box::new(DivOperator),
             ">" => Box::new(GreaterThanOperator),
             "<" => Box::new(LessThanOperator),
             ">=" => Box::new(GreaterEqualOperator),

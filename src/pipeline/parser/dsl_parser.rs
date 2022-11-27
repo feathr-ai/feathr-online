@@ -133,6 +133,7 @@ peg::parser! {
             x:(@) _ "<=" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("<=")), vec![x, y])) }
             x:(@) _ "==" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("==")), vec![x, y])) }
             x:(@) _ "!=" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("!=")), vec![x, y])) }
+            x:(@) _ "<>" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("!=")), vec![x, y])) }
             --
             x:(@) _ "+" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("+")), vec![x, y])) }
             x:(@) _ "-" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("-")), vec![x, y])) }
@@ -140,7 +141,10 @@ peg::parser! {
             --
             x:(@) _ "*" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("*")), vec![x, y])) }
             x:(@) _ "/" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("/")), vec![x, y])) }
+            x:(@) _ "div" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("div")), vec![x, y])) }
+            x:(@) _ "%" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("%")), vec![x, y])) }
             x:(@) _ "&" _ y:@ { (OperatorExpressionBuilder::create((FunctionOperatorBuilder::create("bit_and")), vec![x, y])) }
+            x:(@) _ "&&" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("and")), vec![x, y])) }
             x:(@) _ "and" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create("and")), vec![x, y])) }
             --
             "+" _ x:(@) { (OperatorExpressionBuilder::create((UnaryOperatorBuilder::create("+")), vec![x])) }
@@ -230,7 +234,7 @@ peg::parser! {
             = s:$(!reserved_words() ['a'..='z' | 'A'..='Z']['a'..='z' | 'A'..='Z' | '0'..='9' | '_' ]*) { s.to_string() }
 
         rule literal() -> Value
-            = v:(f64_lit() / u64_lit() / bool_lit() / string_lit() / constant_lit()) { v }
+            = v:(f64_lit() / u64_lit() / bool_lit() / string_lit() / constant_lit() / null_lit()) { v }
 
         rule null_lit() -> Value
             = "null" { Value::Null }
@@ -340,6 +344,14 @@ mod tests {
         .collect();
         let expr = result.unwrap().build(&schema);
         println!("{}", expr.unwrap().dump());
+    }
+
+    #[test]
+    fn test_operators() {
+        let input = "1+2-3*4/5%6 div ~7 & !8 or (9 && not 10 and 11) & ~11 > 1 < 2 >=3 <=4 != 5 == case when 1 then 2 when 3 then 4 else 5 end <> null";
+        let result = pipeline_parser::expression(input);
+        assert!(result.is_ok());
+        println!("{:?}", result.unwrap().build(&Schema::default()).unwrap().dump());
     }
 
     #[test]

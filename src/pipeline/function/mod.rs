@@ -196,8 +196,12 @@ fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // hex
     // histogram_numeric
     function_map.insert("hour".to_string(), unary_fn(|t: NaiveDateTime| t.hour()));
-    // hypot
-    // if
+    function_map.insert("hypot".to_string(), binary_fn(|x: f64, y: f64| (x * x + y * y).sqrt()));
+    function_map.insert("if".to_string(), ternary_fn(|x: Value, y: Value, z: Value| match x.get_bool() {
+        Ok(true) => y,
+        Ok(false) => z,
+        Err(e) => e.into(),
+    }));
     function_map.insert("ifnull".to_string(), binary_fn(|x: Value, y: Value| if x.is_null() {y} else {x}));
     // ilike
     // in
