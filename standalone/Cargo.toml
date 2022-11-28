@@ -1,0 +1,25 @@
+[package]
+name = "standalone"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+piper = { path = "../piper" }
+tokio = { version = "1.0", features = ["full"] }
+poem = { version = "1", features = ["tokio-metrics"] }
+dotenv = "0.15"
+clap = { version = "4", features = ["derive", "env"] }
+once_cell = "1"
+futures = "0.3"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[target.'cfg(target_env = "musl")'.dependencies]
+# Use statically lined openssl when build with musl
+openssl = { version = "0.10", features = ["vendored"] }
+
+[[bin]]
+name = "piper"
+path = "src/main.rs"
