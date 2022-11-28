@@ -33,6 +33,7 @@ levenshtein = "1.0.5"
 uuid = "1"
 rand = "*"
 dyn-clonable = "0.9"
+poem = { version = "1", features = ["tokio-metrics"] }
 
 [build-dependencies]
 protobuf-codegen = "3"

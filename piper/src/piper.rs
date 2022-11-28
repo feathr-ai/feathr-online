@@ -11,7 +11,7 @@ use crate::{
         BuildContext, ErrorCollector, Pipeline,
         PiperError, ValidationMode, Value,
     },
-    Appliable, Args, Logged, Request, Response, SingleRequest, SingleResponse,
+    Appliable, Logged, Request, Response, SingleRequest, SingleResponse,
 };
 
 #[derive(Debug)]
@@ -21,9 +21,9 @@ pub struct Piper {
 }
 
 impl Piper {
-    pub async fn new(args: Args) -> Result<Self, PiperError> {
-        let pipeline_def = load_file(&args.pipeline, args.enable_managed_identity).await?;
-        let lookup_def = load_file(&args.lookup, args.enable_managed_identity).await?;
+    pub async fn new(pipeline: &str, lookup: &str, enable_managed_identity: bool) -> Result<Self, PiperError> {
+        let pipeline_def = load_file(pipeline, enable_managed_identity).await?;
+        let lookup_def = load_file(lookup, enable_managed_identity).await?;
 
         let ctx = BuildContext::from_config(&lookup_def)?;
 
