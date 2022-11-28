@@ -2,8 +2,5 @@
 members = [
     "piper",
     "standalone",
-]
-
-exclude = [
     "python",
 ]

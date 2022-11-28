@@ -121,4 +121,7 @@ pub enum PiperError {
 
     #[error("Environment variable {0} is not set.")]
     EnvVarNotSet(String),
+
+    #[error("{0}")]
+    ExternalError(String),
 }

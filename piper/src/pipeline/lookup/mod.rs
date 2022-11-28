@@ -36,8 +36,15 @@ pub fn init_lookup_sources(
 ) -> Result<HashMap<String, Arc<dyn LookupSource>>, PiperError> {
     #[derive(Debug, Deserialize, Serialize)]
     struct LookupSources {
+        #[serde(default)]
         sources: Vec<LookupSourceEntry>,
     }
+
+    let cfg = if cfg.is_empty() {
+        "{}"
+    } else {
+        cfg
+    };
 
     let cfg: HashMap<String, Arc<dyn LookupSource>> = serde_json::from_str::<LookupSources>(cfg)
         .map_err(|e| PiperError::Unknown(format!("Failed to parse lookup source config: {}", e)))?

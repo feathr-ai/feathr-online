@@ -30,6 +30,21 @@ impl BuildContext {
         })
     }
 
+    pub fn from_config_with_udf(
+        lookup_source_def: &str,
+        udf: HashMap<String, Box<dyn Function>>,
+    ) -> Result<Self, PiperError> {
+        Ok(Self {
+            // TODO: Check duplicates
+            functions: init_built_in_functions()
+                .into_iter()
+                .chain(udf.into_iter())
+                .collect(),
+            lookup_sources: init_lookup_sources(lookup_source_def)?
+                .then(|s| debug!("{} lookup data sources loaded", s.len())),
+        })
+    }
+
     pub fn dump_lookup_sources(&self) -> serde_json::Value {
         json!(self
             .lookup_sources

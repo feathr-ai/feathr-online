@@ -1,17 +1,12 @@
 use std::{collections::HashMap, time::Instant};
 
-use azure_core::auth::TokenCredential;
-use azure_identity::{DefaultAzureCredential, DefaultAzureCredentialBuilder};
 use futures::future::join_all;
 use tracing::{debug, instrument};
 
 use crate::{
     common::IgnoreDebug,
-    pipeline::{
-        BuildContext, ErrorCollector, Pipeline,
-        PiperError, ValidationMode, Value,
-    },
-    Appliable, Logged, Request, Response, SingleRequest, SingleResponse,
+    pipeline::{BuildContext, ErrorCollector, Pipeline, PiperError, ValidationMode, Value},
+    Function, Logged, Request, Response, SingleRequest, SingleResponse,
 };
 
 #[derive(Debug)]
@@ -21,13 +16,26 @@ pub struct Piper {
 }
 
 impl Piper {
-    pub async fn new(pipeline: &str, lookup: &str, enable_managed_identity: bool) -> Result<Self, PiperError> {
-        let pipeline_def = load_file(pipeline, enable_managed_identity).await?;
-        let lookup_def = load_file(lookup, enable_managed_identity).await?;
+    pub fn new(pipeline_def: &str, lookup_def: &str) -> Result<Self, PiperError> {
+        let ctx = BuildContext::from_config(lookup_def)?;
 
-        let ctx = BuildContext::from_config(&lookup_def)?;
+        let mut pipelines = Pipeline::load(pipeline_def, &ctx).log()?;
+        // Use invalid identifier as the name, avoid clashes with user-defined pipelines
+        pipelines.insert("%health".to_string(), Pipeline::get_health_checker());
+        Ok(Self {
+            pipelines,
+            ctx: IgnoreDebug { inner: ctx },
+        })
+    }
 
-        let mut pipelines = Pipeline::load(&pipeline_def, &ctx).log()?;
+    pub fn new_with_udf(
+        pipeline_def: &str,
+        lookup_def: &str,
+        udf: HashMap<String, Box<dyn Function>>,
+    ) -> Result<Self, PiperError> {
+        let ctx = BuildContext::from_config_with_udf(lookup_def, udf)?;
+
+        let mut pipelines = Pipeline::load(pipeline_def, &ctx).log()?;
         // Use invalid identifier as the name, avoid clashes with user-defined pipelines
         pipelines.insert("%health".to_string(), Pipeline::get_health_checker());
         Ok(Self {
@@ -138,68 +146,4 @@ impl Piper {
             errors,
         })
     }
-}
-
-async fn make_request(
-    url: &str,
-    enable_managed_identity: bool,
-) -> Result<reqwest::RequestBuilder, PiperError> {
-    let client = reqwest::Client::new();
-    if url.starts_with("https://") && url.contains(".blob.core.windows.net/") {
-        // It's on Azure Storage Blob
-        let credential = if enable_managed_identity {
-            DefaultAzureCredential::default()
-        } else {
-            DefaultAzureCredentialBuilder::new()
-                .exclude_managed_identity_credential()
-                .build()
-        };
-        let token = credential
-            .get_token("https://storage.azure.com/")
-            .await
-            .log()
-            .map_err(|e| PiperError::AuthError(format!("{:?}", e)))
-            .map(|t| t.token.secret().to_string())
-            .ok();
-        match token {
-            // Acquired token and use it
-            Some(t) => Ok(client
-                .get(url)
-                // @see: https://learn.microsoft.com/en-us/azure/storage/common/storage-auth-aad-app?tabs=dotnet#create-a-block-blob
-                .header("x-ms-version", "2017-11-09")
-                .bearer_auth(t)),
-            // We don't have token, assume it's public accessible
-            None => Ok(client.get(url)),
-        }
-    } else {
-        Ok(client.get(url))
-    }
-}
-
-async fn load_file(path: &str, enable_managed_identity: bool) -> Result<String, PiperError> {
-    debug!("Reading file at {}", path);
-    Ok(if path.starts_with("http:") || path.starts_with("https:") {
-        let resp = make_request(path, enable_managed_identity)
-            .await?
-            .send()
-            .await
-            .log()
-            .map_err(|e| PiperError::Unknown(e.to_string()))?;
-        resp.text()
-            .await
-            .log()
-            .map_err(|e| PiperError::Unknown(e.to_string()))
-    } else {
-        tokio::fs::read_to_string(path)
-            .await
-            .log()
-            .map_err(|e| PiperError::Unknown(e.to_string()))
-    }?
-    .then(|s| {
-        debug!(
-            "Successfully read file at {}, file length is {}",
-            path,
-            s.len()
-        );
-    }))
 }
