@@ -1,6 +1,6 @@
 use crate::pipeline::{
     transformation::{ProjectKeepTransformation, Transformation},
-    PiperError, Schema,
+    PiperError, Schema, pipelines::BuildContext,
 };
 
 use super::TransformationBuilder;
@@ -16,7 +16,7 @@ impl ProjectKeepTransformationBuilder {
 }
 
 impl TransformationBuilder for ProjectKeepTransformationBuilder {
-    fn build(&self, input_schema: &Schema) -> Result<Box<dyn Transformation>, PiperError> {
+    fn build(&self, input_schema: &Schema, _ctx: &BuildContext) -> Result<Box<dyn Transformation>, PiperError> {
         ProjectKeepTransformation::create(input_schema, self.keeps.clone())
     }
 }

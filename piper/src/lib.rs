@@ -9,7 +9,7 @@ mod pipeline;
 mod piper;
 
 pub use common::{Appliable, Logged};
-pub use pipeline::{PiperError, Value, ValueType};
+pub use pipeline::{Function, PiperError, Value, ValueType};
 pub use piper::Piper;
 
 #[derive(Parser, Debug, Clone)]

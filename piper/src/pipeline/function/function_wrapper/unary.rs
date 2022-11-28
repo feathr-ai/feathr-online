@@ -4,14 +4,15 @@ use crate::pipeline::{PiperError, Value, ValueType, ValueTypeOf};
 
 use super::Function;
 
+#[derive(Clone)]
 struct UnaryFunctionWrapper<A, R, F, E>
 where
-    A: Send + Sync,
+    A: Send + Sync + Clone,
     Value: TryInto<A, Error = E>,
-    R: Into<Value> + Sync + Send + ValueTypeOf,
+    R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E>: Into<Value>,
-    E: Sync + Send,
-    F: Fn(A) -> R,
+    E: Sync + Send + Clone,
+    F: Fn(A) -> R + Clone,
 {
     function: F,
     _phantom: PhantomData<(A, R, E)>,
@@ -19,12 +20,12 @@ where
 
 impl<A, R, F, E> UnaryFunctionWrapper<A, R, F, E>
 where
-    A: Send + Sync,
+    A: Send + Sync + Clone,
     Value: TryInto<A, Error = E>,
-    R: Into<Value> + Sync + Send + ValueTypeOf,
+    R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E>: Into<Value>,
-    E: Sync + Send,
-    F: Fn(A) -> R,
+    E: Sync + Send + Clone,
+    F: Fn(A) -> R + Clone,
 {
     fn new(function: F) -> Self {
         Self {
@@ -47,12 +48,12 @@ where
 
 impl<A, R, F, E> Function for UnaryFunctionWrapper<A, R, F, E>
 where
-    A: Send + Sync,
+    A: Send + Sync + Clone,
     Value: TryInto<A, Error = E>,
-    R: Into<Value> + Sync + Send + ValueTypeOf,
-    F: (Fn(A) -> R) + Sync + Send,
+    R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
+    F: (Fn(A) -> R) + Sync + Send + Clone,
     Result<Value, E>: Into<Value>,
-    E: Sync + Send,
+    E: Sync + Send + Clone,
 {
     fn get_output_type(&self, _argument_types: &[ValueType]) -> Result<ValueType, PiperError> {
         Ok(R::value_type())
@@ -65,12 +66,12 @@ where
 
 pub fn unary_fn<A, R, F, E>(f: F) -> Box<impl Function>
 where
-    A: Send + Sync,
+    A: Send + Sync + Clone,
     Value: TryInto<A, Error = E>,
-    R: Into<Value> + Sync + Send + ValueTypeOf,
-    F: Fn(A) -> R + Sync + Send,
+    R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
+    F: Fn(A) -> R + Sync + Send + Clone,
     Result<Value, E>: Into<Value>,
-    E: Sync + Send,
+    E: Sync + Send + Clone,
 {
     Box::new(UnaryFunctionWrapper::new(f))
 }

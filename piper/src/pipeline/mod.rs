@@ -14,6 +14,7 @@ pub use dataset::{
     Validated, ValidatedDataSet, ValidationMode,
 };
 pub use errors::PiperError;
-pub use lookup::dump_lookup_sources;
-pub use pipelines::Pipeline;
+pub use function::{init_built_in_functions, Function};
+pub use lookup::init_lookup_sources;
+pub use pipelines::{BuildContext, Pipeline};
 pub use value::{Value, ValueType, ValueTypeOf};

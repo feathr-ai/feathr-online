@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::pipeline::transformation::{NullPos, SortOrder};
+use crate::pipeline::{
+    pipelines::BuildContext,
+    transformation::{NullPos, SortOrder},
+};
 
 use super::super::{Pipeline, PiperError};
 
@@ -119,7 +122,7 @@ peg::parser! {
             = new:identifier() _ "=" _ old:identifier() {
                 (old.to_string(), new.to_string())
             }
-        
+
         rule rename_with_type() -> (String, Option<String>, ValueType)
             = (new_name:identifier() _ "=" _ name:identifier() _ "as" _ vt:value_type() { (name.to_string(), Some(new_name), vt) })
             / (new_name:identifier() _ "=" _ name:identifier() { (name.to_string(), Some(new_name), ValueType::Dynamic) })
@@ -187,12 +190,12 @@ peg::parser! {
                 let args = when_then.into_iter().flat_map(|(w, t)| [w, t].into_iter()).chain(else_then.into_iter()).collect();
                 OperatorExpressionBuilder::create(FunctionOperatorBuilder::create("case"), args)
             }
-        
+
         rule when_then() -> (Box<dyn ExpressionBuilder>, Box<dyn ExpressionBuilder>)
             = "when" _ condition:expression() _ "then" _ result:expression() {
                 (condition, result)
             }
-        
+
         rule else_then() -> Box<dyn ExpressionBuilder>
             = "else" _ result:expression() {
                 result
@@ -297,24 +300,29 @@ peg::parser! {
     }
 }
 
-pub fn parse_script(input: &str) -> Result<HashMap<String, Pipeline>, PiperError> {
+pub fn parse_script(
+    input: &str,
+    ctx: &BuildContext,
+) -> Result<HashMap<String, Pipeline>, PiperError> {
     let pipelines = pipeline_parser::program(input)
         .map_err(|e| PiperError::SyntaxError(e.to_string()))?
         .into_iter()
-        .map(|p| p.build())
+        .map(|p| p.build(ctx))
         .collect::<Result<Vec<_>, _>>()?;
     Ok(pipelines.into_iter().map(|p| (p.name.clone(), p)).collect())
 }
 
-pub fn parse_pipeline(input: &str) -> Result<Pipeline, PiperError> {
+pub fn parse_pipeline(input: &str, ctx: &BuildContext) -> Result<Pipeline, PiperError> {
     pipeline_parser::pipeline(input)
         .map_err(|e| PiperError::SyntaxError(e.to_string()))?
-        .build()
+        .build(ctx)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::pipeline::{Column, Schema, ValueType};
+    use crate::pipeline::{
+        pipelines::BuildContext, Column, Schema, ValueType,
+    };
 
     use super::pipeline_parser;
 
@@ -326,7 +334,7 @@ mod tests {
         let result = pipeline_parser::expression(input);
         assert!(result.is_ok());
         let schema = Schema::default();
-        let expr = result.unwrap().build(&schema);
+        let expr = result.unwrap().build(&schema, &BuildContext::default());
         println!("{}", expr.unwrap().dump());
     }
 
@@ -342,7 +350,7 @@ mod tests {
         ]
         .into_iter()
         .collect();
-        let expr = result.unwrap().build(&schema);
+        let expr = result.unwrap().build(&schema, &BuildContext::default());
         println!("{}", expr.unwrap().dump());
     }
 
@@ -351,7 +359,14 @@ mod tests {
         let input = "1+2-3*4/5%6 div ~7 & !8 or (9 && not 10 and 11) & ~11 > 1 < 2 >=3 <=4 != 5 == case when 1 then 2 when 3 then 4 else 5 end <> null";
         let result = pipeline_parser::expression(input);
         assert!(result.is_ok());
-        println!("{:?}", result.unwrap().build(&Schema::default()).unwrap().dump());
+        println!(
+            "{:?}",
+            result
+                .unwrap()
+                .build(&Schema::default(), &BuildContext::default())
+                .unwrap()
+                .dump()
+        );
     }
 
     #[test]

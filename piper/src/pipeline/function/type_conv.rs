@@ -4,7 +4,7 @@ use crate::pipeline::{PiperError, Value, ValueType};
 
 use super::Function;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct TypeConverterFunction {
     pub to: ValueType,
 }

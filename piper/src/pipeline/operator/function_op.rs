@@ -6,8 +6,8 @@ use super::Operator;
 
 #[derive(Clone, Debug)]
 pub struct FunctionOperator {
-    pub name: &'static str,
-    pub function: IgnoreDebug<&'static dyn Function>,
+    pub name: String,
+    pub function: IgnoreDebug<Box<dyn Function>>,
 }
 
 impl Operator for FunctionOperator {

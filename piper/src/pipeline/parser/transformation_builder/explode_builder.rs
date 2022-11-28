@@ -1,6 +1,6 @@
 use crate::pipeline::{
     transformation::{ExplodeTransformation, Transformation},
-    PiperError, Schema, ValueType,
+    PiperError, Schema, ValueType, pipelines::BuildContext,
 };
 
 use super::TransformationBuilder;
@@ -20,7 +20,7 @@ impl ExplodeTransformationBuilder {
 }
 
 impl TransformationBuilder for ExplodeTransformationBuilder {
-    fn build(&self, input_schema: &Schema) -> Result<Box<dyn Transformation>, PiperError> {
+    fn build(&self, input_schema: &Schema, _ctx: &BuildContext) -> Result<Box<dyn Transformation>, PiperError> {
         let column_idx = input_schema
             .columns
             .iter()

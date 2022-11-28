@@ -1,6 +1,6 @@
 use crate::pipeline::{
     parser::expression_builders::ExpressionBuilder,
-    transformation::{NullPos, SortOrder, TopTransformation},
+    transformation::{NullPos, SortOrder, TopTransformation}, pipelines::BuildContext,
 };
 
 use super::TransformationBuilder;
@@ -32,11 +32,12 @@ impl TransformationBuilder for TopTransformationBuilder {
     fn build(
         &self,
         input_schema: &crate::pipeline::Schema,
+        ctx: &BuildContext,
     ) -> Result<Box<dyn crate::pipeline::transformation::Transformation>, crate::pipeline::PiperError>
     {
         Ok(TopTransformation::new(
             self.count,
-            self.criteria.build(input_schema)?,
+            self.criteria.build(input_schema, ctx)?,
             self.sort_order,
             self.null_pos,
         ))

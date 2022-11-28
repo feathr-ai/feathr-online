@@ -6,13 +6,18 @@ use futures::future::join_all;
 use tracing::{debug, instrument};
 
 use crate::{
-    pipeline::{dump_lookup_sources, ErrorCollector, Pipeline, PiperError, ValidationMode, Value},
+    common::IgnoreDebug,
+    pipeline::{
+        BuildContext, ErrorCollector, Pipeline,
+        PiperError, ValidationMode, Value,
+    },
     Appliable, Args, Logged, Request, Response, SingleRequest, SingleResponse,
 };
 
 #[derive(Debug)]
 pub struct Piper {
     pub(crate) pipelines: HashMap<String, Pipeline>,
+    pub(crate) ctx: IgnoreDebug<BuildContext>,
 }
 
 impl Piper {
@@ -20,10 +25,15 @@ impl Piper {
         let pipeline_def = load_file(&args.pipeline, args.enable_managed_identity).await?;
         let lookup_def = load_file(&args.lookup, args.enable_managed_identity).await?;
 
-        let mut pipelines = Pipeline::load(&pipeline_def, &lookup_def).log()?;
+        let ctx = BuildContext::from_config(&lookup_def)?;
+
+        let mut pipelines = Pipeline::load(&pipeline_def, &ctx).log()?;
         // Use invalid identifier as the name, avoid clashes with user-defined pipelines
         pipelines.insert("%health".to_string(), Pipeline::get_health_checker());
-        Ok(Self { pipelines })
+        Ok(Self {
+            pipelines,
+            ctx: IgnoreDebug { inner: ctx },
+        })
     }
 
     pub async fn health_check(&self) -> bool {
@@ -49,8 +59,8 @@ impl Piper {
             .collect()
     }
 
-    pub fn get_lookup_sources() -> serde_json::Value {
-        dump_lookup_sources()
+    pub fn get_lookup_sources(&self) -> serde_json::Value {
+        self.ctx.inner.dump_lookup_sources()
     }
 
     #[instrument(level = "trace", skip(self))]

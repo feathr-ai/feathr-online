@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, Timelike, Utc, DateTime};
-use once_cell::sync::OnceCell;
+use dyn_clonable::clonable;
 
 use self::function_wrapper::var_fn;
 
@@ -36,23 +36,15 @@ use timestamp::TimestampFunction;
 use to_json::ToJsonStringFunction;
 use type_conv::TypeConverterFunction;
 
-pub trait Function: Send + Sync {
+#[clonable]
+pub trait Function: Send + Sync + Clone {
     fn get_output_type(&self, argument_types: &[ValueType]) -> Result<ValueType, PiperError>;
 
     fn eval(&self, arguments: Vec<Value>) -> Value;
 }
 
-static FUNCTION_REPO: OnceCell<HashMap<String, Box<dyn Function + 'static>>> = OnceCell::new();
-
-pub fn get_function(name: &str) -> Option<(&'static str, &'static dyn Function)> {
-    FUNCTION_REPO
-        .get_or_init(init_built_in_functions)
-        .get_key_value(name)
-        .map(|(name, f)| (name.as_str(), f.as_ref()))
-}
-
 #[rustfmt::skip]
-fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
+pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>> {
     // Built-in functions
     let mut function_map: HashMap<String, Box<dyn Function + 'static>> = HashMap::new();
     function_map.insert("abs".to_string(), Box::new(Abs));

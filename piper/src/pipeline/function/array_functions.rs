@@ -36,6 +36,7 @@ pub fn array_intersect(array: Vec<Value>, intersect: Vec<Value>) -> Value {
     Value::Array(result)
 }
 
+#[derive(Clone)]
 pub struct ArrayJoin;
 
 impl Function for ArrayJoin {

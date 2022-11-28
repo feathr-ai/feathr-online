@@ -1,4 +1,4 @@
-use crate::pipeline::{transformation::Transformation, Schema, PiperError};
+use crate::{pipeline::{transformation::Transformation, Schema, PiperError, pipelines::BuildContext}};
 
 mod take_builder;
 mod where_builder;
@@ -23,5 +23,5 @@ pub use top_builder::TopTransformationBuilder;
 pub use ignore_error_builder::IgnoreErrorTransformationBuilder;
 
 pub trait TransformationBuilder {
-    fn build(&self, input_schema: &Schema) -> Result<Box<dyn Transformation>, PiperError>;
+    fn build(&self, input_schema: &Schema, ctx: &BuildContext) -> Result<Box<dyn Transformation>, PiperError>;
 }

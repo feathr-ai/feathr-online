@@ -1,8 +1,7 @@
 use crate::pipeline::{
-    lookup::get_lookup_source,
     parser::expression_builders::ExpressionBuilder,
     transformation::{LookupTransformation, Transformation},
-    PiperError, Schema, ValueType,
+    PiperError, Schema, ValueType, pipelines::BuildContext,
 };
 
 use super::TransformationBuilder;
@@ -28,13 +27,13 @@ impl LookupTransformationBuilder {
 }
 
 impl TransformationBuilder for LookupTransformationBuilder {
-    fn build(&self, input_schema: &Schema) -> Result<Box<dyn Transformation>, PiperError> {
+    fn build(&self, input_schema: &Schema, ctx: &BuildContext) -> Result<Box<dyn Transformation>, PiperError> {
         LookupTransformation::create(
             input_schema,
             self.source.clone(),
-            get_lookup_source(&self.source)?,
+            ctx.get_lookup_source(&self.source)?,
             self.fields.clone(),
-            self.key.build(input_schema)?,
+            self.key.build(input_schema, ctx)?,
         ) as Result<Box<dyn Transformation>, PiperError>
     }
 }

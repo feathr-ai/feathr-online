@@ -1,12 +1,19 @@
 use std::fmt::Debug;
 
+use crate::pipeline::pipelines::BuildContext;
+
 use super::{
+    super::expression::{ColumnExpression, Expression, LiteralExpression, OperatorExpression},
     super::{PiperError, Schema, Value},
-    super::expression::{Expression, ColumnExpression, LiteralExpression, OperatorExpression}, operator_builder::OperatorBuilder,
+    operator_builder::OperatorBuilder,
 };
 
-pub trait ExpressionBuilder : Debug {
-    fn build(&self, schema: &Schema) -> Result<Box<dyn Expression>, PiperError>;
+pub trait ExpressionBuilder: Debug {
+    fn build(
+        &self,
+        schema: &Schema,
+        ctx: &BuildContext,
+    ) -> Result<Box<dyn Expression>, PiperError>;
 }
 
 #[derive(Debug)]
@@ -26,7 +33,11 @@ impl ColumnExpressionBuilder {
 }
 
 impl ExpressionBuilder for ColumnExpressionBuilder {
-    fn build(&self, schema: &Schema) -> Result<Box<dyn Expression>, PiperError> {
+    fn build(
+        &self,
+        schema: &Schema,
+        _ctx: &BuildContext,
+    ) -> Result<Box<dyn Expression>, PiperError> {
         let column_index = schema
             .get_column_index(&self.column_name)
             .ok_or_else(|| PiperError::ColumnNotFound(self.column_name.clone()))?;
@@ -54,7 +65,11 @@ impl LiteralExpressionBuilder {
 }
 
 impl ExpressionBuilder for LiteralExpressionBuilder {
-    fn build(&self, _schema: &Schema) -> Result<Box<dyn Expression>, PiperError> {
+    fn build(
+        &self,
+        _schema: &Schema,
+        _ctx: &BuildContext,
+    ) -> Result<Box<dyn Expression>, PiperError> {
         Ok(Box::new(LiteralExpression {
             value: self.value.clone(),
         }))
@@ -80,14 +95,18 @@ impl OperatorExpressionBuilder {
 }
 
 impl ExpressionBuilder for OperatorExpressionBuilder {
-    fn build(&self, schema: &Schema) -> Result<Box<dyn Expression>, PiperError> {
+    fn build(
+        &self,
+        schema: &Schema,
+        ctx: &BuildContext,
+    ) -> Result<Box<dyn Expression>, PiperError> {
         let arguments = self
             .arguments
             .iter()
-            .map(|e| e.build(schema))
+            .map(|e| e.build(schema, ctx))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(Box::new(OperatorExpression {
-            operator: self.operator.build()?,
+            operator: self.operator.build(ctx)?,
             arguments,
         }))
     }

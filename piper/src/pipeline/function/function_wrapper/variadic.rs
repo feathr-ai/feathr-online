@@ -3,14 +3,16 @@ use std::marker::PhantomData;
 use crate::pipeline::{PiperError, Value, ValueType, ValueTypeOf};
 
 use super::Function;
+
+#[derive(Clone)]
 pub struct VariadicFunctionWrapper<A, R, F, E>
 where
-    A: Send + Sync,
+    A: Send + Sync + Clone,
     Value: TryInto<A, Error = E>,
-    R: Into<Value> + Sync + Send + ValueTypeOf,
+    R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E>: Into<Value>,
-    E: Sync + Send,
-    F: Fn(Vec<A>) -> R,
+    E: Sync + Send + Clone,
+    F: Fn(Vec<A>) -> R + Clone,
 {
     function: F,
     _phantom: PhantomData<(A, R, E)>,
@@ -18,12 +20,12 @@ where
 
 impl<A, R, F, E> VariadicFunctionWrapper<A, R, F, E>
 where
-    A: Send + Sync,
+    A: Send + Sync + Clone,
     Value: TryInto<A, Error = E>,
-    R: Into<Value> + Sync + Send + ValueTypeOf,
+    R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E>: Into<Value>,
-    E: Sync + Send,
-    F: Fn(Vec<A>) -> R,
+    E: Sync + Send + Clone,
+    F: Fn(Vec<A>) -> R + Clone,
 {
     pub fn new(function: F) -> Self {
         Self {
@@ -44,12 +46,12 @@ where
 
 impl<A, R, F, E> Function for VariadicFunctionWrapper<A, R, F, E>
 where
-    A: Send + Sync,
+    A: Send + Sync + Clone,
     Value: TryInto<A, Error = E>,
-    R: Into<Value> + Sync + Send + ValueTypeOf,
+    R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E>: Into<Value>,
-    E: Sync + Send,
-    F: Fn(Vec<A>) -> R + Sync + Send,
+    E: Sync + Send + Clone,
+    F: Fn(Vec<A>) -> R + Sync + Send + Clone,
 {
     fn get_output_type(&self, _argument_types: &[ValueType]) -> Result<ValueType, PiperError> {
         Ok(R::value_type())
@@ -62,12 +64,12 @@ where
 
 pub fn var_fn<A, R, F, E>(f: F) -> Box<impl Function>
 where
-    A: Send + Sync,
+    A: Send + Sync + Clone,
     Value: TryInto<A, Error = E>,
-    R: Into<Value> + Sync + Send + ValueTypeOf,
-    F: Fn(Vec<A>) -> R + Sync + Send,
+    R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
+    F: Fn(Vec<A>) -> R + Sync + Send + Clone,
     Result<Value, E>: Into<Value>,
-    E: Sync + Send,
+    E: Sync + Send + Clone,
 {
     Box::new(VariadicFunctionWrapper::new(f))
 }

@@ -1,4 +1,4 @@
-use crate::pipeline::{function::get_function, operator::*, PiperError};
+use crate::pipeline::{operator::*, pipelines::BuildContext, PiperError};
 
 use super::OperatorBuilder;
 
@@ -19,11 +19,14 @@ impl FunctionOperatorBuilder {
 }
 
 impl OperatorBuilder for FunctionOperatorBuilder {
-    fn build(&self) -> Result<Box<dyn Operator>, PiperError> {
-        match get_function(&self.name) {
-            Some((name, function)) => Ok(Box::new(FunctionOperator {
-                name,
-                function: crate::common::IgnoreDebug { inner: function },
+    fn build(&self, ctx: &BuildContext) -> Result<Box<dyn Operator>, PiperError> {
+        // match get_function(&self.name) {
+        match ctx.functions.get(&self.name) {
+            Some(function) => Ok(Box::new(FunctionOperator {
+                name: self.name.clone(),
+                function: crate::common::IgnoreDebug {
+                    inner: function.clone(),
+                },
             })),
             None => Err(PiperError::UnknownFunction(self.name.clone())),
         }
@@ -37,7 +40,7 @@ mod tests {
             expression_builders::{LiteralExpressionBuilder, OperatorExpressionBuilder},
             operator_builder::FunctionOperatorBuilder,
         },
-        Schema,
+        Schema, pipelines::BuildContext,
     };
 
     #[test]
@@ -51,6 +54,8 @@ mod tests {
                 LiteralExpressionBuilder::create(2),
             ],
         );
-        let _ = expression.build(&schema).unwrap();
+        let _ = expression
+            .build(&schema, &BuildContext::default())
+            .unwrap();
     }
 }

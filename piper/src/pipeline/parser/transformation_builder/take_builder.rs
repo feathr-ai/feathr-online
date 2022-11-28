@@ -1,4 +1,4 @@
-use crate::pipeline::{Schema, transformation::{Transformation, TakeTransformation}, PiperError};
+use crate::pipeline::{Schema, transformation::{Transformation, TakeTransformation}, PiperError, pipelines::BuildContext};
 
 use super::TransformationBuilder;
 
@@ -13,7 +13,7 @@ impl TakeTransformationBuilder {
 }
 
 impl TransformationBuilder for TakeTransformationBuilder {
-    fn build(&self, _input_schema: &Schema) -> Result<Box<dyn Transformation>, PiperError> {
+    fn build(&self, _input_schema: &Schema, _ctx: &BuildContext) -> Result<Box<dyn Transformation>, PiperError> {
         Ok(Box::new(TakeTransformation {
             count: self.count,
         }))

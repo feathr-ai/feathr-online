@@ -2,16 +2,15 @@ use std::collections::HashMap;
 
 use clap::Parser;
 use once_cell::sync::OnceCell;
-use piper::{Args, Piper, PiperError, Logged, Appliable};
+use piper::{Appliable, Args, Logged, Piper, PiperError};
 use poem::{
     error::BadRequest,
     get, handler,
     listener::TcpListener,
     middleware::{Cors, TokioMetrics, Tracing},
     post,
-    Server,
     web::Json,
-    EndpointExt, Route,
+    EndpointExt, Route, Server,
 };
 use tracing::{info, metadata::LevelFilter};
 use tracing_subscriber::EnvFilter;
@@ -46,7 +45,7 @@ fn get_pipelines() -> Json<HashMap<String, serde_json::Value>> {
 
 #[handler]
 fn get_lookup_sources() -> Json<serde_json::Value> {
-    Json(piper::Piper::get_lookup_sources())
+    Json(PIPER.get().unwrap().get_lookup_sources())
 }
 
 #[handler]

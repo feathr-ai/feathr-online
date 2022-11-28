@@ -1,4 +1,4 @@
-use crate::pipeline::{operator::*, PiperError};
+use crate::pipeline::{operator::*, pipelines::BuildContext, PiperError};
 
 use super::OperatorBuilder;
 
@@ -17,7 +17,7 @@ impl BinaryOperatorBuilder {
 }
 
 impl OperatorBuilder for BinaryOperatorBuilder {
-    fn build(&self) -> Result<Box<dyn Operator>, PiperError> {
+    fn build(&self, _ctx: &BuildContext) -> Result<Box<dyn Operator>, PiperError> {
         Ok(match self.op.as_str() {
             "+" => Box::new(PlusOperator),
             "-" => Box::new(MinusOperator),

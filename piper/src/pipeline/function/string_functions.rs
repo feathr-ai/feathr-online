@@ -4,7 +4,7 @@ use crate::pipeline::{PiperError, Value, ValueType};
 
 use super::Function;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SplitFunction;
 
 impl Function for SplitFunction {
@@ -53,7 +53,7 @@ impl Function for SplitFunction {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SubstringFunction;
 
 impl Function for SubstringFunction {

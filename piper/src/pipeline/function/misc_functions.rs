@@ -2,7 +2,7 @@ use crate::pipeline::{PiperError, Value, ValueType};
 
 use super::Function;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Abs;
 
 impl Function for Abs {
@@ -41,6 +41,7 @@ pub fn ascii(s: String) -> Value {
     s.chars().next().map_or(Value::Null, |c| (c as u32).into())
 }
 
+#[derive(Clone)]
 pub struct Concat;
 
 impl Function for Concat {
@@ -116,6 +117,7 @@ impl Function for Concat {
     }
 }
 
+#[derive(Clone)]
 pub struct ConcatWs;
 
 impl Function for ConcatWs {
@@ -178,6 +180,7 @@ pub fn contains(s: Option<String>, substr: Option<String>) -> Value {
     }
 }
 
+#[derive(Clone)]
 pub struct Conv;
 
 impl Function for Conv {

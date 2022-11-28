@@ -6,7 +6,7 @@ use crate::pipeline::{PiperError, Value, ValueType};
 
 use super::Function;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct TimestampFunction;
 
 const DEFAULT_FORMAT: &str = "%Y-%m-%d %H:%M:%S";

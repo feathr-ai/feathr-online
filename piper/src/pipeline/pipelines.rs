@@ -1,19 +1,59 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use serde_json::json;
 use tracing::debug;
 
-use crate::Appliable;
+use crate::{Appliable, Function};
 
 use super::{
     expression::{ColumnExpression, Expression, LiteralExpression, OperatorExpression},
-    lookup::init_lookup_sources,
+    init_built_in_functions,
+    lookup::{init_lookup_sources, LookupSource},
     operator::PlusOperator,
     parser::{parse_pipeline, parse_script},
     transformation::{ProjectTransformation, Transformation},
     Column, DataSet, DataSetCreator, PiperError, Schema, Validated, ValidationMode, Value,
     ValueType,
 };
+
+pub struct BuildContext {
+    pub functions: HashMap<String, Box<dyn Function>>,
+    pub lookup_sources: HashMap<String, Arc<dyn LookupSource>>,
+}
+
+impl BuildContext {
+    pub fn from_config(lookup_source_def: &str) -> Result<Self, PiperError> {
+        Ok(Self {
+            functions: init_built_in_functions(),
+            lookup_sources: init_lookup_sources(lookup_source_def)?
+                .then(|s| debug!("{} lookup data sources loaded", s.len())),
+        })
+    }
+
+    pub fn dump_lookup_sources(&self) -> serde_json::Value {
+        json!(self
+            .lookup_sources
+            .iter()
+            .map(|(k, v)| (k, v.dump()))
+            .collect::<HashMap<_, _>>())
+    }
+
+    pub fn get_lookup_source(&self, name: &str) -> Result<Arc<dyn LookupSource>, PiperError> {
+        self.lookup_sources
+            .get(name)
+            .cloned()
+            .ok_or_else(|| PiperError::LookupSourceNotFound(name.to_owned()))
+    }
+}
+
+impl Default for BuildContext {
+    fn default() -> Self {
+        Self {
+            functions: init_built_in_functions(),
+            lookup_sources: HashMap::new(),
+        }
+    }
+}
 
 /**
  * One transformation stage
@@ -77,11 +117,10 @@ impl Pipeline {
     /**
      * Load DSL script and lookup source config to build name/pipeline map.
      */
-    pub fn load(script: &str, lookup_def: &str) -> Result<HashMap<String, Self>, PiperError> {
+    pub fn load(script: &str, ctx: &BuildContext) -> Result<HashMap<String, Self>, PiperError> {
         debug!("Loading lookup data sources");
-        init_lookup_sources(lookup_def)?.then(|s| debug!("{} lookup data sources loaded", s));
         debug!("Loading pipeline definitions");
-        Ok(parse_script(script)?.then(|p| {
+        Ok(parse_script(script, ctx)?.then(|p| {
             debug!("{} pipeline definitions loaded", p.len());
         }))
     }
@@ -90,8 +129,8 @@ impl Pipeline {
      * Load a pipeline from the DSL definition.
      */
     #[allow(dead_code)]
-    pub fn parse(input: &str) -> Result<Self, PiperError> {
-        parse_pipeline(input)
+    pub fn parse(input: &str, ctx: &BuildContext) -> Result<Self, PiperError> {
+        parse_pipeline(input, ctx)
     }
 
     /// Returns a health checking pipeline, which does `a as int + 42`
@@ -205,7 +244,7 @@ impl Pipeline {
 
 #[cfg(test)]
 mod tests {
-    use crate::pipeline::{DataSetCreator, Value};
+    use crate::pipeline::{pipelines::BuildContext, DataSetCreator, Value};
 
     #[tokio::test]
     async fn test_explode() {
@@ -213,6 +252,7 @@ mod tests {
             "test_pipeline(a as int, b as array)
             | explode b as int
             ;",
+            &BuildContext::default(),
         )
         .unwrap();
         let ds = DataSetCreator::eager(

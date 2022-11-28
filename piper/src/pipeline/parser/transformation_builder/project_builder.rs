@@ -1,5 +1,8 @@
 use crate::pipeline::{
-    parser::expression_builders::ExpressionBuilder, transformation::{ProjectTransformation, Transformation}, Schema, PiperError,
+    parser::expression_builders::ExpressionBuilder,
+    pipelines::BuildContext,
+    transformation::{ProjectTransformation, Transformation},
+    PiperError, Schema,
 };
 
 use super::TransformationBuilder;
@@ -20,13 +23,13 @@ impl TransformationBuilder for ProjectTransformationBuilder {
     fn build(
         &self,
         input_schema: &Schema,
-    ) -> Result<Box<dyn Transformation>, PiperError>
-    {
+        ctx: &BuildContext,
+    ) -> Result<Box<dyn Transformation>, PiperError> {
         ProjectTransformation::create(
             input_schema,
             self.columns
                 .iter()
-                .map(|(name, exp)| exp.build(input_schema).map(|e| (name.to_owned(), e)))
+                .map(|(name, exp)| exp.build(input_schema, ctx).map(|e| (name.to_owned(), e)))
                 .collect::<Result<Vec<_>, _>>()?,
         )
     }

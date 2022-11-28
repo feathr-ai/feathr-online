@@ -3,22 +3,24 @@ use std::marker::PhantomData;
 use crate::pipeline::{PiperError, Value, ValueType, ValueTypeOf};
 
 use super::Function;
+
+#[derive(Clone)]
 struct TernaryFunctionWrapper<A1, A2, A3, R, F, E1, E2, E3>
 where
-    A1: Send + Sync,
-    A2: Send + Sync,
-    A3: Send + Sync,
+    A1: Send + Sync + Clone,
+    A2: Send + Sync + Clone,
+    A3: Send + Sync + Clone,
     Value: TryInto<A1, Error = E1>,
     Value: TryInto<A2, Error = E2>,
     Value: TryInto<A3, Error = E3>,
-    R: Into<Value> + Sync + Send + ValueTypeOf,
+    R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E1>: Into<Value>,
     Result<Value, E2>: Into<Value>,
     Result<Value, E3>: Into<Value>,
-    E1: Sync + Send,
-    E2: Sync + Send,
-    E3: Sync + Send,
-    F: Fn(A1, A2, A3) -> R,
+    E1: Sync + Send + Clone,
+    E2: Sync + Send + Clone,
+    E3: Sync + Send + Clone,
+    F: Fn(A1, A2, A3) -> R + Clone,
 {
     function: F,
     _phantom: PhantomData<(A1, A2, A3, R, E1, E2, E3)>,
@@ -26,20 +28,20 @@ where
 
 impl<A1, A2, A3, R, F, E1, E2, E3> TernaryFunctionWrapper<A1, A2, A3, R, F, E1, E2, E3>
 where
-    A1: Send + Sync,
-    A2: Send + Sync,
-    A3: Send + Sync,
+    A1: Send + Sync + Clone,
+    A2: Send + Sync + Clone,
+    A3: Send + Sync + Clone,
     Value: TryInto<A1, Error = E1>,
     Value: TryInto<A2, Error = E2>,
     Value: TryInto<A3, Error = E3>,
-    R: Into<Value> + Sync + Send + ValueTypeOf,
+    R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E1>: Into<Value>,
     Result<Value, E2>: Into<Value>,
     Result<Value, E3>: Into<Value>,
-    E1: Sync + Send,
-    E2: Sync + Send,
-    E3: Sync + Send,
-    F: Fn(A1, A2, A3) -> R,
+    E1: Sync + Send + Clone,
+    E2: Sync + Send + Clone,
+    E3: Sync + Send + Clone,
+    F: Fn(A1, A2, A3) -> R + Clone,
 {
     fn new(function: F) -> Self {
         Self {
@@ -68,20 +70,20 @@ where
 
 impl<A1, A2, A3, R, F, E1, E2, E3> Function for TernaryFunctionWrapper<A1, A2, A3, R, F, E1, E2, E3>
 where
-    A1: Send + Sync,
-    A2: Send + Sync,
-    A3: Send + Sync,
+    A1: Send + Sync + Clone,
+    A2: Send + Sync + Clone,
+    A3: Send + Sync + Clone,
     Value: TryInto<A1, Error = E1>,
     Value: TryInto<A2, Error = E2>,
     Value: TryInto<A3, Error = E3>,
-    R: Into<Value> + Sync + Send + ValueTypeOf,
-    F: Fn(A1, A2, A3) -> R + Sync + Send,
+    R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
+    F: Fn(A1, A2, A3) -> R + Sync + Send + Clone,
     Result<Value, E1>: Into<Value>,
     Result<Value, E2>: Into<Value>,
     Result<Value, E3>: Into<Value>,
-    E1: Sync + Send,
-    E2: Sync + Send,
-    E3: Sync + Send,
+    E1: Sync + Send + Clone,
+    E2: Sync + Send + Clone,
+    E3: Sync + Send + Clone,
 {
     fn get_output_type(&self, _argument_types: &[ValueType]) -> Result<ValueType, PiperError> {
         Ok(R::value_type())
@@ -94,20 +96,20 @@ where
 
 pub fn ternary_fn<A1, A2, A3, R, F, E1, E2, E3>(f: F) -> Box<impl Function>
 where
-    A1: Send + Sync,
-    A2: Send + Sync,
-    A3: Send + Sync,
+    A1: Send + Sync + Clone,
+    A2: Send + Sync + Clone,
+    A3: Send + Sync + Clone,
     Value: TryInto<A1, Error = E1>,
     Value: TryInto<A2, Error = E2>,
     Value: TryInto<A3, Error = E3>,
-    R: Into<Value> + Sync + Send + ValueTypeOf,
+    R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E1>: Into<Value>,
     Result<Value, E2>: Into<Value>,
     Result<Value, E3>: Into<Value>,
-    E1: Sync + Send,
-    E2: Sync + Send,
-    E3: Sync + Send,
-    F: Fn(A1, A2, A3) -> R + Sync + Send,
+    E1: Sync + Send + Clone,
+    E2: Sync + Send + Clone,
+    E3: Sync + Send + Clone,
+    F: Fn(A1, A2, A3) -> R + Sync + Send + Clone,
 {
     Box::new(TernaryFunctionWrapper::new(f))
 }
