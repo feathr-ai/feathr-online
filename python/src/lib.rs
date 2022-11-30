@@ -41,6 +41,8 @@ fn block_on<F: std::future::Future>(future: F) -> F::Output {
             .block_on(future),
     }
 }
+
+#[repr(transparent)]
 struct Value(piper::Value);
 
 impl<'source> FromPyObject<'source> for Value {
@@ -154,7 +156,7 @@ impl PiperService {
     }
 
     #[pyo3(text_signature = "($self address port /)")]
-    fn start<'p>(&self, address: &str, port: u16, py: Python<'p>) -> PyResult<()> {
+    fn start<'p>(&mut self, address: &str, port: u16, py: Python<'p>) -> PyResult<()> {
         py.allow_threads(|| {
             block_on(cancelable_wait(async {
                 self.service
@@ -163,6 +165,12 @@ impl PiperService {
                     .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))
             }))
         })
+    }
+
+    #[pyo3(text_signature = "($self /)")]
+    fn stop(&mut self) -> PyResult<()> {
+        self.service.stop();
+        Ok(())
     }
 }
 

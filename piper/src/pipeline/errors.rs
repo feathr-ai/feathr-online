@@ -122,6 +122,9 @@ pub enum PiperError {
     #[error("Environment variable {0} is not set.")]
     EnvVarNotSet(String),
 
+    #[error("The service has been stopped.")]
+    Interrupted,
+
     #[error("{0}")]
     ExternalError(String),
 }

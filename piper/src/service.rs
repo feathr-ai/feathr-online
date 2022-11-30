@@ -1,8 +1,15 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
 
 use azure_core::auth::TokenCredential;
 use azure_identity::{DefaultAzureCredential, DefaultAzureCredentialBuilder};
 use clap::Parser;
+use futures::{pin_mut, Future};
 use poem::{
     error::BadRequest,
     get, handler,
@@ -23,14 +30,14 @@ pub struct Args {
     #[arg(short, long, env = "PIPELINE_DEFINITION_FILE")]
     pub pipeline: String,
 
-    #[arg(hide = true, long, default_value = "None")]
+    #[arg(hide = true, long)]
     pub pipeline_definition: Option<String>,
 
     /// Lookup source definition file name
     #[arg(short, long, env = "LOOKUP_DEFINITION_FILE")]
     pub lookup: String,
 
-    #[arg(hide = true, long, default_value = "None")]
+    #[arg(hide = true, long)]
     pub lookup_definition: Option<String>,
 
     #[arg(long, default_value = "0.0.0.0", env = "LISTENING_ADDRESS")]
@@ -46,6 +53,8 @@ pub struct Args {
 pub struct PiperService {
     arg: Args,
     piper: Arc<Piper>,
+
+    should_stop: AtomicBool,
 }
 
 impl PiperService {
@@ -61,7 +70,11 @@ impl PiperService {
         };
 
         let piper = Arc::new(Piper::new(&pipeline_def, &lookup_def)?);
-        Ok(Self { arg, piper })
+        Ok(Self {
+            arg,
+            piper,
+            should_stop: AtomicBool::new(false),
+        })
     }
 
     pub async fn with_udf(
@@ -72,11 +85,11 @@ impl PiperService {
         let lookup_def = load_file(&arg.lookup, arg.enable_managed_identity).await?;
 
         let piper = Arc::new(Piper::new_with_udf(&pipeline_def, &lookup_def, udf)?);
-        Ok(Self { arg, piper })
-    }
-
-    pub async fn start(&self) -> Result<(), PiperError> {
-        self.start_at(&self.arg.address, self.arg.port).await
+        Ok(Self {
+            arg,
+            piper,
+            should_stop: AtomicBool::new(false),
+        })
     }
 
     pub fn create(pipelines: &str, lookups: &str, udf: HashMap<String, Box<dyn Function>>) -> Self {
@@ -84,10 +97,17 @@ impl PiperService {
         Self {
             arg: Default::default(),
             piper: Arc::new(piper),
+            should_stop: AtomicBool::new(false),
         }
     }
 
-    pub async fn start_at(&self, address: &str, port: u16) -> Result<(), PiperError> {
+    pub async fn start(&mut self) -> Result<(), PiperError> {
+        let address = self.arg.address.clone();
+        self.start_at(&address, self.arg.port).await
+    }
+
+    pub async fn start_at(&mut self, address: &str, port: u16) -> Result<(), PiperError> {
+        self.should_stop.store(false, Ordering::Relaxed);
         let metrics_process = TokioMetrics::new();
 
         let app = Route::new()
@@ -102,12 +122,43 @@ impl PiperService {
             .data(self.piper.clone());
 
         info!("Piper started, listening on {}:{}", address, port);
-        Server::new(TcpListener::bind(format!("{}:{}", address, port)))
-            .run(app)
-            .await
-            .log()
-            .map_err(|e| PiperError::Unknown(e.to_string()))
-            .then(|_| info!("Exiting..."))
+        self.cancelable_wait(async {
+            Server::new(TcpListener::bind(format!("{}:{}", address, port)))
+                .run(app)
+                .await
+                .log()
+                .map_err(|e| PiperError::Unknown(e.to_string()))
+                .then(|_| info!("Exiting..."))
+        })
+        .await
+    }
+
+    pub fn stop(&mut self) {
+        self.should_stop.store(true, Ordering::Relaxed);
+    }
+
+    /**
+     * Check CTRL-C every 100ms, cancel the future if pressed and return Interrupted error
+     */
+    async fn cancelable_wait<F, T: Send>(&self, f: F) -> Result<T, PiperError>
+    where
+        F: Future<Output = Result<T, PiperError>>,
+    {
+        // Future needs to be pinned then its mutable ref can be awaited multiple times.
+        pin_mut!(f);
+        loop {
+            match tokio::time::timeout(std::time::Duration::from_millis(100), &mut f).await {
+                Ok(v) => {
+                    return v;
+                }
+                Err(_) => {
+                    // Timeout, check if CTRL-C is pressed
+                    if self.should_stop.load(Ordering::Relaxed) {
+                        return Err(PiperError::Interrupted);
+                    }
+                }
+            }
+        }
     }
 }
 

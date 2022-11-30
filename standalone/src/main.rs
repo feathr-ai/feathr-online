@@ -17,7 +17,7 @@ async fn main() -> Result<(), PiperError> {
     info!("Piper is starting...");
     let args = Args::parse();
 
-    let svc = PiperService::new(args).await?;
+    let mut svc = PiperService::new(args).await?;
 
     svc.start().await
 }

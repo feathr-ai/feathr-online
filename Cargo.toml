@@ -3,4 +3,5 @@ members = [
     "piper",
     "standalone",
     "python",
+    "java",
 ]

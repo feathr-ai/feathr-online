@@ -7,6 +7,14 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Launch Java",
+            "program": "/Library/Java/JavaVirtualMachines/liberica-jdk-11-full.jdk/Contents/Home/bin/java",
+            "args": ["-cp", "lib/build/classes/java/main", "com.azure.feathr.piper.PiperService"],
+            "cwd": "${workspaceFolder}/java"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug executable 'piper'",
             "cargo": {
                 "args": [
