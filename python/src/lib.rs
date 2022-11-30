@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use futures::{pin_mut, Future};
 use pyo3::exceptions::PyException;
-use pyo3::types::PyTuple;
+use pyo3::types::{PyDict, PyList, PyTuple};
 use pyo3::{create_exception, prelude::*};
 use tokio::runtime::Handle;
 
@@ -129,6 +129,84 @@ impl piper::Function for PyPiperFunction {
     }
 }
 
+fn dict_to_request(pipeline: &str, dict: &PyDict) -> PyResult<piper::SingleRequest> {
+    let mut request = piper::SingleRequest {
+        pipeline: pipeline.to_string(),
+        ..Default::default()
+    };
+    for (k, v) in dict {
+        let k = k.extract::<String>()?;
+        let v = v.extract::<Value>()?.0;
+        request.data.insert(k, v.into());
+    }
+    Ok(request)
+}
+
+fn error_record_to_dict(py: Python<'_>, e: piper::ErrorRecord) -> PyResult<Py<PyDict>> {
+    let dict = PyDict::new(py);
+    dict.set_item("row", e.row)?;
+    dict.set_item("column", e.column)?;
+    dict.set_item("message", e.message)?;
+    Ok(dict.into())
+}
+
+fn response_to_tuple(py: Python<'_>, response: piper::SingleResponse) -> PyResult<Py<PyTuple>> {
+    let errors = PyList::empty(py);
+    for e in response.errors {
+        errors.append(error_record_to_dict(py, e)?)?;
+    }
+    let list = PyList::empty(py);
+    for row in response.data.unwrap_or_default() {
+        let dict = PyDict::new(py);
+        for (k, v) in row {
+            dict.set_item(k, Value(piper::Value::from(v)).to_object(py))?;
+        }
+        list.append(dict)?;
+    }
+    let t = PyTuple::new(py, [list, errors]);
+    Ok(t.into())
+}
+
+#[pyclass]
+struct Piper {
+    piper: piper::Piper,
+}
+
+#[pymethods]
+impl Piper {
+    #[new]
+    #[args(lookups = "\"\"", functions = "HashMap::new()")]
+    fn new(pipelines: &str, lookups: &str, functions: HashMap<String, PyObject>) -> PyResult<Self> {
+        let functions = functions
+            .into_iter()
+            .map(|(k, v)| {
+                (
+                    k,
+                    Box::new(PyPiperFunction { function: v }) as Box<dyn piper::Function>,
+                )
+            })
+            .collect();
+
+        Ok(Self {
+            piper: piper::Piper::new_with_udf(pipelines, lookups, functions)
+                .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))?,
+        })
+    }
+
+    fn process(&self, pipeline: &str, dict: &PyDict, py: Python<'_>) -> PyResult<Py<PyTuple>> {
+        let req = dict_to_request(pipeline, dict)?;
+        let resp = py.allow_threads(|| {
+            block_on(cancelable_wait(async move {
+                self.piper
+                    .process_single_request(req)
+                    .await
+                    .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))
+            }))
+        })?;
+        response_to_tuple(py, resp)
+    }
+}
+
 #[pyclass]
 #[pyo3(text_signature = "(pipelines lookups functions /)")]
 struct PiperService {
@@ -177,6 +255,7 @@ impl PiperService {
 #[pymodule]
 #[pyo3(name = "feathrpiper")]
 fn python(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<Piper>()?;
     m.add_class::<PiperService>()?;
     Ok(())
 }

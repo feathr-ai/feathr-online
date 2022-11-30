@@ -26,7 +26,7 @@ public class PiperService implements AutoCloseable {
         System.out.println(System.getProperty("os.arch"));
         System.out.println("Working Directory = " + System.getProperty("user.dir"));
         System.setProperty("java.library.path", ".");
-        System.loadLibrary("feathr_piper");
+        System.loadLibrary("feathr_piper_jni");
     }
 
     public PiperService(String pipelines, String lookups, UdfRepository repo) {

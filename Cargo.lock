@@ -474,7 +474,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "feathr-piper"
+name = "feathr_piper_jni"
 version = "0.1.0"
 dependencies = [
  "chrono",

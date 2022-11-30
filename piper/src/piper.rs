@@ -101,7 +101,7 @@ impl Piper {
     }
 
     #[instrument(level = "trace", skip(self))]
-    async fn process_single_request(
+    pub async fn process_single_request(
         &self,
         req: SingleRequest,
     ) -> Result<SingleResponse, PiperError> {
