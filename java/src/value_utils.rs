@@ -11,6 +11,7 @@ use crate::get_jvm;
 
 pub fn to_jvalue<'a>(value: piper::Value, env: &JNIEnv<'a>) -> JObject<'a> {
     let jvm = get_jvm();
+    // All below `unwrap()` are not supposed to fail
     match value {
         piper::Value::Null => JObject::null(),
         piper::Value::Bool(v) => env
@@ -81,6 +82,11 @@ pub fn to_value<'a>(o: JValue<'a>, env: &JNIEnv<'a>) -> Result<piper::Value, pip
 
 fn obj_to_value<'a>(obj: JObject<'a>, env: &JNIEnv<'a>) -> Result<piper::Value, piper::PiperError> {
     let state = get_jvm();
+
+    if obj.is_null() {
+        return Ok(piper::Value::Null);
+    }
+
     if env
         .is_instance_of(obj, &state.bool_cls)
         .map_err(|e| piper::PiperError::ExternalError(e.to_string()))?

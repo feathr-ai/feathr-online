@@ -4,46 +4,45 @@ use jni::{
 };
 use once_cell::sync::OnceCell;
 
-use crate::MAX_ARITY;
-
 pub struct JavaStates {
     pub jvm: JavaVM,
 
     pub obj_cls: GlobalRef,
     pub to_string: JMethodID,
-    
+
     pub illegal_argument_exception_cls: GlobalRef,
-    
+    pub runtime_exception_cls: GlobalRef,
+
     pub array_list_cls: GlobalRef,
     pub new_array_list: JMethodID,
-    
+
     pub hash_map_cls: GlobalRef,
     pub new_hash_map: JMethodID,
-    
+
     pub bool_cls: GlobalRef,
     pub new_bool: JMethodID,
     pub get_bool_value: JMethodID,
-    
+
     pub short_cls: GlobalRef,
     pub new_short: JMethodID,
     pub get_short_value: JMethodID,
-    
+
     pub int_cls: GlobalRef,
     pub new_int: JMethodID,
     pub get_int_value: JMethodID,
-    
+
     pub long_cls: GlobalRef,
     pub new_long: JMethodID,
     pub get_long_value: JMethodID,
-    
+
     pub float_cls: GlobalRef,
     pub new_float: JMethodID,
     pub get_float_value: JMethodID,
-    
+
     pub double_cls: GlobalRef,
     pub new_double: JMethodID,
     pub get_double_value: JMethodID,
-    
+
     pub string_cls: GlobalRef,
 
     pub instant_cls: GlobalRef,
@@ -55,8 +54,7 @@ pub struct JavaStates {
 
     pub map_cls: GlobalRef,
 
-    pub function_interfaces: Vec<GlobalRef>,
-    pub invokes: Vec<JMethodID>,
+    pub max_arity: usize,
 }
 
 pub static JVM: OnceCell<JavaStates> = OnceCell::new();
@@ -69,24 +67,26 @@ pub fn set_jvm(env: &JNIEnv) {
         let jvm = env.get_java_vm().unwrap();
 
         let obj_cls = env.find_class("java/lang/Object").unwrap();
-        let to_string = env.get_method_id(obj_cls, "toString", "()Ljava/lang/String;").unwrap();
+        let to_string = env
+            .get_method_id(obj_cls, "toString", "()Ljava/lang/String;")
+            .unwrap();
         let obj_cls = env.new_global_ref(obj_cls).unwrap();
 
         let illegal_argument_exception_cls = env
             .find_class("java/lang/IllegalArgumentException")
             .unwrap();
-        let illegal_argument_exception_cls = env.new_global_ref(illegal_argument_exception_cls).unwrap();
+        let illegal_argument_exception_cls =
+            env.new_global_ref(illegal_argument_exception_cls).unwrap();
+
+        let runtime_exception_cls = env.find_class("java/lang/RuntimeException").unwrap();
+        let runtime_exception_cls = env.new_global_ref(runtime_exception_cls).unwrap();
 
         let array_list_cls = env.find_class("java/util/ArrayList").unwrap();
-        let new_array_list = env
-            .get_method_id(array_list_cls, "<init>", "()V")
-            .unwrap();
+        let new_array_list = env.get_method_id(array_list_cls, "<init>", "()V").unwrap();
         let array_list_cls = env.new_global_ref(array_list_cls).unwrap();
 
         let hash_map_cls = env.find_class("java/util/ArrayList").unwrap();
-        let new_hash_map = env
-            .get_method_id(hash_map_cls, "<init>", "()V")
-            .unwrap();
+        let new_hash_map = env.get_method_id(hash_map_cls, "<init>", "()V").unwrap();
         let hash_map_cls = env.new_global_ref(hash_map_cls).unwrap();
 
         let bool_cls = env.find_class("java/lang/Boolean").unwrap();
@@ -138,40 +138,23 @@ pub fn set_jvm(env: &JNIEnv) {
         let map_cls = env.find_class("java/util/Map").unwrap();
         let map_cls = env.new_global_ref(map_cls).unwrap();
 
-        let mut function_interfaces: Vec<GlobalRef> = vec![];
-        let mut invokes: Vec<JMethodID> = vec![];
-        for i in 0..MAX_ARITY {
-            let function_interface = env
-                .find_class(&format!("com/azure/feathr/piper/Function{}", i))
-                .unwrap();
-            let invoke = env
-                .get_method_id(
-                    function_interface,
-                    format!("apply{}", i),
-                    &format!("({})Ljava/lang/Object;", "Ljava/lang/Object;".repeat(i)),
-                )
-                .unwrap();
-            let function_interface = env.new_global_ref(function_interface).unwrap();
-            function_interfaces.push(function_interface);
-            invokes.push(invoke);
+        let mut max_arity = 0;
+        loop {
+            if env.find_class(&format!("com/azure/feathr/piper/Function{}", max_arity)).is_err()
+            {
+                // NOTE: Here we already triggered a `ClassNotFound` exception, need to clear it before continue.
+                env.exception_clear().unwrap();
+                break;
+            }
+            max_arity += 1;
         }
-        let function_interface = env.find_class("com/azure/feathr/piper/VarFunction").unwrap();
-        let invoke = env
-            .get_method_id(
-                function_interface,
-                "applyVar",
-                "(Ljava/util/List;)Ljava/lang/Object;",
-            )
-            .unwrap();
-        let function_interface = env.new_global_ref(function_interface).unwrap();
-        function_interfaces.push(function_interface);
-        invokes.push(invoke);
 
         JavaStates {
             jvm,
             obj_cls,
             to_string,
             illegal_argument_exception_cls,
+            runtime_exception_cls,
             array_list_cls,
             new_array_list,
             hash_map_cls,
@@ -201,12 +184,12 @@ pub fn set_jvm(env: &JNIEnv) {
             get_nano,
             list_cls,
             map_cls,
-            function_interfaces,
-            invokes,
+            max_arity,
         }
     });
 }
 
 pub fn get_jvm() -> &'static JavaStates {
+    // The global JVM cache should already be initialized at the time this function is called.
     JVM.get().unwrap()
 }

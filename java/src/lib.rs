@@ -6,7 +6,7 @@ use jni::objects::{JClass, JMap, JObject, JString};
 
 use jni::signature::ReturnType;
 use jni::sys::{jlong, jshort};
-use piper::PiperService;
+use piper::{PiperError, PiperService};
 use tokio::runtime::Handle;
 
 mod java_function;
@@ -15,8 +15,6 @@ mod value_utils;
 
 pub use jvm_cache::get_jvm;
 pub use value_utils::{to_jvalue, to_value};
-
-const MAX_ARITY: usize = 4;
 
 #[no_mangle]
 pub extern "system" fn Java_com_azure_feathr_piper_PiperService_create(
@@ -34,6 +32,7 @@ pub extern "system" fn Java_com_azure_feathr_piper_PiperService_create(
     let pipelines: String = match env.get_string(pipelines) {
         Ok(v) => v,
         Err(e) => {
+            println!("Error getting pipelines: {}", e);
             illegal_argument(&env, &e.to_string());
             return 0;
         }
@@ -110,9 +109,27 @@ pub unsafe extern "system" fn Java_com_azure_feathr_piper_PiperService_start(
     port: jshort,
 ) {
     let svc = &mut *(svc_handle as *mut PiperService);
-    let address: String = env.get_string(address).unwrap().into();
+    let address: String = match env.get_string(address) {
+        Ok(v) => v,
+        Err(e) => {
+            illegal_argument(&env, &e.to_string());
+            return;
+        }
+    }
+    .into();
     let port: u16 = port as u16;
-    block_on(async move { svc.start_at(&address, port).await.unwrap() });
+    let ret = block_on(async move { svc.start_at(&address, port).await });
+    match ret {
+        Ok(_) => {}
+        Err(e) => {
+            if matches!(e, PiperError::Interrupted) {
+                // ignore interrupted error because it's caused by `stop()` method
+                return;
+            }
+            // Throw exception otherwise
+            runtime_exception(&env, &e.to_string());
+        }
+    }
 }
 
 /**
@@ -139,9 +156,11 @@ pub unsafe extern "system" fn Java_com_azure_feathr_piper_PiperService_stop(
 pub unsafe extern "system" fn Java_com_azure_feathr_piper_PiperService_destroy(
     _env: JNIEnv,
     _class: JClass,
-    svc_handle: jlong,
+    _svc_handle: jlong,
 ) {
-    let _svc = Box::from_raw(svc_handle as *mut PiperService);
+    // TODO: Java reports double-free error, need to investigate
+    // Let the memory leak for now, the Java side is not supposed to create many PiperServer instances
+    // let _svc = Box::from_raw(svc_handle as *mut PiperService);
 }
 
 fn block_on<F: std::future::Future>(future: F) -> F::Output {
@@ -153,6 +172,11 @@ fn block_on<F: std::future::Future>(future: F) -> F::Output {
             .unwrap()
             .block_on(future),
     }
+}
+
+fn runtime_exception(env: &JNIEnv, msg: &str) {
+    let cls = &get_jvm().runtime_exception_cls;
+    env.throw_new(cls, msg).unwrap();
 }
 
 fn illegal_argument(env: &JNIEnv, msg: &str) {

@@ -4,13 +4,13 @@ use jni::{
     JNIEnv,
 };
 
-use crate::{get_jvm, to_jvalue, to_string, to_value, MAX_ARITY};
+use crate::{get_jvm, to_jvalue, to_string, to_value};
 
 #[derive(Clone)]
 pub struct JavaFunction {
     pub obj: GlobalRef,
     pub method_id: JMethodID,
-    pub arity: usize,
+    pub arity: Option<usize>,
 }
 
 impl JavaFunction {
@@ -18,7 +18,7 @@ impl JavaFunction {
         let obj = env.new_global_ref(obj).unwrap();
 
         // Check from Function0 to Function'MAX_ARITY'
-        for a in 0..MAX_ARITY {
+        for a in 0..get_jvm().max_arity {
             let cls = env
                 .find_class(format!("com/azure/feathr/piper/Function{}", a))
                 .map_err(|e| piper::PiperError::ExternalError(e.to_string()))?;
@@ -36,7 +36,7 @@ impl JavaFunction {
                 return Ok(Self {
                     obj,
                     method_id,
-                    arity: a,
+                    arity: Some(a),
                 });
             }
         }
@@ -51,7 +51,7 @@ impl JavaFunction {
         Ok(Self {
             obj,
             method_id,
-            arity: MAX_ARITY,
+            arity: None,
         })
     }
 }
@@ -70,25 +70,26 @@ impl piper::Function for JavaFunction {
             Err(e) => return piper::Value::Error(piper::PiperError::ExternalError(e.to_string())),
         };
 
-        let args: Vec<jvalue> = if self.arity == MAX_ARITY {
-            // call applyVar
-            let array_list_cls = &get_jvm().array_list_cls;
-            let new_array_list = get_jvm().new_array_list;
-            let l = env
-                .new_object_unchecked(array_list_cls, new_array_list, &[])
-                .unwrap();
-            let j = JList::from_env(&env, l).unwrap();
-            for arg in arguments {
-                j.add(to_jvalue(arg, &env)).unwrap();
+        let args: Vec<jvalue> = match self.arity {
+            None => {
+                // call applyVar
+                let array_list_cls = &get_jvm().array_list_cls;
+                let new_array_list = get_jvm().new_array_list;
+                let l = env
+                    .new_object_unchecked(array_list_cls, new_array_list, &[])
+                    .unwrap();
+                let j = JList::from_env(&env, l).unwrap();
+                for arg in arguments {
+                    j.add(to_jvalue(arg, &env)).unwrap();
+                }
+                let o: JObject = j.into();
+                vec![JValue::Object(o).to_jni()]
             }
-            let o: JObject = j.into();
-            vec![JValue::Object(o).to_jni()]
-        } else {
-            arguments
+            Some(arity) => arguments
                 .into_iter()
-                .take(self.arity)
+                .take(arity)
                 .map(|a| JValue::Object(to_jvalue(a, &env)).to_jni())
-                .collect()
+                .collect(),
         };
 
         let ret = env

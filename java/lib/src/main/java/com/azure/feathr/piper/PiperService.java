@@ -3,11 +3,14 @@
  */
 package com.azure.feathr.piper;
 
+import org.checkerframework.checker.units.qual.A;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class PiperService implements AutoCloseable {
     private static native long create(String pipelines, String lookups, Map<String, UserDefinedFunction> functions);
@@ -43,11 +46,12 @@ public class PiperService implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        destroy(svcHandle);
+         destroy(svcHandle);
     }
 
     static Object inc(Object arg) {
-        long n = (long) arg;
+        var l = (List<Object>) arg;
+        long n = l.size();
         long m = n + 42;
         var map = new HashMap<String, Object>();
         map.put("m", m);
@@ -55,15 +59,19 @@ public class PiperService implements AutoCloseable {
         list.add(m);
         map.put("list", list);
         map.put("instant", Instant.ofEpochSecond(m));
-        throw  new RuntimeException("Something happened");
-//        return map;
+//        throw  new RuntimeException("Something happened");
+        return map;
     }
 
     public static void main(String[] args) {
         Function1 f = PiperService::inc;
         var repo = new UdfRepository().put("inc", f);
         try (PiperService svc = new PiperService("t(x) | project y=inc(x);", "{}", repo)) {
-            svc.start("localhost", (short) 8000);
+            new Thread(() -> {
+                svc.start("localhost", (short) 8000);
+            }).start();
+            Thread.sleep(5 * 1000);
+            svc.stop();
         } catch (Exception e) {
             e.printStackTrace();
         }
