@@ -4,6 +4,10 @@
 		{
 			"type": "cargo",
 			"command": "build",
+			"args": [
+				"--package=standalone",
+				"--package=feathr_piper_jni"
+			],
 			"problemMatcher": [
 				"$rustc"
 			],

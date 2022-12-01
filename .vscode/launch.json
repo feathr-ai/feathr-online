@@ -11,8 +11,8 @@
             "program": "/Library/Java/JavaVirtualMachines/liberica-jdk-11-full.jdk/Contents/Home/bin/java",
             "args": [
                 "-cp",
-                "lib/build/classes/java/main",
-                "com.azure.feathr.piper.PiperService"
+                "feathrpiper/build/libs/feathrpiper-0.1.0.jar",
+                "com.github.windoze.feathr.piper.PiperService"
             ],
             "cwd": "${workspaceFolder}/java",
             "preLaunchTask": "rust: cargo build"

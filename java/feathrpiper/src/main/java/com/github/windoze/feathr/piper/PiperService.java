@@ -22,12 +22,12 @@ public class PiperService implements AutoCloseable {
         /*
          * Following JNI libs should be included
          * Windows:
-         *  feathr_piper_jni_windows_x86_64.dll
+         *  feathr_piper_jni_windows_amd64.dll
          * MacOS:
-         *  libfeathr_piper_jni_osx_x86_64.dylib
+         *  libfeathr_piper_jni_osx_amd64.dylib
          *  libfeathr_piper_jni_osx_aarch64.dylib
          * Linux:
-         *  libfeathr_piper_jni_linux_x86_64.so
+         *  libfeathr_piper_jni_linux_amd64.so
          *  libfeathr_piper_jni_linux_aarch64.so
          */
         loadLibrary("feathr_piper_jni");
@@ -35,13 +35,16 @@ public class PiperService implements AutoCloseable {
 
     private static String getLibName(String base) {
         String arch = System.getProperty("os.arch").toLowerCase();
+        if (arch.equals("x86_64")) {
+            arch = "amd64";
+        }
         String os = System.getProperty("os.name").toLowerCase();
         if (os.contains("windows")) {
-            return  base + "_windows_" + arch + ".dll";
+            return base + "_windows_" + arch + ".dll";
         } else if (os.contains("mac os x")) {
-            return  "lib" + base + "_osx_" + arch + ".dylib";
+            return "lib" + base + "_osx_" + arch + ".dylib";
         } else if (os.contains("linux")) {
-            return  "lib" + base + "_linux_" + arch + ".so";
+            return "lib" + base + "_linux_" + arch + ".so";
         } else {
             throw new UnsupportedOperationException("The platform " + os + "/" + arch + " is not supported");
         }
@@ -50,6 +53,7 @@ public class PiperService implements AutoCloseable {
     private static void loadLibrary(String base) {
         String libName = getLibName(base);
         String path = "/native/" + libName;
+        System.out.println("Resource path: " + path);
         URL url = PiperService.class.getResource(path);
         if (url == null) {
             throw new UnsupportedOperationException("The platform is not supported.");
@@ -86,6 +90,35 @@ public class PiperService implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-         destroy(svcHandle);
+        destroy(svcHandle);
+    }
+
+
+    static Object inc(Object arg) {
+        Long n = (Long) arg;
+        return n + 42;
+    }
+
+    static Object dec(Object arg) {
+        Long n = (Long) arg;
+        return n - 42;
+    }
+
+    public static void main(String[] args) {
+        Function1 f = PiperService::inc;
+        UdfRepository repo = new UdfRepository()
+                .put("inc", (Function1) PiperService::inc)
+                .put("dec", (Function1) PiperService::dec);
+        try (
+                PiperService svc = new PiperService("t(x) | project y=inc(x), z=dec(x);", "", repo)) {
+            new Thread(() -> {
+                svc.start("localhost", (short) 8000);
+            }).start();
+            Thread.sleep(5 * 1000);
+            svc.stop();
+        } catch (
+                Exception e) {
+            e.printStackTrace();
+        }
     }
 }
