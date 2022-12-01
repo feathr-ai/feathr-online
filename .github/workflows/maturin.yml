@@ -83,7 +83,7 @@ jobs:
       with:
         target: x86_64
         manylinux: auto
-        args: --release --out dist -m python/Cargo.toml
+        args: --release -i "python${{ matrix.python_version }}" --out dist -m python/Cargo.toml
     - name: Install built wheel
       run: |
         pip install feathrpiper --no-index --find-links dist --force-reinstall
