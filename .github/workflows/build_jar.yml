@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "piper/**"
-      - "java/**"
-      - ".github/workflows/build_jar.yml"
   pull_request:
 
 jobs:

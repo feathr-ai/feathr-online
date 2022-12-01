@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "piper/**"
-      - "python/**"
   pull_request:
 
 jobs:
