@@ -35,8 +35,8 @@ jobs:
           libfeathr_piper_jni_osx_amd64.dylib
           libfeathr_piper_jni_osx_aarch64.dylib
 
-  windows:
-    runs-on: windows-latest
+  linux:
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -46,33 +46,25 @@ jobs:
         profile: minimal
         toolchain: stable
         target: x86_64-pc-windows-gnu
-    - name: Build
-      run: |
-        cargo build --target x86_64-pc-windows-gnu --package feathr_piper_jni --release
-        mv target/x86_64-pc-windows-gnu/release/feathr_piper_jni.dll feathr_piper_jni_windows_amd64.dll
-    - uses: actions/upload-artifact@v3
-      with:
-        name: windows-jni
-        retention-days: 1
-        path: feathr_piper_jni_windows_amd64.dll
-
-  linux:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+    - name: Install MinGW64
+      run: sudo apt-get -y update && sudo apt-get install -y gcc-mingw-w64
     - name: Build
       run: |
         cargo build --target x86_64-unknown-linux-gnu --package feathr_piper_jni --release
+        cargo build --target x86_64-pc-windows-gnu --package feathr_piper_jni --release
         mv target/x86_64-unknown-linux-gnu/release/libfeathr_piper_jni.so libfeathr_piper_jni_linux_amd64.so
+        mv target/x86_64-pc-windows-gnu/release/feathr_piper_jni.dll feathr_piper_jni_windows_amd64.dll
     - uses: actions/upload-artifact@v3
       with:
         name: linux-jni
         retention-days: 1
-        path: libfeathr_piper_jni_linux_amd64.so
+        path: |
+          libfeathr_piper_jni_linux_amd64.so
+          feathr_piper_jni_windows_amd64.dll
 
   jar:
     runs-on: ubuntu-latest
+    needs: [ macos, linux ]
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -85,11 +77,6 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: macos-jni
-        path: java/feathrpiper/src/main/resources/native
-    - name: Download Windows JNI libs
-      uses: actions/download-artifact@v3
-      with:
-        name: windows-jni
         path: java/feathrpiper/src/main/resources/native
     - name: Download Linux JNI libs
       uses: actions/download-artifact@v3
