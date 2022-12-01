@@ -11,6 +11,10 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 
+[project.urls]
+"Source Code" = "https://github.com/windoze/piper"
+Issues = "https://github.com/windoze/piper/issues"
+
 [tool.feathrpiper]
 target_version = ['py37', 'py38', 'py39', 'py310', 'py311']
 
