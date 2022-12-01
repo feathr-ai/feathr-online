@@ -475,7 +475,7 @@ dependencies = [
 
 [[package]]
 name = "feathr_piper_jni"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "dotenv",
@@ -488,7 +488,7 @@ dependencies = [
 
 [[package]]
 name = "feathrpiper"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "futures",
@@ -2068,7 +2068,7 @@ dependencies = [
 
 [[package]]
 name = "standalone"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap",
  "dotenv",
