@@ -15,6 +15,12 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        target: aarch64-apple-darwin
     - name: Build
       run: |
         cargo build --target x86_64-apple-darwin --package feathr_piper_jni --release
@@ -34,10 +40,16 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        target: x86_64-pc-windows-gnu
     - name: Build
       run: |
         cargo build --target x86_64-pc-windows-gnu --package feathr_piper_jni --release
-        mv target/x86_64-pc-windows-gnu/feathr_piper_jni.dll feathr_piper_jni_windows_amd64.dll
+        mv target/x86_64-pc-windows-gnu/release/feathr_piper_jni.dll feathr_piper_jni_windows_amd64.dll
     - uses: actions/upload-artifact@v3
       with:
         name: windows-jni
@@ -52,7 +64,7 @@ jobs:
     - name: Build
       run: |
         cargo build --target x86_64-unknown-linux-gnu --package feathr_piper_jni --release
-        mv target/x86_64-unknown-linux-gnu/libfeathr_piper_jni.so libfeathr_piper_jni_linux_amd64.so
+        mv target/x86_64-unknown-linux-gnu/release/libfeathr_piper_jni.so libfeathr_piper_jni_linux_amd64.so
     - uses: actions/upload-artifact@v3
       with:
         name: linux-jni
