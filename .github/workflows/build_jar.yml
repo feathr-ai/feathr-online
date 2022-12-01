@@ -85,8 +85,10 @@ jobs:
         name: linux-jni
         path: java/feathrpiper/src/main/resources/native
     - name: Build
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        cd java; ./gradlew jar
+        cd java; ./gradlew publish
     - uses: actions/upload-artifact@v3
       with:
         name: feathrpiper-jars
