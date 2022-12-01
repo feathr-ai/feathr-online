@@ -492,6 +492,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "futures",
+ "openssl",
  "piper",
  "pyo3",
  "tokio",

@@ -19,3 +19,7 @@ futures = "0.3"
 chrono = "0.4"
 pyo3 = { version = "0.17", features = ["extension-module", "chrono"] }
 piper = { path = "../piper" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# Use statically lined openssl when build with musl
+openssl = { version = "0.10", features = ["vendored"] }
