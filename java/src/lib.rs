@@ -17,7 +17,7 @@ pub use jvm_cache::get_jvm;
 pub use value_utils::{to_jvalue, to_value};
 
 #[no_mangle]
-pub extern "system" fn Java_com_azure_feathr_piper_PiperService_create(
+pub extern "system" fn Java_com_github_windoze_feathr_piper_PiperService_create(
     env: JNIEnv,
     _class: JClass,
     pipelines: JString,
@@ -101,7 +101,7 @@ pub extern "system" fn Java_com_azure_feathr_piper_PiperService_create(
  * unsafe because it dereferences a raw pointer as JNI spec required
  */
 #[no_mangle]
-pub unsafe extern "system" fn Java_com_azure_feathr_piper_PiperService_start(
+pub unsafe extern "system" fn Java_com_github_windoze_feathr_piper_PiperService_start(
     env: JNIEnv,
     _class: JClass,
     svc_handle: jlong,
@@ -138,7 +138,7 @@ pub unsafe extern "system" fn Java_com_azure_feathr_piper_PiperService_start(
  * unsafe because it dereferences a raw pointer as JNI spec required
  */
 #[no_mangle]
-pub unsafe extern "system" fn Java_com_azure_feathr_piper_PiperService_stop(
+pub unsafe extern "system" fn Java_com_github_windoze_feathr_piper_PiperService_stop(
     _env: JNIEnv,
     _class: JClass,
     svc_handle: jlong,
@@ -153,7 +153,7 @@ pub unsafe extern "system" fn Java_com_azure_feathr_piper_PiperService_stop(
  * unsafe because it dereferences a raw pointer as JNI spec required
  */
 #[no_mangle]
-pub unsafe extern "system" fn Java_com_azure_feathr_piper_PiperService_destroy(
+pub unsafe extern "system" fn Java_com_github_windoze_feathr_piper_PiperService_destroy(
     _env: JNIEnv,
     _class: JClass,
     _svc_handle: jlong,

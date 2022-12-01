@@ -1,7 +1,7 @@
 FROM messense/rust-musl-cross:x86_64-musl AS builder
 WORKDIR /usr/src/
 COPY . ./
-RUN cargo build --release --target=x86_64-unknown-linux-musl
+RUN cargo build --release --target=x86_64-unknown-linux-musl --package=standalone
 
 # Bundle Stage
 FROM alpine

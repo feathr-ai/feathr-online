@@ -481,6 +481,7 @@ dependencies = [
  "dotenv",
  "jni",
  "once_cell",
+ "openssl",
  "piper",
  "tokio",
 ]
@@ -491,6 +492,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "futures",
+ "openssl",
  "piper",
  "pyo3",
  "tokio",
