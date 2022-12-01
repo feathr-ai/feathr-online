@@ -10,7 +10,7 @@ mod variadic;
  * NOTE: Seems to make generic trait over all function wrappers needs HRTB (and GAT?).
  * 
  * E.g. following code does not compile:
- ```
+ ``` ignore
  trait IntoFunction {
      fn into_function(self) -> Box<dyn Function>;
  }

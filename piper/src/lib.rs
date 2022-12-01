@@ -10,7 +10,7 @@ mod service;
 
 pub use common::{Appliable, Logged};
 pub use pipeline::{ErrorRecord, Function, PiperError, Value, ValueType};
-pub use piper::Piper;
+pub use crate::piper::Piper;
 pub use service::{Args, PiperService};
 
 #[derive(Debug, Default, Deserialize)]
