@@ -6,17 +6,30 @@ package com.github.windoze.feathr.piper;
 import java.io.*;
 import java.net.URL;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-public class PiperService implements AutoCloseable {
+public class PiperService {
     private static native long create(String pipelines, String lookups, Map<String, UserDefinedFunction> functions);
 
     private static native void start(long handle, String address, short port);
 
     private static native void stop(long handle);
 
-    private static native void destroy(long handle);
+    private static Logger log = Logger.getLogger(PiperService.class.getName());
 
-    private final long svcHandle;
+    private final String pipelines;
+    private final String lookups;
+    private final UdfRepository repo;
+
+    private final ReadWriteLock rwlock = new ReentrantReadWriteLock();
+    private final Lock rlock = rwlock.readLock();
+    private final Lock wlock = rwlock.writeLock();
+    private long svcHandle = 0;
 
     static {
         /*
@@ -52,10 +65,12 @@ public class PiperService implements AutoCloseable {
 
     private static void loadLibrary(String base) {
         String libName = getLibName(base);
+        log.fine("Loading library " + libName);
         String path = "/native/" + libName;
-        System.out.println("Resource path: " + path);
+        log.finer("Resource path: " + path);
         URL url = PiperService.class.getResource(path);
         if (url == null) {
+            log.warning("The platform is not supported.");
             throw new UnsupportedOperationException("The platform is not supported.");
         }
         try {
@@ -69,30 +84,90 @@ public class PiperService implements AutoCloseable {
                     output.write(buffer, 0, len);
                 output.close();
                 input.close();
-                System.load(tempFile.getAbsolutePath());
+                String libPath = tempFile.getAbsolutePath();
+                log.finer("Loading lib file at: " + libPath);
+                System.load(libPath);
+                log.fine("Library loaded.");
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    /**
+     * Create the PiperService
+     *
+     * @param pipelines The pipeline definition DSL script,
+     * @param lookups   The lookup data source definition in JSON format,
+     * @param repo      the UDF repository
+     */
     public PiperService(String pipelines, String lookups, UdfRepository repo) {
-        svcHandle = create(pipelines, lookups, repo.udfMap);
+        this.pipelines = pipelines;
+        this.lookups = lookups;
+        this.repo = repo;
     }
 
+    /**
+     * <p>Start listening on address:port and block until the service stops.</p>
+     * <p>
+     * Try to start the service again when the service is already started will block,
+     * then it will start the new service when the existing one stops.
+     * </p>
+     * <p>
+     * If you need to start multiple services, you need to create multiple PiperService instances,
+     * and start them on different address:port combinations.
+     * </p>
+     *
+     * @param address The listening address, could be IP or host/domain name.
+     * @param port    Listening port
+     */
     public void start(String address, short port) {
-        start(svcHandle, address, port);
+        wlock.lock();
+        try {
+            if (svcHandle == 0) {
+                try {
+                } finally {
+                    rlock.lock();
+                    wlock.unlock();
+                }
+                try {
+                    // Now we hold only read lock so stop() can be called
+                    log.finer("Creating service");
+                    svcHandle = create(pipelines, lookups, repo.udfMap);
+                    log.finer("Service created");
+                    log.finer("Starting service");
+                    start(svcHandle, address, port);
+                    log.finer("Service stopped");
+                } finally {
+                    rlock.unlock();
+                    wlock.lock();
+                }
+                svcHandle = 0;
+            } else {
+                log.fine("Service is already started");
+            }
+        } finally {
+            wlock.unlock();
+        }
     }
 
+    /**
+     * Stop the service, no-op if the service is not started.
+     */
     public void stop() {
-        stop(svcHandle);
+        rlock.lock();
+        try {
+            if (svcHandle != 0) {
+                log.finer("Stopping service");
+                stop(svcHandle);
+                log.finer("Stopping signal sent");
+            } else {
+                log.fine("Service is not started");
+            }
+        } finally {
+            rlock.unlock();
+        }
     }
-
-    @Override
-    public void close() throws Exception {
-        destroy(svcHandle);
-    }
-
 
     static Object inc(Object arg) {
         Long n = (Long) arg;
@@ -105,12 +180,16 @@ public class PiperService implements AutoCloseable {
     }
 
     public static void main(String[] args) {
+        log.setLevel(Level.ALL);
+        ConsoleHandler consoleHandler = new ConsoleHandler();
+        consoleHandler.setLevel(Level.ALL);
+        log.addHandler(consoleHandler);
         Function1 f = PiperService::inc;
         UdfRepository repo = new UdfRepository()
                 .put("inc", (Function1) PiperService::inc)
                 .put("dec", (Function1) PiperService::dec);
-        try (
-                PiperService svc = new PiperService("t(x) | project y=inc(x), z=dec(x);", "", repo)) {
+        try {
+            PiperService svc = new PiperService("t(x) | project y=inc(x), z=dec(x);", "", repo);
             new Thread(() -> {
                 svc.start("localhost", (short) 8000);
             }).start();

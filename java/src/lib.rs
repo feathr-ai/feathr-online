@@ -108,7 +108,7 @@ pub unsafe extern "system" fn Java_com_github_windoze_feathr_piper_PiperService_
     address: JString,
     port: jshort,
 ) {
-    let svc = &mut *(svc_handle as *mut PiperService);
+    let mut svc = Box::from_raw(svc_handle as *mut PiperService);
     let address: String = match env.get_string(address) {
         Ok(v) => v,
         Err(e) => {
@@ -143,24 +143,8 @@ pub unsafe extern "system" fn Java_com_github_windoze_feathr_piper_PiperService_
     _class: JClass,
     svc_handle: jlong,
 ) {
-    let mut svc = Box::from_raw(svc_handle as *mut PiperService);
+    let svc = &mut *(svc_handle as *mut PiperService);
     svc.stop();
-}
-
-/**
- * # Safety
- *
- * unsafe because it dereferences a raw pointer as JNI spec required
- */
-#[no_mangle]
-pub unsafe extern "system" fn Java_com_github_windoze_feathr_piper_PiperService_destroy(
-    _env: JNIEnv,
-    _class: JClass,
-    _svc_handle: jlong,
-) {
-    // TODO: Java reports double-free error, need to investigate
-    // Let the memory leak for now, the Java side is not supposed to create many PiperServer instances
-    // let _svc = Box::from_raw(svc_handle as *mut PiperService);
 }
 
 fn block_on<F: std::future::Future>(future: F) -> F::Output {
