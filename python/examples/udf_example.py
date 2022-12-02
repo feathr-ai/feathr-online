@@ -1,9 +1,10 @@
 
-# Install the `feathrpiper` package
-#! pip install -U feathrpiper
+# Install the `feathrpiper` package, and the `sentence_transformers` package, which is used in the `embed` UDF
+#! pip install -U feathrpiper sentence_transformers
 
 import feathrpiper
 
+print("The first time running of this demo may take a while because it needs to download the model.")
 # Complex UDF demo
 from sentence_transformers import SentenceTransformer
 model = SentenceTransformer('all-MiniLM-L6-v2')
