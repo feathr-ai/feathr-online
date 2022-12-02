@@ -3,7 +3,7 @@ README
 
 This project include 3 components:
 
-* The standalone executable, which is a HTTP server that can be used to transform data, it doesn't support UDF, and the docker image is published to DockerHub as `windoze:feathrpiper:latest`.
+* The standalone executable, which is a HTTP server that can be used to transform data, it doesn't support UDF, and the docker image is published to DockerHub as `windoze/feathrpiper:latest`.
 * The Python package, it supports UDF written in Python, the package is published to PyPI as `feathrpiper` and can be installed with `pip`.
 * The Java package, it supports UDF written in Java, the package is published to GitHub Package Registry as `com.github.windoze.feathr:feathrpiper`.
 
