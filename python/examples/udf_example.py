@@ -2,28 +2,33 @@
 # Install the `feathrpiper` package, and the `sentence_transformers` package, which is used in the `embed` UDF
 #! pip install -U feathrpiper sentence_transformers
 
+from sentence_transformers import SentenceTransformer
 import feathrpiper
 
 print("The first time running of this demo may take a while because it needs to download the model.")
 # Complex UDF demo
-from sentence_transformers import SentenceTransformer
 print("Loading the model...")
 model = SentenceTransformer('all-MiniLM-L6-v2')
 print("Model loaded.")
 
 # UDFs
 
+
 def inc(x):
     return x+42
+
 
 def dec(x):
     return x-42
 
-# This is the word embedding UDF, it takes about 10ms for single sentence, so be aware of the performance impact
 def embed(s):
-    # NOTE: The result can be directly returned because NumPy array supports auto-conversion to List
-    # Otherwise you must do the conversion manually.
+    """
+    This is the word embedding UDF, it takes about 10ms for single sentence, so be aware of the performance impact
+    NOTE: The result can be directly returned because NumPy array supports auto-conversion to List
+    Otherwise you must do the conversion manually.
+    """
     return model.encode(s)
+
 
 # Pipeline definition
 # It defined a pipeline 't' with 2 input fields, 'x' and 's' where 'x' should be a number and 's' should be a string or a list of strings.
@@ -38,9 +43,9 @@ t(x, s)
 # Define the UDF map
 # Each UDF must have a unique name so it can be used in the pipeline DSL script
 UDF = {"inc": inc, "dec": dec, "embed": embed,
-# This will raise the exception "Function with name sqrt already exists"    
-#    "sqrt": math.sqrt
-}
+       # This will raise the exception "Function with name sqrt already exists"
+       #    "sqrt": math.sqrt
+       }
 
 print("Testing Piper functionalities...")
 # Piper for local execution
@@ -48,20 +53,23 @@ p = feathrpiper.Piper(pipelines, "", UDF)
 
 # This request should be processed correctly
 (ret, errors) = p.process("t", {"x": 1, "s": "Hello World"})
-assert(errors == [])
-assert(len(ret) == 1)
-assert(ret[0]["x"] == 1)
-assert(ret[0]["y"] == 43)
-assert(ret[0]["z"] == -41)
-assert(len(ret[0]["e"]) > 100)    # I don't know the exact embedding result, just know it should be there and pretty long
+assert (errors == [])
+assert (len(ret) == 1)
+assert (ret[0]["x"] == 1)
+assert (ret[0]["y"] == 43)
+assert (ret[0]["z"] == -41)
+# I don't know the exact embedding result, just know it should be there and pretty long
+assert (len(ret[0]["e"]) > 100)
 
 # This request contains the wrong 'x' value so there will be errors
 (ret, errors) = p.process("t", {"x": "foo", "s": "Hello World"})
 # These 2 values cannot be calculated because the input field 'x' has the wrong type, the UDF will raise exceptions
-assert(ret[0]["y"] is None)       # The value of the error field is None
-assert(ret[0]["z"] is None)       # The value of the error field is None
-assert(len(ret[0]["e"]) > 100)    # This value is correctly generated because it doesn't depend on the input field 'x'
-assert(len(errors) == 2)          # 2 output fields in 1 row cannot be calculated, so there are 2 errors
+assert (ret[0]["y"] is None)       # The value of the error field is None
+assert (ret[0]["z"] is None)       # The value of the error field is None
+# This value is correctly generated because it doesn't depend on the input field 'x'
+assert (len(ret[0]["e"]) > 100)
+# 2 output fields in 1 row cannot be calculated, so there are 2 errors
+assert (len(errors) == 2)
 print("Tests passed.")
 
 # Use PiperService to start the service

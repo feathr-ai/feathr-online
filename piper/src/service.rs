@@ -21,7 +21,7 @@ use poem::{
 };
 use tracing::{debug, info};
 
-use crate::{Appliable, Function, Logged, Piper, PiperError, Request, Response};
+use crate::{Appliable, Function, Logged, LookupSource, Piper, PiperError, Request, Response};
 
 #[derive(Parser, Debug, Clone, Default)]
 #[command(author, version, about, long_about = None)]
@@ -55,6 +55,13 @@ pub struct PiperService {
     piper: Arc<Piper>,
 
     should_stop: AtomicBool,
+}
+
+#[derive(Debug, Clone)]
+pub struct HandlerData {
+    piper: Arc<Piper>,
+    #[cfg(feature = "python")]
+    locals: pyo3_asyncio::TaskLocals,
 }
 
 impl PiperService {
@@ -101,6 +108,19 @@ impl PiperService {
         }
     }
 
+    pub fn create_with_lookup_udf(
+        pipelines: &str,
+        lookups: HashMap<String, Arc<dyn LookupSource>>,
+        udf: HashMap<String, Box<dyn Function>>,
+    ) -> Self {
+        let piper = Piper::new_with_lookup_udf(pipelines, lookups, udf).unwrap();
+        Self {
+            arg: Default::default(),
+            piper: Arc::new(piper),
+            should_stop: AtomicBool::new(false),
+        }
+    }
+
     pub async fn start(&mut self) -> Result<(), PiperError> {
         let address = self.arg.address.clone();
         self.start_at(&address, self.arg.port).await
@@ -109,6 +129,13 @@ impl PiperService {
     pub async fn start_at(&mut self, address: &str, port: u16) -> Result<(), PiperError> {
         self.should_stop.store(false, Ordering::Relaxed);
         let metrics_process = TokioMetrics::new();
+
+        let data = HandlerData {
+            piper: self.piper.clone(),
+            #[cfg(feature = "python")]
+            locals: pyo3::Python::with_gil(pyo3_asyncio::tokio::get_current_locals)
+                .map_err(|e| PiperError::ExternalError(e.to_string()))?,
+        };
 
         let app = Route::new()
             .at("/version", get(get_version))
@@ -119,7 +146,7 @@ impl PiperService {
             .at("/lookup-sources", get(get_lookup_sources))
             .with(Cors::new())
             .with(Tracing)
-            .data(self.piper.clone());
+            .data(data);
 
         info!("Piper started, listening on {}:{}", address, port);
         self.cancelable_wait(async {
@@ -175,8 +202,8 @@ fn get_version() -> Json<HashMap<String, String>> {
 }
 
 #[handler]
-async fn health_check(piper: Data<&Arc<Piper>>) -> String {
-    if piper.0.health_check().await {
+async fn health_check(data: Data<&HandlerData>) -> String {
+    if data.0.piper.health_check().await {
         "OK".to_string()
     } else {
         "ERROR".to_string()
@@ -184,18 +211,29 @@ async fn health_check(piper: Data<&Arc<Piper>>) -> String {
 }
 
 #[handler]
-fn get_pipelines(piper: Data<&Arc<Piper>>) -> Json<HashMap<String, serde_json::Value>> {
-    Json(piper.0.get_pipelines())
+fn get_pipelines(data: Data<&HandlerData>) -> Json<HashMap<String, serde_json::Value>> {
+    Json(data.0.piper.get_pipelines())
 }
 
 #[handler]
-fn get_lookup_sources(piper: Data<&Arc<Piper>>) -> Json<serde_json::Value> {
-    Json(piper.0.get_lookup_sources())
+fn get_lookup_sources(data: Data<&HandlerData>) -> Json<serde_json::Value> {
+    Json(data.0.piper.get_lookup_sources())
 }
 
+#[cfg(feature = "python")]
 #[handler]
-async fn process(piper: Data<&Arc<Piper>>, req: Json<Request>) -> poem::Result<Json<Response>> {
-    Ok(Json(piper.0.process(req.0).await.map_err(BadRequest)?))
+async fn process(data: Data<&HandlerData>, req: Json<Request>) -> poem::Result<Json<Response>> {
+    let data = data.0.clone();
+    pyo3_asyncio::tokio::scope(data.locals.clone(), async move {
+        Ok(Json(data.piper.process(req.0).await.map_err(BadRequest)?))
+    })
+    .await
+}
+
+#[cfg(not(feature = "python"))]
+#[handler]
+async fn process(data: Data<&HandlerData>, req: Json<Request>) -> poem::Result<Json<Response>> {
+    Ok(Json(data.0.piper.process(req.0).await.map_err(BadRequest)?))
 }
 
 async fn make_request(

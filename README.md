@@ -163,6 +163,91 @@ All the keywords are case sensitive and must be in lowered case.
 
 The list of built-in functions can be found in the [`piper/src/pipeline/function/mod.rs`](piper/src/pipeline/function/mod.rs) file.
 
+
+Lookup Data Source Definition
+-----------------------------
+
+There are 2 types of builtin lookup data source:
+* Feathr Online Store
+* JSON-based HTTP API
+
+They can be defined in the lookup source definition file, which is a JSON file in following format:
+```json
+{
+    "sources": [
+        {
+            // source1
+        },
+        {
+            // source2
+        }
+        ...
+    ]
+}
+```
+
+* Feathr Online Store
+```json
+{
+    // This field indicates this is a Feathr Online Store
+    "class": "FeathrRedisSource",
+    // The name of the source
+    "name": "feathrci",
+    "host": "SOME_REDIS_HOST",
+    "port": 6379,
+    // The password, can be omitted if there is no password
+    "password": "SOME_MAGIC_WORD",
+    "ssl": false,
+    // See the Feathr documentation for more details
+    "table": "FEATHER_TABLE_NAME"
+}
+```
+
+* JSON-based HTTP API
+```json
+{
+    // This field indicates this is a HTTP API source
+    "class": "HttpJsonApiSource",
+    // The name of the source
+    "name": "geoip",
+    // The base URL of the API
+    "urlBase": "http://ip-api.com",
+    // HTTP method, can be GET or POST
+    "method": "POST",
+    // The `key` part of the URL, if the key needs to be in the URL, or it can be omitted if the key is in any other place.
+    "keyUrlTemplate": "/json/$",
+    // If the request needs some extra headers to be set, they can be defined here.
+    "additionalHeaders": {
+        "header": "value"
+    },
+    // If the key is set in the query param.
+    "keyQueryParam": "queryParamName"
+    // If the request needs some extra query params, they can be defined here.
+    "additionalQueryParams": {
+        "param": "value"
+    },
+    // Auth, can be omitted if no auth needed
+    "auth": {
+        // The type of the authentication, can be "basic", "bearer", or "aad"
+        "type": "basic",
+        // For basic auth, the username
+        "username": "username",
+        // For basic auth, the password
+        "password": "password",
+        // For bearer auth
+        "token":"token",
+        // For aad auth, the client credential are acquired from the environment variables, Azure CLI, or the managed identity.
+        "resource":"resource",
+    },
+    // This map defined all available fields from this source, each field is extracted from the HTTP response body by a JSON path.
+    "resultPath": {
+        "field1": "json_path_to_get_field1",
+        "field2": "json_path_to_get_field1",
+        //...
+    }
+}
+```
+
 TODO:
 ------
 

@@ -55,6 +55,12 @@ pub fn init_lookup_sources(
     Ok(cfg)
 }
 
+pub fn load_lookup_source(json_str: &str) -> Result<Arc<dyn LookupSource>, PiperError> {
+    let entry: LookupSourceEntry = serde_json::from_str(json_str)
+        .map_err(|e| PiperError::Unknown(format!("Failed to parse lookup source config: {}", e)))?;
+    Ok(Arc::new(entry.source))
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "class")]
 enum LookupSourceType {

@@ -66,9 +66,9 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "azure_core"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e691a99e962919e047217367613b3dd39d7510ef1cebbe1e04980117d8fab42f"
+checksum = "e8a13a7e5f9c8413644579bdee6731f0a7a0f722e318b3a5ea6dba5ecfd8eb64"
 dependencies = [
  "async-trait",
  "base64",
@@ -92,9 +92,9 @@ dependencies = [
 
 [[package]]
 name = "azure_identity"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ca95b83d96c5e7256047670e42c5dc1ba11381869b4717c61bfa66486ad1276"
+checksum = "5a4f72c60d1fc960e305dadf20f2c7c16dd64723a9f760e3492a4ea829d73dcb"
 dependencies = [
  "async-lock",
  "async-trait",
@@ -104,6 +104,7 @@ dependencies = [
  "futures",
  "log",
  "oauth2",
+ "pin-project",
  "serde",
  "serde_json",
  "time 0.3.17",
@@ -490,11 +491,15 @@ dependencies = [
 name = "feathrpiper"
 version = "0.2.2"
 dependencies = [
+ "async-trait",
  "chrono",
  "futures",
  "openssl",
  "piper",
  "pyo3",
+ "pyo3-asyncio",
+ "serde",
+ "serde_json",
  "tokio",
 ]
 
@@ -1413,6 +1418,8 @@ dependencies = [
  "poem",
  "protobuf",
  "protobuf-codegen",
+ "pyo3",
+ "pyo3-asyncio",
  "rand 0.8.5",
  "redis",
  "regex",
@@ -1592,6 +1599,31 @@ dependencies = [
  "pyo3-ffi",
  "pyo3-macros",
  "unindent",
+]
+
+[[package]]
+name = "pyo3-asyncio"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1febe3946b26194628f00526929ee6f8559f9e807f811257e94d4c456103be0e"
+dependencies = [
+ "futures",
+ "once_cell",
+ "pin-project-lite",
+ "pyo3",
+ "pyo3-asyncio-macros",
+ "tokio",
+]
+
+[[package]]
+name = "pyo3-asyncio-macros"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "270b167ea304b961616aa0f003463c95becd3c11a85bd83ba668fe16129e2469"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

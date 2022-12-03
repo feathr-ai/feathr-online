@@ -1,11 +1,15 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
+use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use futures::{pin_mut, Future};
 use pyo3::exceptions::PyException;
 use pyo3::types::{PyDict, PyList, PyTuple};
 use pyo3::{create_exception, prelude::*};
+use serde_json::json;
 use tokio::runtime::Handle;
+use tokio::sync::RwLock;
 
 create_exception!(piper, PiperError, PyException);
 
@@ -39,6 +43,110 @@ fn block_on<F: std::future::Future>(future: F) -> F::Output {
             .build()
             .unwrap()
             .block_on(future),
+    }
+}
+
+#[derive(Debug)]
+struct PyLookupSource {
+    lookup_fun: PyObject,
+}
+
+impl PyLookupSource {
+    fn new(lookup_fun: &PyAny, py: Python<'_>) -> PyResult<Self> {
+        let ret = py
+            .import("asyncio")?
+            .call_method1("iscoroutinefunction", (lookup_fun,))?
+            .extract::<bool>()?;
+        if !ret {
+            return Err(PiperError::new_err(
+                "lookup_fun must be an async coroutine function",
+            ));
+        }
+        Ok(Self {
+            lookup_fun: lookup_fun.into_py(py),
+        })
+    }
+}
+
+#[async_trait]
+impl piper::LookupSource for PyLookupSource {
+    fn dump(&self) -> serde_json::Value {
+        json!(
+            {
+                "type": "python",
+                "lookup_fun": self.lookup_fun.to_string(),
+            }
+        )
+    }
+
+    async fn lookup(&self, key: &piper::Value, fields: &[String]) -> Vec<piper::Value> {
+        let fields = fields.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let fut = Python::with_gil(|py| {
+            self.lookup_fun
+                .call(
+                    py,
+                    (
+                        Value(key.to_owned()).to_object(py),
+                        fields.clone().into_py(py),
+                    ),
+                    None,
+                )
+                .and_then(|c| pyo3_asyncio::tokio::into_future(c.into_ref(py)))
+        });
+        let r = match fut {
+            Ok(fut) => fut.await,
+            Err(e) => Err(e),
+        };
+        match r {
+            Ok(v) => Python::with_gil(|py| {
+                let v = match v.extract::<Py<PyList>>(py) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return vec![
+                            piper::Value::Error(piper::PiperError::ExternalError(
+                                e.to_string()
+                            ));
+                            fields.len()
+                        ];
+                    }
+                };
+                let mut ret = vec![];
+                let v = v.as_ref(py);
+                for idx in 0..fields.len() {
+                    let e = match v
+                        .get_item(idx)
+                        .and_then(|v| v.into_py(py).extract::<Value>(py))
+                    {
+                        Ok(v) => v,
+                        Err(e) => Value(piper::Value::Error(piper::PiperError::ExternalError(
+                            e.to_string(),
+                        ))),
+                    };
+                    ret.push(e.0);
+                }
+                ret
+            }),
+            Err(e) => vec![
+                piper::Value::Error(piper::PiperError::ExternalError(e.to_string()));
+                fields.len()
+            ],
+        }
+    }
+}
+
+fn dict_to_lookup_source(d: &PyDict, py: Python<'_>) -> PyResult<Arc<dyn piper::LookupSource>> {
+    let js = py.import("json")?.call_method1("dumps", (d,))?;
+    let js = js.into_py(py).extract::<String>(py)?;
+    piper::load_lookup_source(&js).map_err(|e| PiperError::new_err(e.to_string()))
+}
+
+fn obj_to_lookup_source(o: &PyObject, py: Python<'_>) -> PyResult<Arc<dyn piper::LookupSource>> {
+    match o.extract::<String>(py) {
+        Ok(s) => piper::load_lookup_source(&s).map_err(|e| PiperError::new_err(e.to_string())),
+        Err(_) => match o.into_py(py).extract::<Py<PyDict>>(py) {
+            Ok(d) => dict_to_lookup_source(d.as_ref(py).extract::<Py<PyDict>>()?.as_ref(py), py),
+            Err(_) => Ok(Arc::new(PyLookupSource::new(o.as_ref(py), py)?)),
+        },
     }
 }
 
@@ -160,7 +268,11 @@ impl piper::Function for PyPiperFunction {
     }
 }
 
-fn dict_to_request(pipeline: &str, dict: &PyDict, error_report: ErrorCollectingMode) -> PyResult<piper::SingleRequest> {
+fn dict_to_request(
+    pipeline: &str,
+    dict: &PyDict,
+    error_report: ErrorCollectingMode,
+) -> PyResult<piper::SingleRequest> {
     let mut request = piper::SingleRequest {
         pipeline: pipeline.to_string(),
         errors: error_report.into(),
@@ -199,16 +311,33 @@ fn response_to_tuple(py: Python<'_>, response: piper::SingleResponse) -> PyResul
     Ok(t.into())
 }
 
+#[repr(transparent)]
+struct SingleResponse(piper::SingleResponse);
+
+impl IntoPy<PyObject> for SingleResponse {
+    fn into_py(self, py: Python<'_>) -> PyObject {
+        match response_to_tuple(py, self.0) {
+            Ok(t) => t.to_object(py),
+            Err(e) => e.to_object(py),
+        }
+    }
+}
+
 #[pyclass]
 struct Piper {
-    piper: piper::Piper,
+    piper: Arc<piper::Piper>,
 }
 
 #[pymethods]
 impl Piper {
     #[new]
-    #[args(lookups = "\"\"", functions = "HashMap::new()")]
-    fn new(pipelines: &str, lookups: &str, functions: HashMap<String, PyObject>) -> PyResult<Self> {
+    #[args(functions = "HashMap::new()")]
+    fn new(
+        pipelines: &str,
+        lookups: PyObject,
+        functions: HashMap<String, PyObject>,
+        py: Python<'_>,
+    ) -> PyResult<Self> {
         let functions = functions
             .into_iter()
             .map(|(k, v)| {
@@ -218,15 +347,42 @@ impl Piper {
                 )
             })
             .collect();
-
-        Ok(Self {
-            piper: piper::Piper::new_with_udf(pipelines, lookups, functions)
-                .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))?,
-        })
+        match lookups.as_ref(py).extract::<String>() {
+            Ok(lookups) => Ok(Self {
+                piper: Arc::new(
+                    piper::Piper::new_with_udf(pipelines, &lookups, functions)
+                        .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))?,
+                ),
+            }),
+            Err(_) => {
+                let lookups = lookups.as_ref(py).extract::<Py<PyDict>>()?;
+                let lookups = lookups
+                    .as_ref(py)
+                    .into_iter()
+                    .map(|(k, v)| {
+                        let k = k.extract::<String>()?;
+                        let v = obj_to_lookup_source(&v.into_py(py), py);
+                        v.map(|v| (k, v))
+                    })
+                    .collect::<PyResult<HashMap<_, _>>>()?;
+                Ok(Self {
+                    piper: Arc::new(
+                        piper::Piper::new_with_lookup_udf(pipelines, lookups, functions)
+                            .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))?,
+                    ),
+                })
+            }
+        }
     }
 
-    #[args(lookups = "\"\"", error_report = "ErrorCollectingMode::default()")]
-    fn process(&self, pipeline: &str, dict: &PyDict, error_report: ErrorCollectingMode, py: Python<'_>) -> PyResult<Py<PyTuple>> {
+    #[args(error_report = "ErrorCollectingMode::default()")]
+    fn process(
+        &self,
+        pipeline: &str,
+        dict: &PyDict,
+        error_report: ErrorCollectingMode,
+        py: Python<'_>,
+    ) -> PyResult<Py<PyTuple>> {
         let req = dict_to_request(pipeline, dict, error_report)?;
         let resp = py.allow_threads(|| {
             block_on(cancelable_wait(async move {
@@ -238,19 +394,46 @@ impl Piper {
         })?;
         response_to_tuple(py, resp)
     }
+
+    #[args(error_report = "ErrorCollectingMode::default()")]
+    fn process_async<'p>(
+        &self,
+        pipeline: &str,
+        dict: &PyDict,
+        error_report: ErrorCollectingMode,
+        py: Python<'p>,
+    ) -> PyResult<&'p PyAny> {
+        let req = dict_to_request(pipeline, dict, error_report)?;
+        let piper = self.piper.clone();
+        pyo3_asyncio::tokio::future_into_py(
+            py,
+            cancelable_wait(async move {
+                piper
+                    .process_single_request(req)
+                    .await
+                    .map(SingleResponse)
+                    .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))
+            }),
+        )
+    }
 }
 
 #[pyclass]
 #[pyo3(text_signature = "(pipelines lookups functions /)")]
 struct PiperService {
-    service: piper::PiperService,
+    service: Arc<RwLock<piper::PiperService>>,
 }
 
 #[pymethods]
 impl PiperService {
     #[new]
-    #[args(lookups = "\"\"", functions = "HashMap::new()")]
-    fn new(pipelines: &str, lookups: &str, functions: HashMap<String, PyObject>) -> Self {
+    #[args(functions = "HashMap::new()")]
+    fn new(
+        pipelines: &str,
+        lookups: PyObject,
+        functions: HashMap<String, PyObject>,
+        py: Python<'_>,
+    ) -> PyResult<Self> {
         let functions = functions
             .into_iter()
             .map(|(k, v)| {
@@ -261,16 +444,39 @@ impl PiperService {
             })
             .collect();
 
-        Self {
-            service: piper::PiperService::create(pipelines, lookups, functions),
+        match lookups.as_ref(py).extract::<String>() {
+            Ok(lookups) => Ok(Self {
+                service: Arc::new(RwLock::new(piper::PiperService::create(
+                    pipelines, &lookups, functions,
+                ))),
+            }),
+            Err(_) => {
+                let lookups = lookups.into_py(py).extract::<Py<PyDict>>(py)?;
+                let lookups = lookups
+                    .as_ref(py)
+                    .into_iter()
+                    .map(|(k, v)| {
+                        let k = k.extract::<String>()?;
+                        let v = obj_to_lookup_source(&v.into_py(py), py);
+                        v.map(|v| (k, v))
+                    })
+                    .collect::<PyResult<HashMap<_, _>>>()?;
+                Ok(Self {
+                    service: Arc::new(RwLock::new(piper::PiperService::create_with_lookup_udf(
+                        pipelines, lookups, functions,
+                    ))),
+                })
+            }
         }
     }
 
     #[pyo3(text_signature = "($self address port /)")]
     fn start<'p>(&mut self, address: &str, port: u16, py: Python<'p>) -> PyResult<()> {
+        let svc = self.service.clone();
         py.allow_threads(|| {
-            block_on(cancelable_wait(async {
-                self.service
+            block_on(cancelable_wait(async move {
+                svc.write()
+                    .await
                     .start_at(address, port)
                     .await
                     .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))
@@ -278,10 +484,28 @@ impl PiperService {
         })
     }
 
+    #[pyo3(text_signature = "($self address port /)")]
+    fn start_async<'p>(&mut self, address: &str, port: u16, py: Python<'p>) -> PyResult<&'p PyAny> {
+        let svc = self.service.clone();
+        let address = address.to_string();
+        pyo3_asyncio::tokio::future_into_py(
+            py,
+            cancelable_wait(async move {
+                svc.write()
+                    .await
+                    .start_at(&address, port)
+                    .await
+                    .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))
+            }),
+        )
+    }
+
     #[pyo3(text_signature = "($self /)")]
     fn stop(&mut self) -> PyResult<()> {
-        self.service.stop();
-        Ok(())
+        block_on(cancelable_wait(async move {
+            self.service.write().await.stop();
+            Ok(())
+        }))
     }
 }
 
