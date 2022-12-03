@@ -1,6 +1,5 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use pipeline::{ErrorCollectingMode};
 use serde::{Deserialize, Serialize};
 
 mod common;
@@ -9,7 +8,7 @@ mod piper;
 mod service;
 
 pub use common::{Appliable, Logged};
-pub use pipeline::{ErrorRecord, Function, PiperError, Value, ValueType};
+pub use pipeline::{ErrorCollectingMode, ErrorRecord, Function, PiperError, Value, ValueType};
 pub use crate::piper::Piper;
 pub use service::{Args, PiperService};
 

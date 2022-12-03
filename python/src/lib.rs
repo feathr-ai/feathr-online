@@ -42,6 +42,37 @@ fn block_on<F: std::future::Future>(future: F) -> F::Output {
     }
 }
 
+#[pyclass]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum ErrorCollectingMode {
+    On,
+    Off,
+}
+
+impl Default for ErrorCollectingMode {
+    fn default() -> Self {
+        Self::On
+    }
+}
+
+impl From<piper::ErrorCollectingMode> for ErrorCollectingMode {
+    fn from(mode: piper::ErrorCollectingMode) -> Self {
+        match mode {
+            piper::ErrorCollectingMode::On => ErrorCollectingMode::On,
+            piper::ErrorCollectingMode::Off => ErrorCollectingMode::Off,
+        }
+    }
+}
+
+impl From<ErrorCollectingMode> for piper::ErrorCollectingMode {
+    fn from(mode: ErrorCollectingMode) -> Self {
+        match mode {
+            ErrorCollectingMode::On => piper::ErrorCollectingMode::On,
+            ErrorCollectingMode::Off => piper::ErrorCollectingMode::Off,
+        }
+    }
+}
+
 #[repr(transparent)]
 struct Value(piper::Value);
 
@@ -129,9 +160,10 @@ impl piper::Function for PyPiperFunction {
     }
 }
 
-fn dict_to_request(pipeline: &str, dict: &PyDict) -> PyResult<piper::SingleRequest> {
+fn dict_to_request(pipeline: &str, dict: &PyDict, error_report: ErrorCollectingMode) -> PyResult<piper::SingleRequest> {
     let mut request = piper::SingleRequest {
         pipeline: pipeline.to_string(),
+        errors: error_report.into(),
         ..Default::default()
     };
     for (k, v) in dict {
@@ -193,8 +225,9 @@ impl Piper {
         })
     }
 
-    fn process(&self, pipeline: &str, dict: &PyDict, py: Python<'_>) -> PyResult<Py<PyTuple>> {
-        let req = dict_to_request(pipeline, dict)?;
+    #[args(lookups = "\"\"", error_report = "ErrorCollectingMode::default()")]
+    fn process(&self, pipeline: &str, dict: &PyDict, error_report: ErrorCollectingMode, py: Python<'_>) -> PyResult<Py<PyTuple>> {
+        let req = dict_to_request(pipeline, dict, error_report)?;
         let resp = py.allow_threads(|| {
             block_on(cancelable_wait(async move {
                 self.piper
@@ -255,6 +288,7 @@ impl PiperService {
 #[pymodule]
 #[pyo3(name = "feathrpiper")]
 fn python(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<ErrorCollectingMode>()?;
     m.add_class::<Piper>()?;
     m.add_class::<PiperService>()?;
     Ok(())
