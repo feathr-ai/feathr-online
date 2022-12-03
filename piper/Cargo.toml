@@ -42,4 +42,4 @@ protobuf-codegen = "3"
 
 [features]
 default = []
-pyo3-asyncio = ["pyo3", "pyo3-asyncio/tokio-runtime"]
+python = ["pyo3", "pyo3-asyncio/tokio-runtime"]

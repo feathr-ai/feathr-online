@@ -60,7 +60,7 @@ pub struct PiperService {
 #[derive(Debug, Clone)]
 pub struct HandlerData {
     piper: Arc<Piper>,
-    #[cfg(feature = "pyo3-asyncio")]
+    #[cfg(feature = "python")]
     locals: pyo3_asyncio::TaskLocals,
 }
 
@@ -132,7 +132,7 @@ impl PiperService {
 
         let data = HandlerData {
             piper: self.piper.clone(),
-            #[cfg(feature = "pyo3-asyncio")]
+            #[cfg(feature = "python")]
             locals: pyo3::Python::with_gil(pyo3_asyncio::tokio::get_current_locals)
                 .map_err(|e| PiperError::ExternalError(e.to_string()))?,
         };
@@ -220,7 +220,7 @@ fn get_lookup_sources(data: Data<&HandlerData>) -> Json<serde_json::Value> {
     Json(data.0.piper.get_lookup_sources())
 }
 
-#[cfg(feature = "pyo3-asyncio")]
+#[cfg(feature = "python")]
 #[handler]
 async fn process(data: Data<&HandlerData>, req: Json<Request>) -> poem::Result<Json<Response>> {
     let data = data.0.clone();
@@ -230,7 +230,7 @@ async fn process(data: Data<&HandlerData>, req: Json<Request>) -> poem::Result<J
     .await
 }
 
-#[cfg(not(feature = "pyo3-asyncio"))]
+#[cfg(not(feature = "python"))]
 #[handler]
 async fn process(data: Data<&HandlerData>, req: Json<Request>) -> poem::Result<Json<Response>> {
     Ok(Json(data.0.piper.process(req.0).await.map_err(BadRequest)?))
