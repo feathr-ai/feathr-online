@@ -7,7 +7,9 @@ import feathrpiper
 print("The first time running of this demo may take a while because it needs to download the model.")
 # Complex UDF demo
 from sentence_transformers import SentenceTransformer
+print("Loading the model...")
 model = SentenceTransformer('all-MiniLM-L6-v2')
+print("Model loaded.")
 
 # UDFs
 
@@ -35,8 +37,12 @@ t(x, s)
 
 # Define the UDF map
 # Each UDF must have a unique name so it can be used in the pipeline DSL script
-UDF = {"inc": inc, "dec": dec, "embed": embed}
+UDF = {"inc": inc, "dec": dec, "embed": embed,
+# This will raise the exception "Function with name sqrt already exists"    
+#    "sqrt": math.sqrt
+}
 
+print("Testing Piper functionalities...")
 # Piper for local execution
 p = feathrpiper.Piper(pipelines, "", UDF)
 
@@ -56,6 +62,7 @@ assert(ret[0]["y"] is None)       # The value of the error field is None
 assert(ret[0]["z"] is None)       # The value of the error field is None
 assert(len(ret[0]["e"]) > 100)    # This value is correctly generated because it doesn't depend on the input field 'x'
 assert(len(errors) == 2)          # 2 output fields in 1 row cannot be calculated, so there are 2 errors
+print("Tests passed.")
 
 # Use PiperService to start the service
 # NOTE: This may **not** work on hosted notebook, because the service will be started on the notebook server, which is not accessible from the outside.
