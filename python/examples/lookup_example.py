@@ -53,7 +53,7 @@ async def piper_test():
 async def piper_service_test():
     """
     Use PiperService to start the service
-    Same as the `Piper` test, we need to use `process_async` instead of `process`
+    Same as the `Piper` test, we need to use `start_async` instead of `start`
     NOTE: This may **not** work on hosted notebook, because the service will be started on the notebook server, which is not accessible from the outside.
     """
     print("Starting service at localhost:8000, press Ctrl+C to stop")
