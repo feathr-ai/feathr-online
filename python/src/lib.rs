@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use futures::{pin_mut, Future};
 use pyo3::exceptions::PyException;
-use pyo3::types::{PyDict, PyList, PyTuple};
+use pyo3::types::{PyDict, PyList, PyTuple, PyFunction};
 use pyo3::{create_exception, prelude::*};
 use tokio::runtime::Handle;
 
@@ -41,6 +41,11 @@ fn block_on<F: std::future::Future>(future: F) -> F::Output {
             .block_on(future),
     }
 }
+
+struct PyLookupSource {
+    lookup_fun: PyFunction,
+}
+
 
 #[pyclass]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
