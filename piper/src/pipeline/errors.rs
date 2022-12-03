@@ -127,4 +127,10 @@ pub enum PiperError {
 
     #[error("{0}")]
     ExternalError(String),
+
+    #[error("Column with name {0} already exists.")]
+    ColumnAlreadyExists(String),
+
+    #[error("Function with name {0} already exists.")]
+    FunctionAlreadyDefined(String),
 }

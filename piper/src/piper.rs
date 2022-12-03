@@ -1,4 +1,7 @@
-use std::{collections::HashMap, time::Instant};
+use std::{
+    collections::{HashMap, HashSet},
+    time::Instant,
+};
 
 use futures::future::join_all;
 use tracing::{debug, instrument};
@@ -42,6 +45,10 @@ impl Piper {
             pipelines,
             ctx: IgnoreDebug { inner: ctx },
         })
+    }
+
+    pub fn get_functions(&self) -> HashSet<String> {
+        self.ctx.inner.functions.keys().cloned().collect()
     }
 
     pub async fn health_check(&self) -> bool {
@@ -145,5 +152,41 @@ impl Piper {
             data: Some(ret),
             errors,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Function, Piper, PiperError};
+
+    #[test]
+    fn test_dup_columns() {
+        let p = Piper::new("test_pipeline(a,b) | lookup b from src on a ;", "");
+        // Try to define a udf with the same name as a built-in function
+        assert!(matches!(p, Err(PiperError::ColumnAlreadyExists(_))));
+
+        let p = Piper::new("test_pipeline(a,b) | project-rename b=a ;", "");
+        // Try to define a udf with the same name as a built-in function
+        assert!(matches!(p, Err(PiperError::ColumnAlreadyExists(_))));
+
+        let p = Piper::new("test_pipeline(a,b) | project b=sqrt(a) ;", "");
+        // Try to define a udf with the same name as a built-in function
+        assert!(matches!(p, Err(PiperError::ColumnAlreadyExists(_))));
+
+        let p = Piper::new("test_pipeline(a) | project b=sqrt(a) ;", "");
+        // Try to define a udf with the same name as a built-in function
+        assert!(p.is_ok());
+    }
+
+    #[test]
+    fn test_with_udf() {
+        let udf = crate::pipeline::unary_fn(f64::sqrt) as Box<dyn Function>;
+        let p = Piper::new_with_udf(
+            "test_pipeline(a) | project b=sqrt(a) ;",
+            "",
+            vec![("sqrt".to_string(), udf)].into_iter().collect(),
+        );
+        // Try to define a udf with the same name as a built-in function
+        assert!(matches!(p, Err(PiperError::FunctionAlreadyDefined(_))));
     }
 }

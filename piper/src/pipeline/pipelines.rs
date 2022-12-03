@@ -34,12 +34,15 @@ impl BuildContext {
         lookup_source_def: &str,
         udf: HashMap<String, Box<dyn Function>>,
     ) -> Result<Self, PiperError> {
+        let mut functions = init_built_in_functions();
+        for (name, func) in udf {
+            if functions.contains_key(&name) {
+                return Err(PiperError::FunctionAlreadyDefined(name));
+            }
+            functions.insert(name, func);
+        }
         Ok(Self {
-            // TODO: Check duplicates
-            functions: init_built_in_functions()
-                .into_iter()
-                .chain(udf.into_iter())
-                .collect(),
+            functions,
             lookup_sources: init_lookup_sources(lookup_source_def)?
                 .then(|s| debug!("{} lookup data sources loaded", s.len())),
         })

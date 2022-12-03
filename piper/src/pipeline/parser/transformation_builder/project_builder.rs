@@ -25,6 +25,12 @@ impl TransformationBuilder for ProjectTransformationBuilder {
         input_schema: &Schema,
         ctx: &BuildContext,
     ) -> Result<Box<dyn Transformation>, PiperError> {
+        for f in self.columns.iter() {
+            let name = &f.0;
+            if input_schema.get_column_index(name).is_some() {
+                return Err(PiperError::ColumnAlreadyExists(name.clone()));
+            }
+        }
         ProjectTransformation::create(
             input_schema,
             self.columns
