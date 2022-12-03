@@ -490,11 +490,15 @@ dependencies = [
 name = "feathrpiper"
 version = "0.2.2"
 dependencies = [
+ "async-trait",
  "chrono",
  "futures",
  "openssl",
  "piper",
  "pyo3",
+ "pyo3-asyncio",
+ "serde",
+ "serde_json",
  "tokio",
 ]
 
@@ -1413,6 +1417,8 @@ dependencies = [
  "poem",
  "protobuf",
  "protobuf-codegen",
+ "pyo3",
+ "pyo3-asyncio",
  "rand 0.8.5",
  "redis",
  "regex",
@@ -1592,6 +1598,31 @@ dependencies = [
  "pyo3-ffi",
  "pyo3-macros",
  "unindent",
+]
+
+[[package]]
+name = "pyo3-asyncio"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1febe3946b26194628f00526929ee6f8559f9e807f811257e94d4c456103be0e"
+dependencies = [
+ "futures",
+ "once_cell",
+ "pin-project-lite",
+ "pyo3",
+ "pyo3-asyncio-macros",
+ "tokio",
+]
+
+[[package]]
+name = "pyo3-asyncio-macros"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "270b167ea304b961616aa0f003463c95becd3c11a85bd83ba668fe16129e2469"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

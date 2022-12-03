@@ -7,9 +7,12 @@ mod pipeline;
 mod piper;
 mod service;
 
-pub use common::{Appliable, Logged};
-pub use pipeline::{ErrorCollectingMode, ErrorRecord, Function, LookupSource, PiperError, Value, ValueType};
 pub use crate::piper::Piper;
+pub use common::{Appliable, Logged};
+pub use pipeline::{
+    load_lookup_source, ErrorCollectingMode, ErrorRecord, Function, LookupSource, PiperError,
+    Value, ValueType,
+};
 pub use service::{Args, PiperService};
 
 #[derive(Debug, Default, Deserialize)]
@@ -29,7 +32,7 @@ pub struct Request {
     pub requests: Vec<SingleRequest>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct SingleResponse {
     pub pipeline: String,
     pub status: String,

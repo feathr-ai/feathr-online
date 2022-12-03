@@ -48,6 +48,23 @@ impl BuildContext {
         })
     }
 
+    pub fn new_with_lookup_udf(
+        lookup: HashMap<String, Arc<dyn LookupSource>>,
+        udf: HashMap<String, Box<dyn Function>>,
+    ) -> Result<Self, PiperError> {
+        let mut functions = init_built_in_functions();
+        for (name, func) in udf {
+            if functions.contains_key(&name) {
+                return Err(PiperError::FunctionAlreadyDefined(name));
+            }
+            functions.insert(name, func);
+        }
+        Ok(Self {
+            functions,
+            lookup_sources: lookup,
+        })
+    }
+
     pub fn dump_lookup_sources(&self) -> serde_json::Value {
         json!(self
             .lookup_sources

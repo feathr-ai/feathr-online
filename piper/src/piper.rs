@@ -1,6 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
-    time::Instant,
+    time::Instant, sync::Arc,
 };
 
 use futures::future::join_all;
@@ -9,7 +9,7 @@ use tracing::{debug, instrument};
 use crate::{
     common::IgnoreDebug,
     pipeline::{BuildContext, ErrorCollector, Pipeline, PiperError, ValidationMode, Value},
-    Function, Logged, Request, Response, SingleRequest, SingleResponse,
+    Function, Logged, Request, Response, SingleRequest, SingleResponse, LookupSource,
 };
 
 #[derive(Debug)]
@@ -37,6 +37,22 @@ impl Piper {
         udf: HashMap<String, Box<dyn Function>>,
     ) -> Result<Self, PiperError> {
         let ctx = BuildContext::from_config_with_udf(lookup_def, udf)?;
+
+        let mut pipelines = Pipeline::load(pipeline_def, &ctx).log()?;
+        // Use invalid identifier as the name, avoid clashes with user-defined pipelines
+        pipelines.insert("%health".to_string(), Pipeline::get_health_checker());
+        Ok(Self {
+            pipelines,
+            ctx: IgnoreDebug { inner: ctx },
+        })
+    }
+
+    pub fn new_with_lookup_udf(
+        pipeline_def: &str,
+        lookup: HashMap<String, Arc<dyn LookupSource>>,
+        udf: HashMap<String, Box<dyn Function>>,
+    ) -> Result<Self, PiperError> {
+        let ctx = BuildContext::new_with_lookup_udf(lookup, udf)?;
 
         let mut pipelines = Pipeline::load(pipeline_def, &ctx).log()?;
         // Use invalid identifier as the name, avoid clashes with user-defined pipelines

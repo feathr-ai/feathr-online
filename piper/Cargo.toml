@@ -34,6 +34,12 @@ uuid = "1"
 rand = "*"
 dyn-clonable = "0.9"
 poem = { version = "1", features = ["tokio-metrics"] }
+pyo3 = { version = "0.17", optional = true }
+pyo3-asyncio = { version = "0.17", features = ["tokio-runtime"], optional = true }
 
 [build-dependencies]
 protobuf-codegen = "3"
+
+[features]
+default = []
+pyo3-asyncio = ["pyo3", "pyo3-asyncio/tokio-runtime"]
