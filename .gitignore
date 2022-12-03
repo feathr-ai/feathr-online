@@ -1,5 +1,6 @@
 /target
 /test-conf
+**/.venv
 **/.env
 **/*.log
 **/*.dylib

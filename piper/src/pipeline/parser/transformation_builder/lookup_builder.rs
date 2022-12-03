@@ -28,6 +28,12 @@ impl LookupTransformationBuilder {
 
 impl TransformationBuilder for LookupTransformationBuilder {
     fn build(&self, input_schema: &Schema, ctx: &BuildContext) -> Result<Box<dyn Transformation>, PiperError> {
+        for f in self.fields.iter() {
+            let name = f.1.as_ref().unwrap_or(&f.0);
+            if input_schema.get_column_index(name).is_some() {
+                return Err(PiperError::ColumnAlreadyExists(name.clone()));
+            }
+        }
         LookupTransformation::create(
             input_schema,
             self.source.clone(),

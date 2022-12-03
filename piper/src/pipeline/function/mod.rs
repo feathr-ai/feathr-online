@@ -27,7 +27,6 @@ use bucket::BucketFunction;
 use case::CaseFunction;
 use datetime_functions::*;
 use extract_json::{ExtractJsonArray, ExtractJsonObject};
-use function_wrapper::{binary_fn, nullary_fn, ternary_fn, unary_fn};
 use len::Len;
 use make_array::MakeArray;
 use misc_functions::*;
@@ -35,6 +34,8 @@ use string_functions::{SplitFunction, SubstringFunction};
 use timestamp::TimestampFunction;
 use to_json::ToJsonStringFunction;
 use type_conv::TypeConverterFunction;
+
+pub use function_wrapper::{binary_fn, nullary_fn, ternary_fn, unary_fn};
 
 #[clonable]
 pub trait Function: Send + Sync + Clone {
