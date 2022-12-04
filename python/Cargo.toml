@@ -17,7 +17,7 @@ crate-type = ["cdylib"]
 async-trait = "0.1"
 tokio = "1"
 futures = "0.3"
-chrono = "0.4"
+chrono = { version = "0.4", default-features = false }
 serde = "1"
 serde_json = "1"
 pyo3 = { version = "0.17", features = ["extension-module", "chrono"] }
