@@ -193,7 +193,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lookup() {
-        dotenv::dotenv().ok();
+        dotenvy::dotenv().ok();
         let s = r#"
         {
             "host": "${REDIS_HOST}",
