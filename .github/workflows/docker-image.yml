@@ -32,4 +32,4 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: windoze/feathrpiper:latest,windoze/feathrpiper:$(date +%s)
+          tags: windoze/feathrpiper:latest,windoze/feathrpiper:${{ github.sha }}
