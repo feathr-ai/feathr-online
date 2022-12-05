@@ -5,6 +5,7 @@
         "jmethod",
         "jshort",
         "jvalue",
-        "Ljava"
+        "Ljava",
+        "sdist"
     ]
 }

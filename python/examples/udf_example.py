@@ -1,3 +1,4 @@
+print("The first time running of this demo may take a while because it needs to download the model.")
 
 # Install the `feathrpiper` package, and the `sentence_transformers` package, which is used in the `embed` UDF
 #! pip install -U feathrpiper sentence_transformers
@@ -5,14 +6,12 @@
 from sentence_transformers import SentenceTransformer
 import feathrpiper
 
-print("The first time running of this demo may take a while because it needs to download the model.")
 # Complex UDF demo
 print("Loading the model...")
 model = SentenceTransformer('all-MiniLM-L6-v2')
 print("Model loaded.")
 
 # UDFs
-
 
 def inc(x):
     return x+42
