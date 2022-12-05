@@ -61,7 +61,7 @@ pub struct PiperService {
 pub struct HandlerData {
     piper: Arc<Piper>,
     #[cfg(feature = "python")]
-    locals: pyo3_asyncio::TaskLocals,
+    locals: Option<pyo3_asyncio::TaskLocals>,
 }
 
 impl PiperService {
@@ -121,20 +121,40 @@ impl PiperService {
         }
     }
 
-    pub async fn start(&mut self) -> Result<(), PiperError> {
+    pub async fn start(
+        &mut self,
+        #[cfg(feature = "python")] use_py_async: bool,
+    ) -> Result<(), PiperError> {
         let address = self.arg.address.clone();
-        self.start_at(&address, self.arg.port).await
+        self.start_at(
+            &address,
+            self.arg.port,
+            #[cfg(feature = "python")]
+            use_py_async,
+        )
+        .await
     }
 
-    pub async fn start_at(&mut self, address: &str, port: u16) -> Result<(), PiperError> {
+    pub async fn start_at(
+        &mut self,
+        address: &str,
+        port: u16,
+        #[cfg(feature = "python")] use_py_async: bool,
+    ) -> Result<(), PiperError> {
         self.should_stop.store(false, Ordering::Relaxed);
         let metrics_process = TokioMetrics::new();
 
         let data = HandlerData {
             piper: self.piper.clone(),
             #[cfg(feature = "python")]
-            locals: pyo3::Python::with_gil(pyo3_asyncio::tokio::get_current_locals)
-                .map_err(|e| PiperError::ExternalError(e.to_string()))?,
+            locals: if use_py_async {
+                Some(
+                    pyo3::Python::with_gil(pyo3_asyncio::tokio::get_current_locals)
+                        .map_err(|e| PiperError::ExternalError(e.to_string()))?,
+                )
+            } else {
+                None
+            },
         };
 
         let app = Route::new()
@@ -224,10 +244,15 @@ fn get_lookup_sources(data: Data<&HandlerData>) -> Json<serde_json::Value> {
 #[handler]
 async fn process(data: Data<&HandlerData>, req: Json<Request>) -> poem::Result<Json<Response>> {
     let data = data.0.clone();
-    pyo3_asyncio::tokio::scope(data.locals.clone(), async move {
-        Ok(Json(data.piper.process(req.0).await.map_err(BadRequest)?))
-    })
-    .await
+    match data.locals.clone() {
+        Some(locals) => {
+            pyo3_asyncio::tokio::scope(locals, async move {
+                Ok(Json(data.piper.process(req.0).await.map_err(BadRequest)?))
+            })
+            .await
+        }
+        None => Ok(Json(data.piper.process(req.0).await.map_err(BadRequest)?)),
+    }
 }
 
 #[cfg(not(feature = "python"))]

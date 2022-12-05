@@ -477,7 +477,7 @@ impl PiperService {
             block_on(cancelable_wait(async move {
                 svc.write()
                     .await
-                    .start_at(address, port)
+                    .start_at(address, port, false)
                     .await
                     .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))
             }))
@@ -493,7 +493,7 @@ impl PiperService {
             cancelable_wait(async move {
                 svc.write()
                     .await
-                    .start_at(&address, port)
+                    .start_at(&address, port, true)
                     .await
                     .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))
             }),
