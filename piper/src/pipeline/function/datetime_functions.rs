@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, TimeZone};
+use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
 
 use crate::pipeline::{value::IntoValue, PiperError, Value};
@@ -49,6 +49,35 @@ pub fn from_utc_timestamp(dt: Value, tz: String) -> Result<NaiveDateTime, PiperE
     Ok(local_dt)
 }
 
+pub fn to_timestamp(arguments: Vec<Value>) -> Result<DateTime<Utc>, PiperError> {
+    if arguments.len() > 3 {
+        return Err(PiperError::ArityError(
+            "timestamp".to_string(),
+            arguments.len(),
+        ));
+    }
+
+    let dt = arguments[0].get_string()?;
+    let format = if arguments.len() > 1 {
+        arguments[1].get_string()?
+    } else {
+        "%Y-%m-%d %H:%M:%S".into()
+    };
+    let tz = if arguments.len() > 2 {
+        arguments[2].get_string()?
+    } else {
+        "UTC".into()
+    };
+
+    let ret = NaiveDateTime::parse_from_str(dt.as_ref(), format.as_ref())
+        .map_err(|e| PiperError::InvalidValue(format!("Invalid datetime: {}", e)))?;
+
+    let tz = Tz::from_str(&tz)
+        .map_err(|e| PiperError::InvalidValue(format!("Invalid timezone: {}", e)))?;
+
+    Ok(tz.from_local_datetime(&ret).unwrap().with_timezone(&Utc))
+}
+
 pub fn make_timestamp(arguments: Vec<Value>) -> Result<Value, PiperError> {
     if arguments.len() < 6 {
         return Err(PiperError::ArityError(
@@ -80,7 +109,7 @@ pub fn make_timestamp(arguments: Vec<Value>) -> Result<Value, PiperError> {
 
 #[cfg(test)]
 mod tests {
-    use crate::pipeline::value::IntoValue;
+    use crate::pipeline::{function::datetime_functions::to_timestamp, value::IntoValue};
 
     use super::from_utc_timestamp;
 
@@ -96,6 +125,28 @@ mod tests {
             .into_value();
 
         let dt = from_utc_timestamp(cst, "Asia/Shanghai".to_string()).into_value();
+        assert_eq!(dt, gmt);
+    }
+
+    #[test]
+    fn test_to_timestamp() {
+        let gmt = "2022-03-04 05:00:00"
+            .into_value()
+            .get_datetime()
+            .into_value();
+
+        let dt = to_timestamp(vec![
+            "2022/03/04 13:00".into_value(),
+            "%Y/%-m/%-d %-H:%-M".into_value(),
+            "Asia/Shanghai".into_value(),
+        ])
+        .into_value();
+        assert_eq!(dt, gmt);
+
+        let dt = to_timestamp(vec![
+            "2022-03-04 05:00:00".into_value(),
+        ])
+        .into_value();
         assert_eq!(dt, gmt);
     }
 }
