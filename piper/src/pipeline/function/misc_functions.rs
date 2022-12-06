@@ -348,6 +348,18 @@ pub fn slice(array: Vec<Value>, start: i64, end: i64) -> Result<Value, PiperErro
     Ok(Value::Array(array[start..end].to_vec()))
 }
 
+pub fn distance(lat1: f64, lng1: f64, lat2: f64, lng2: f64) -> f64 {
+    let lat1 = lat1.to_radians();
+    let lng1 = lng1.to_radians();
+    let lat2 = lat2.to_radians();
+    let lng2 = lng2.to_radians();
+    let dlat = lat2 - lat1;
+    let dlng = lng2 - lng1;
+    let a = (dlat / 2.0).sin().powi(2) + lat1.cos() * lat2.cos() * (dlng / 2.0).sin().powi(2);
+    let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
+    6371.0 * c
+}
+
 #[cfg(test)]
 mod tests {
     use crate::pipeline::value::IntoValue;

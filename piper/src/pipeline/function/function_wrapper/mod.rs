@@ -2,13 +2,14 @@ use super::Function;
 
 mod binary;
 mod nullary;
+mod quaternary;
 mod ternary;
 mod unary;
 mod variadic;
 
 /**
  * NOTE: Seems to make generic trait over all function wrappers needs HRTB (and GAT?).
- * 
+ *
  * E.g. following code does not compile:
  ``` ignore
  trait IntoFunction {
@@ -41,6 +42,11 @@ pub use nullary::nullary_fn;
  * Wrap a ternary function into `Function` so it can be registered in the function registry.
  */
 pub use ternary::ternary_fn;
+
+/**
+ * Wrap a quaternary function into `Function` so it can be registered in the function registry.
+ */
+pub use quaternary::quaternary_fn;
 
 /**
  * Wrap a unary function into `Function` so it can be registered in the function registry.
