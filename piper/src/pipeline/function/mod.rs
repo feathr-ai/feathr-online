@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveDateTime, Timelike, Utc};
 use dyn_clonable::clonable;
 
-use self::function_wrapper::var_fn;
+use self::function_wrapper::{quaternary_fn, var_fn};
 
 use super::{PiperError, Value, ValueType};
 
@@ -421,11 +421,11 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     
 
 
-
+    // Functions not in Spark
     function_map.insert("split".to_string(), Box::new(SplitFunction));
     function_map.insert("case".to_string(), Box::new(CaseFunction));
     function_map.insert("bucket".to_string(), Box::new(BucketFunction));
-    // function_map.insert("timestamp".to_string(), Box::new(TimestampFunction));
+    function_map.insert("distance".to_string(), quaternary_fn(misc_functions::distance));
     function_map.insert("len".to_string(), Box::new(Len));
 
     function_map
