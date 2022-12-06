@@ -25,6 +25,10 @@ impl ProjectKeepTransformation {
                 .get_column_index(column)
                 .ok_or_else(|| PiperError::ColumnNotFound(column.to_string()))?;
             keep_set.insert(index);
+        }
+        let mut indices: Vec<usize> = keep_set.iter().copied().collect();
+        indices.sort();
+        for index in indices {
             columns.push(input_schema.columns[index].clone());
         }
         Ok(Box::new(ProjectKeepTransformation {
