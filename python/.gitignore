@@ -1,5 +1,7 @@
 /target
 
+non_pub_*.py
+
 .*.zsh
 
 # Byte-compiled / optimized / DLL files
