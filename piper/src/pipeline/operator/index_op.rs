@@ -13,7 +13,10 @@ impl Operator for ArrayIndexOperator {
                 argument_types.len(),
             ));
         }
-        if argument_types[0] != ValueType::Array && argument_types[0] != ValueType::Dynamic {
+        if argument_types[0] != ValueType::Array
+            && argument_types[0] != ValueType::Object
+            && argument_types[0] != ValueType::Dynamic
+        {
             return Err(PiperError::InvalidArgumentType(
                 "[]]".to_string(),
                 0,
@@ -33,6 +36,7 @@ impl Operator for ArrayIndexOperator {
         match [a, b] {
             [Value::Array(mut a), Value::Int(b)] => a.remove(b as usize),
             [Value::Array(mut a), Value::Long(b)] => a.remove(b as usize),
+            [Value::Object(mut a), Value::String(b)] => a.remove(b.as_ref()).unwrap_or_default(),
 
             // All other combinations are invalid
             _ => Value::Error(PiperError::TypeMismatch(
@@ -66,11 +70,11 @@ impl Operator for MapIndexOperator {
                 argument_types[0],
             ));
         }
-        if argument_types[0] != ValueType::String {
+        if argument_types[1] != ValueType::String {
             return Err(PiperError::InvalidArgumentType(
                 ".".to_string(),
                 0,
-                argument_types[0],
+                argument_types[1],
             ));
         }
         Ok(ValueType::Dynamic)
