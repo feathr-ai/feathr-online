@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, Timelike, Utc, DateTime};
+use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveDateTime, Timelike, Utc};
 use dyn_clonable::clonable;
 
 use self::function_wrapper::var_fn;
@@ -358,7 +358,7 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     // sum
     function_map.insert("tan".to_string(), unary_fn(f64::tan));
     function_map.insert("tanh".to_string(), unary_fn(f64::tanh));
-    function_map.insert("timestamp".to_string(), unary_fn(|v: Value| v.convert_to(ValueType::DateTime)));
+    function_map.insert("timestamp".to_string(), var_fn(to_timestamp));
     function_map.insert("timestamp_micros".to_string(), unary_fn(|v: u64| NaiveDateTime::from_timestamp_opt((v / 1_000_000) as i64, ((v % 1_000_000) * 1_000) as u32)));
     function_map.insert("timestamp_millis".to_string(), unary_fn(|v: u64| NaiveDateTime::from_timestamp_opt((v / 1_000) as i64, ((v % 1_000) * 1_000_000) as u32)));
     function_map.insert("timestamp_seconds".to_string(), unary_fn(|v: u64| NaiveDateTime::from_timestamp_opt(v as i64, 0)));
