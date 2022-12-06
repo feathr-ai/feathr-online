@@ -86,7 +86,7 @@ impl piper::LookupSource for PyLookupSource {
                 .call(
                     py,
                     (
-                        Value(key.to_owned()).to_object(py),
+                        Value(key.to_owned()).into_py(py),
                         fields.clone().into_py(py),
                     ),
                     None,
@@ -212,27 +212,23 @@ impl<'source> FromPyObject<'source> for Value {
     }
 }
 
-impl ToPyObject for Value {
-    fn to_object(&self, py: Python<'_>) -> PyObject {
-        match &self.0 {
+impl IntoPy<PyObject> for Value {
+    fn into_py(self, py: Python<'_>) -> PyObject {
+        match self.0 {
             piper::Value::Null => py.None(),
-            piper::Value::Bool(v) => v.to_object(py),
-            piper::Value::Int(v) => v.to_object(py),
-            piper::Value::Long(v) => v.to_object(py),
-            piper::Value::Float(v) => v.to_object(py),
-            piper::Value::Double(v) => v.to_object(py),
-            piper::Value::String(v) => v.as_ref().to_object(py),
-            piper::Value::Array(v) => v
-                .iter()
-                .map(|v| Value(v.clone()))
-                .collect::<Vec<_>>()
-                .to_object(py),
+            piper::Value::Bool(v) => v.into_py(py),
+            piper::Value::Int(v) => v.into_py(py),
+            piper::Value::Long(v) => v.into_py(py),
+            piper::Value::Float(v) => v.into_py(py),
+            piper::Value::Double(v) => v.into_py(py),
+            piper::Value::String(v) => v.into_py(py),
+            piper::Value::DateTime(v) => v.into_py(py),
+            piper::Value::Array(v) => v.into_iter().map(Value).collect::<Vec<_>>().into_py(py),
             piper::Value::Object(v) => v
-                .iter()
-                .map(|(k, v)| (k.clone(), Value(v.clone())))
+                .into_iter()
+                .map(|(k, v)| (k, Value(v)))
                 .collect::<HashMap<_, _>>()
-                .to_object(py),
-            piper::Value::DateTime(v) => v.to_object(py),
+                .into_py(py),
             piper::Value::Error(v) => PyErr::new::<PiperError, _>(v.to_string()).to_object(py),
         }
     }
@@ -253,7 +249,7 @@ impl piper::Function for PyPiperFunction {
 
     fn eval(&self, arguments: Vec<piper::Value>) -> piper::Value {
         Python::with_gil(|py| {
-            let args = PyTuple::new(py, arguments.into_iter().map(|v| Value(v).to_object(py)));
+            let args = PyTuple::new(py, arguments.into_iter().map(|v| Value(v).into_py(py)));
             self.function
                 .call1(py, args)
                 .map(|v| {
@@ -303,7 +299,7 @@ fn response_to_tuple(py: Python<'_>, response: piper::SingleResponse) -> PyResul
     for row in response.data.unwrap_or_default() {
         let dict = PyDict::new(py);
         for (k, v) in row {
-            dict.set_item(k, Value(piper::Value::from(v)).to_object(py))?;
+            dict.set_item(k, Value(piper::Value::from(v)).into_py(py))?;
         }
         list.append(dict)?;
     }
