@@ -1259,9 +1259,9 @@ mod tests {
 
         assert!( Value::Bool(true) != Value::Double(2f64));
 
-        assert_eq!(Value::String("2022-03-04".into()), Value::DateTime(str_to_datetime("2022-03-04").unwrap()));
+        assert_eq!(Value::String("2022-03-04".into()).get_datetime().unwrap(), Value::DateTime(str_to_datetime("2022-03-04").unwrap()).get_datetime().unwrap());
 
-        assert!(Value::String("2022-03-01".into()) < Value::DateTime(str_to_datetime("2022-03-04").unwrap()));
+        assert!(Value::String("2022-03-01".into()).get_datetime().unwrap() < Value::DateTime(str_to_datetime("2022-03-04").unwrap()).get_datetime().unwrap());
 
         assert_eq!(Value::Array(vec![Value::Int(1), Value::Int(2)]), Value::Array(vec![Value::Int(1), Value::Int(2)]));
     }
