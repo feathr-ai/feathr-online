@@ -131,10 +131,10 @@ peg::parser! {
             / (name:identifier() { (name.to_string(), None, ValueType::Dynamic) })
 
         pub rule summarize_transformation() -> Box<dyn TransformationBuilder>
-            = "summarize" _ columns:(summarize_column_def() **<1,> list_sep()) _ "by" _ group_by:(group_key_def() **<1,> list_sep()) {
+            = "summarize" _ columns:(summarize_column_def() **<1,> list_sep()) _ group_by:("by" _ g:(group_key_def() **<1,> list_sep()) { g })? {
                 Box::new(SummarizeTransformationBuilder{
                     aggregations: columns,
-                    group_by,
+                    group_by: group_by.unwrap_or_default(),
                 })
             }
         pub rule summarize_column_def() -> (String, parser::aggregation_builder::AggregationBuilder)
@@ -427,6 +427,12 @@ mod tests {
     #[test]
     fn test_summarize() {
         let input = "summarize a=f(x), b=g(y+z), c=count() by b,x=c+1, y=f(d)";
+        let result = pipeline_parser::summarize_transformation(input);
+        println!("{:?}", result);
+        assert!(result.is_ok());
+
+        // The `by` part can be omitted
+        let input = "summarize a=f(x), b=g(y+z), c=count()";
         let result = pipeline_parser::summarize_transformation(input);
         println!("{:?}", result);
         assert!(result.is_ok());
