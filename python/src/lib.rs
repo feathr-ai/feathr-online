@@ -4,6 +4,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use futures::{pin_mut, Future};
+use piper::RequestData;
 use pyo3::exceptions::PyException;
 use pyo3::types::{PyDict, PyList, PyTuple};
 use pyo3::{create_exception, prelude::*};
@@ -269,17 +270,59 @@ fn dict_to_request(
     dict: &PyDict,
     error_report: ErrorCollectingMode,
 ) -> PyResult<piper::SingleRequest> {
-    let mut request = piper::SingleRequest {
-        pipeline: pipeline.to_string(),
-        errors: error_report.into(),
-        ..Default::default()
-    };
+    let mut data: HashMap<String, serde_json::Value> = HashMap::new();
     for (k, v) in dict {
         let k = k.extract::<String>()?;
         let v = v.extract::<Value>()?.0;
-        request.data.insert(k, v.into());
+        data.insert(k, v.into());
     }
-    Ok(request)
+    Ok(piper::SingleRequest {
+        pipeline: pipeline.to_string(),
+        errors: error_report.into(),
+        data: RequestData::Single(data),
+        ..Default::default()
+    })
+}
+
+fn list_to_request(
+    py: Python<'_>,
+    pipeline: &str,
+    list: &PyList,
+    error_report: ErrorCollectingMode,
+) -> PyResult<piper::SingleRequest> {
+    let mut data: Vec<HashMap<String, serde_json::Value>> = Vec::new();
+    for dict in list {
+        let mut row: HashMap<String, serde_json::Value> = HashMap::new();
+        for (k, v) in dict.extract::<Py<PyDict>>()?.as_ref(py) {
+            let k = k.extract::<String>()?;
+            let v = v.extract::<Value>()?.0;
+            row.insert(k, v.into());
+        }
+        data.push(row);
+    }
+    Ok(piper::SingleRequest {
+        pipeline: pipeline.to_string(),
+        errors: error_report.into(),
+        data: RequestData::Multi(data),
+        ..Default::default()
+    })
+}
+
+fn pyobj_to_request(
+    py: Python<'_>,
+    pipeline: &str,
+    obj: PyObject,
+    error_report: ErrorCollectingMode,
+) -> PyResult<piper::SingleRequest> {
+    if let Ok(dict) = obj.extract::<Py<PyDict>>(py) {
+        dict_to_request(pipeline, dict.as_ref(py), error_report)
+    } else if let Ok(list) = obj.extract::<Py<PyList>>(py) {
+        list_to_request(py, pipeline, list.as_ref(py), error_report)
+    } else {
+        Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+            "Must be a dict or a list of dicts",
+        ))
+    }
 }
 
 fn error_record_to_dict(py: Python<'_>, e: piper::ErrorRecord) -> PyResult<Py<PyDict>> {
@@ -375,11 +418,11 @@ impl Piper {
     fn process(
         &self,
         pipeline: &str,
-        dict: &PyDict,
+        object: PyObject,
         error_report: ErrorCollectingMode,
         py: Python<'_>,
     ) -> PyResult<Py<PyTuple>> {
-        let req = dict_to_request(pipeline, dict, error_report)?;
+        let req = pyobj_to_request(py, pipeline, object, error_report)?;
         let resp = py.allow_threads(|| {
             block_on(cancelable_wait(async move {
                 self.piper
@@ -395,11 +438,11 @@ impl Piper {
     fn process_async<'p>(
         &self,
         pipeline: &str,
-        dict: &PyDict,
+        object: PyObject,
         error_report: ErrorCollectingMode,
         py: Python<'p>,
     ) -> PyResult<&'p PyAny> {
-        let req = dict_to_request(pipeline, dict, error_report)?;
+        let req = pyobj_to_request(py, pipeline, object, error_report)?;
         let piper = self.piper.clone();
         pyo3_asyncio::tokio::future_into_py(
             py,

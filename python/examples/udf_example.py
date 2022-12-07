@@ -71,6 +71,20 @@ assert (len(ret[0]["e"]) > 100)
 assert (len(errors) == 2)
 print("Tests passed.")
 
+# `process` also accepts a list of requests, the result will be a list of results
+(ret, errors) = p.process("t", [{"x": 1, "s": "Hello World"}, {"x": 2, "s": "foo bar"}])
+assert (errors == [])
+assert (len(ret) == 2)
+assert (ret[0]["x"] == 1)
+assert (ret[0]["y"] == 43)
+assert (ret[0]["z"] == -41)
+assert (len(ret[0]["e"]) > 100)
+assert (ret[1]["x"] == 2)
+assert (ret[1]["y"] == 44)
+assert (ret[1]["z"] == -40)
+assert (len(ret[1]["e"]) > 100)
+
+
 # Use PiperService to start the service
 # NOTE: This may **not** work on hosted notebook, because the service will be started on the notebook server, which is not accessible from the outside.
 print("Starting service at localhost:8000, press Ctrl+C to stop")

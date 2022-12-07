@@ -100,7 +100,7 @@ impl Operator for PlusOperator {
 
 macro_rules! binary_math_op {
     ($name:ident, $op_name:tt, $op:tt) => {
-        #[derive(Clone, Debug)]
+        #[derive(Clone, Debug, Default)]
         pub struct $name;
 
         impl Operator for $name {

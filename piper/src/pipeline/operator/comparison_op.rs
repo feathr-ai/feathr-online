@@ -4,7 +4,7 @@ use super::Operator;
 
 macro_rules! order_op {
     ($name:ident, $op:tt) => {
-        #[derive(Clone, Debug)]
+        #[derive(Clone, Debug, Default)]
         pub struct $name;
 
         impl Operator for $name {
