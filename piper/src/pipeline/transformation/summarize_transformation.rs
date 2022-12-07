@@ -31,7 +31,7 @@ pub struct SummarizeTransformation {
     keys: Arc<Vec<Key>>,
 }
 
-// summarize col1=agg1(param1, param2), col2=agg2(param1, param2) by key1[=expr1], key2[=expr2], expr defaults to ColumnExpression
+// summarize col1=agg1(param1, param2), col2=agg2(param1, param2) [by key1[=expr1], key2[=expr2]]
 impl SummarizeTransformation {
     pub fn create(
         input_schema: &Schema,
@@ -126,7 +126,7 @@ impl SummarizedDataSet {
         self.keys.iter().map(|k| k.expression.eval(row)).collect()
     }
 
-    async fn fetch_rows(&mut self) -> Result<(), PiperError> {
+    async fn do_fetch_rows(&mut self) -> Result<(), PiperError> {
         if self.rows.is_none() {
             let mut key_to_agg: HashMap<Vec<Value>, Vec<Agg>> = HashMap::new();
             while let Some(row) = self.input.next().await {
@@ -158,6 +158,18 @@ impl SummarizedDataSet {
         }
         Ok(())
     }
+
+    async fn fetch_rows(&mut self) {
+        match self.do_fetch_rows().await {
+            Ok(_) => {}
+            Err(e) => {
+                let mut rows = VecDeque::new();
+                // Propagate error to all fields in the only row.
+                rows.push_back(vec![e.into(); self.output_schema.columns.len()]);
+                self.rows = Some(rows);
+            }
+        }
+    }
 }
 
 #[async_trait]
@@ -167,13 +179,10 @@ impl DataSet for SummarizedDataSet {
     }
 
     async fn next(&mut self) -> Option<Vec<Value>> {
-        match self.fetch_rows().await {
-            Ok(_) => self.rows.as_mut()?.pop_front(),
-            Err(e) => {
-                eprintln!("Error: {:?}", e);
-                None
-            }
+        if self.rows.is_none() {
+            self.fetch_rows().await;
         }
+        self.rows.as_mut()?.pop_front()
     }
 }
 
