@@ -249,7 +249,7 @@ impl std::hash::Hash for Value {
             Self::String(v) => v.hash(state),
             Self::Array(v) => v.hash(state),
             Self::DateTime(v) => v.timestamp().hash(state),
-            _ => core::mem::discriminant(self).hash(state)
+            _ => core::mem::discriminant(self).hash(state),
         }
     }
 }
@@ -693,7 +693,13 @@ impl TryInto<Vec<Value>> for Value {
     type Error = PiperError;
 
     fn try_into(self) -> Result<Vec<Value>, PiperError> {
-        self.get_array().cloned()
+        match self {
+            Value::Array(a) => Ok(a),
+            _ => Err(PiperError::InvalidTypeCast(
+                self.value_type(),
+                ValueType::Array,
+            )),
+        }
     }
 }
 
@@ -704,12 +710,29 @@ where
     type Error = PiperError;
 
     fn try_into(self) -> Result<Vec<T>, PiperError> {
-        match self.get_array() {
-            Ok(array) => array
-                .iter()
-                .map(|v| v.clone().try_into())
+        match self {
+            Value::Array(a) => a
+                .into_iter()
+                .map(|v| v.try_into())
                 .collect::<Result<Vec<T>, PiperError>>(),
-            Err(e) => Err(e),
+            _ => Err(PiperError::InvalidTypeCast(
+                self.value_type(),
+                ValueType::Array,
+            )),
+        }
+    }
+}
+
+impl TryInto<HashMap<String, Value>> for Value {
+    type Error = PiperError;
+
+    fn try_into(self) -> Result<HashMap<String, Value>, PiperError> {
+        match self {
+            Value::Object(o) => Ok(o),
+            _ => Err(PiperError::InvalidTypeCast(
+                self.value_type(),
+                ValueType::Object,
+            )),
         }
     }
 }
@@ -721,12 +744,15 @@ where
     type Error = PiperError;
 
     fn try_into(self) -> Result<HashMap<String, T>, PiperError> {
-        match self.get_object() {
-            Ok(array) => array
-                .iter()
-                .map(|(k, v)| v.clone().try_into().map(|v| (k.clone(), v)))
+        match self {
+            Value::Object(o) => o
+                .into_iter()
+                .map(|(k, v)| v.try_into().map(|v| (k, v)))
                 .collect::<Result<HashMap<String, T>, PiperError>>(),
-            Err(e) => Err(e),
+            _ => Err(PiperError::InvalidTypeCast(
+                self.value_type(),
+                ValueType::Object,
+            )),
         }
     }
 }
@@ -1178,7 +1204,7 @@ fn str_to_datetime(v: &str) -> Result<DateTime<Utc>, PiperError> {
 mod tests {
     use chrono::NaiveDate;
 
-    use crate::pipeline::{Value, value::str_to_datetime};
+    use crate::pipeline::{value::str_to_datetime, Value};
 
     #[test]
     fn value_conv() {
@@ -1219,9 +1245,7 @@ mod tests {
     fn datetime_str_cast() {
         // Auto-cast between string and datetime
         let vs: Value = "2022-03-04".to_string().into();
-        let vd: Value = NaiveDate::from_ymd_opt(2022, 3, 4)
-            .unwrap()
-            .into();
+        let vd: Value = NaiveDate::from_ymd_opt(2022, 3, 4).unwrap().into();
         assert_eq!(vs.get_datetime().unwrap(), vd.get_datetime().unwrap());
         assert_eq!(vd.get_string().unwrap(), "2022-03-04 00:00:00");
     }
@@ -1252,17 +1276,30 @@ mod tests {
         assert_eq!(Value::Float(1f32), Value::Int(1));
         assert_eq!(Value::Long(1), Value::Double(1f64));
 
-        assert!( Value::Int(1) < Value::Int(2));
-        assert!( Value::Long(1) < Value::Int(2));
-        assert!( Value::Float(1f32) < Value::Int(2));
-        assert!( Value::Int(1) < Value::Double(2f64));
+        assert!(Value::Int(1) < Value::Int(2));
+        assert!(Value::Long(1) < Value::Int(2));
+        assert!(Value::Float(1f32) < Value::Int(2));
+        assert!(Value::Int(1) < Value::Double(2f64));
 
-        assert!( Value::Bool(true) != Value::Double(2f64));
+        assert!(Value::Bool(true) != Value::Double(2f64));
 
-        assert_eq!(Value::String("2022-03-04".into()).get_datetime().unwrap(), Value::DateTime(str_to_datetime("2022-03-04").unwrap()).get_datetime().unwrap());
+        assert_eq!(
+            Value::String("2022-03-04".into()).get_datetime().unwrap(),
+            Value::DateTime(str_to_datetime("2022-03-04").unwrap())
+                .get_datetime()
+                .unwrap()
+        );
 
-        assert!(Value::String("2022-03-01".into()).get_datetime().unwrap() < Value::DateTime(str_to_datetime("2022-03-04").unwrap()).get_datetime().unwrap());
+        assert!(
+            Value::String("2022-03-01".into()).get_datetime().unwrap()
+                < Value::DateTime(str_to_datetime("2022-03-04").unwrap())
+                    .get_datetime()
+                    .unwrap()
+        );
 
-        assert_eq!(Value::Array(vec![Value::Int(1), Value::Int(2)]), Value::Array(vec![Value::Int(1), Value::Int(2)]));
+        assert_eq!(
+            Value::Array(vec![Value::Int(1), Value::Int(2)]),
+            Value::Array(vec![Value::Int(1), Value::Int(2)])
+        );
     }
 }

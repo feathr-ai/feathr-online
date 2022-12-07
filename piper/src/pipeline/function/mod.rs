@@ -239,13 +239,13 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     // make_ym_interval
     // map
     // map_concat
-    // map_contains_key
+    function_map.insert("map_contains_key".to_string(), binary_fn(|m: HashMap<String, Value>, key: String| m.contains_key(&key)));
     // map_entries
     // map_filter
     // map_from_arrays
     // map_from_entries
-    // map_keys
-    // map_values
+    function_map.insert("map_keys".to_string(), unary_fn(|m: HashMap<String, Value>| m.into_keys().collect::<Vec<_>>()));
+    function_map.insert("map_values".to_string(), unary_fn(|m: HashMap<String, Value>| m.into_values().collect::<Vec<_>>()));
     // map_zip_with
     // max, implemented as aggregation function
     // max_by, implemented as aggregation function
@@ -259,7 +259,7 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     function_map.insert("month".to_string(), unary_fn(|d: NaiveDate| d.month()));
     // months_between
     // named_struct
-    // nanvl
+    function_map.insert("nanvl".to_string(), binary_fn(|x: f64, y: f64| if x.is_nan() { y } else { x }));
     // negative
     function_map.insert("next_day".to_string(), unary_fn(|d: NaiveDate| d + Duration::days(1)));
     // * not, implemented as operator so both `not x` and `not(x)` works
@@ -270,7 +270,7 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     function_map.insert("nvl".to_string(), binary_fn(|x: Value, y: Value| if x.is_null() { y } else { x }));
     function_map.insert("nvl2".to_string(), ternary_fn(|x: Value, y: Value, z: Value| if x.is_null() { z } else { y }));
     // octet_length
-    // * or, operator
+    // * or, implemented as operator
     // overlay
     // parse_url
     // percent_rank
