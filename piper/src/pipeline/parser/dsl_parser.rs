@@ -75,6 +75,7 @@ peg::parser! {
                 / lookup_transformation()
                 / top_transformation()
                 / ignore_error_transformation()
+                / summarize_transformation()
             ) {t}
 
         pub rule ignore_error_transformation() -> Box<dyn TransformationBuilder>
@@ -128,6 +129,25 @@ peg::parser! {
             / (new_name:identifier() _ "=" _ name:identifier() { (name.to_string(), Some(new_name), ValueType::Dynamic) })
             / (name:identifier() _ "as" _ vt:value_type() { (name.to_string(), None, vt) })
             / (name:identifier() { (name.to_string(), None, ValueType::Dynamic) })
+
+        pub rule summarize_transformation() -> Box<dyn TransformationBuilder>
+            = "summarize" _ columns:(summarize_column_def() **<1,> list_sep()) _ "by" _ group_by:(group_key_def() **<1,> list_sep()) {
+                Box::new(SummarizeTransformationBuilder{
+                    aggregations: columns,
+                    group_by,
+                })
+            }
+        pub rule summarize_column_def() -> (String, parser::aggregation_builder::AggregationBuilder)
+            = name:identifier() _ "=" _ agg:identifier() _ "(" _ args:expression_list() _ ")" {
+                (name.to_string(), parser::aggregation_builder::AggregationBuilder{
+                    aggregation_name: agg.to_string(),
+                    aggregation_args: args,
+                })
+            }
+        pub rule group_key_def() -> (String, Option<Box<dyn ExpressionBuilder>>)
+            = name:identifier() def:(_ "=" _ def:expression() {def})? {
+                (name.to_string(), def)
+            }
 
         pub rule expression() -> Box<dyn ExpressionBuilder> = precedence!{
             x:(@) _ ">" _ y:@ { (OperatorExpressionBuilder::create((BinaryOperatorBuilder::create(">")), vec![x, y])) }
@@ -320,9 +340,7 @@ pub fn parse_pipeline(input: &str, ctx: &BuildContext) -> Result<Pipeline, Piper
 
 #[cfg(test)]
 mod tests {
-    use crate::pipeline::{
-        pipelines::BuildContext, Column, Schema, ValueType,
-    };
+    use crate::pipeline::{pipelines::BuildContext, Column, Schema, ValueType};
 
     use super::pipeline_parser;
 
@@ -381,6 +399,35 @@ mod tests {
     fn test_case_clause() {
         let input = "case when (a > 1) then (2) when a>2 then 2 else 4 end";
         let result = pipeline_parser::expression(input);
+        println!("{:?}", result);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_summarize_column_def() {
+        let input = "a=        stat(x, y, z+1)";
+        let result = pipeline_parser::summarize_column_def(input);
+        println!("{:?}", result);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_group_key() {
+        let input = "a=f(x)";
+        let result = pipeline_parser::group_key_def(input);
+        println!("{:?}", result);
+        assert!(result.is_ok());
+
+        let input = "col1";
+        let result = pipeline_parser::group_key_def(input);
+        println!("{:?}", result);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_summarize() {
+        let input = "summarize a=f(x), b=g(y+z), c=count() by b,x=c+1, y=f(d)";
+        let result = pipeline_parser::summarize_transformation(input);
         println!("{:?}", result);
         assert!(result.is_ok());
     }

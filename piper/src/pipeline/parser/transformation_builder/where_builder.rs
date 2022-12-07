@@ -6,6 +6,7 @@ use crate::pipeline::{
 
 use super::TransformationBuilder;
 
+#[derive(Debug)]
 pub struct WhereTransformationBuilder {
     pub expression: Box<dyn ExpressionBuilder>,
 }

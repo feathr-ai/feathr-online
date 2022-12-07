@@ -2,7 +2,7 @@ use crate::pipeline::{PiperError, Value, ValueType};
 
 use super::Operator;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PlusOperator;
 
 impl Operator for PlusOperator {

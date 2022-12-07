@@ -236,6 +236,24 @@ pub enum Value {
     Error(PiperError),
 }
 
+impl Eq for Value {}
+
+impl std::hash::Hash for Value {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match &self {
+            Self::Bool(v) => v.hash(state),
+            Self::Int(v) => v.hash(state),
+            Self::Long(v) => v.hash(state),
+            Self::Float(v) => v.to_bits().hash(state),
+            Self::Double(v) => v.to_bits().hash(state),
+            Self::String(v) => v.hash(state),
+            Self::Array(v) => v.hash(state),
+            Self::DateTime(v) => v.timestamp().hash(state),
+            _ => core::mem::discriminant(self).hash(state)
+        }
+    }
+}
+
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -268,19 +286,7 @@ impl PartialEq for Value {
             (Self::Object(l0), Self::Object(r0)) => l0 == r0,
 
             (Self::DateTime(l0), Self::DateTime(r0)) => l0 == r0,
-            (Self::DateTime(l0), Self::String(r0)) => {
-                *l0 == match str_to_datetime(r0) {
-                    Ok(dt) => dt,
-                    Err(_) => return false,
-                }
-            }
-            (Self::String(l0), Self::DateTime(r0)) => {
-                let l0 = match str_to_datetime(l0) {
-                    Ok(dt) => dt,
-                    Err(_) => return false,
-                };
-                l0 == *r0
-            }
+
             (Self::Error(l0), Self::Error(r0)) => false,
             _ => core::mem::discriminant(self) == core::mem::discriminant(other),
         }

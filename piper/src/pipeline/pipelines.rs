@@ -13,11 +13,12 @@ use super::{
     parser::{parse_pipeline, parse_script},
     transformation::{ProjectTransformation, Transformation},
     Column, DataSet, DataSetCreator, PiperError, Schema, Validated, ValidationMode, Value,
-    ValueType,
+    ValueType, AggregationFunction, init_built_in_agg_functions,
 };
 
 pub struct BuildContext {
     pub functions: HashMap<String, Box<dyn Function>>,
+    pub agg_functions: HashMap<String, Box<dyn AggregationFunction>>,
     pub lookup_sources: HashMap<String, Arc<dyn LookupSource>>,
 }
 
@@ -25,6 +26,7 @@ impl BuildContext {
     pub fn from_config(lookup_source_def: &str) -> Result<Self, PiperError> {
         Ok(Self {
             functions: init_built_in_functions(),
+            agg_functions: init_built_in_agg_functions(),
             lookup_sources: init_lookup_sources(lookup_source_def)?
                 .then(|s| debug!("{} lookup data sources loaded", s.len())),
         })
@@ -43,6 +45,7 @@ impl BuildContext {
         }
         Ok(Self {
             functions,
+            agg_functions: init_built_in_agg_functions(),
             lookup_sources: init_lookup_sources(lookup_source_def)?
                 .then(|s| debug!("{} lookup data sources loaded", s.len())),
         })
@@ -61,6 +64,7 @@ impl BuildContext {
         }
         Ok(Self {
             functions,
+            agg_functions: init_built_in_agg_functions(),
             lookup_sources: lookup,
         })
     }
@@ -85,6 +89,7 @@ impl Default for BuildContext {
     fn default() -> Self {
         Self {
             functions: init_built_in_functions(),
+            agg_functions: init_built_in_agg_functions(),
             lookup_sources: HashMap::new(),
         }
     }

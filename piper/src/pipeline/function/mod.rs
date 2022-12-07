@@ -3,8 +3,6 @@ use std::collections::HashMap;
 use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveDateTime, Timelike, Utc};
 use dyn_clonable::clonable;
 
-use self::function_wrapper::{quaternary_fn, var_fn};
-
 use super::{PiperError, Value, ValueType};
 
 mod array_functions;
@@ -35,7 +33,7 @@ use timestamp::TimestampFunction;
 use to_json::ToJsonStringFunction;
 use type_conv::TypeConverterFunction;
 
-pub use function_wrapper::{binary_fn, nullary_fn, ternary_fn, unary_fn};
+pub use function_wrapper::{binary_fn, nullary_fn, quaternary_fn, ternary_fn, unary_fn, var_fn};
 
 #[clonable]
 pub trait Function: Send + Sync + Clone {

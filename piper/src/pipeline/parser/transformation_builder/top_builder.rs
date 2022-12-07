@@ -5,6 +5,7 @@ use crate::pipeline::{
 
 use super::TransformationBuilder;
 
+#[derive(Debug)]
 pub struct TopTransformationBuilder {
     count: usize,
     criteria: Box<dyn ExpressionBuilder>,

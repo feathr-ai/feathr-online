@@ -5,6 +5,7 @@ use crate::pipeline::{
 
 use super::TransformationBuilder;
 
+#[derive(Debug)]
 pub struct ProjectKeepTransformationBuilder {
     pub keeps: Vec<String>,
 }

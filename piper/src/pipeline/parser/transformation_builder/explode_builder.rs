@@ -5,6 +5,7 @@ use crate::pipeline::{
 
 use super::TransformationBuilder;
 
+#[derive(Debug)]
 pub struct ExplodeTransformationBuilder {
     pub column: String,
     pub exploded_type: ValueType,

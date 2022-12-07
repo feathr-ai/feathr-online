@@ -2,6 +2,7 @@ use crate::pipeline::{transformation::{Transformation, IgnoreErrorTransformation
 
 use super::TransformationBuilder;
 
+#[derive(Debug)]
 pub struct IgnoreErrorTransformationBuilder;
 
 impl TransformationBuilder for IgnoreErrorTransformationBuilder {

@@ -15,11 +15,24 @@ pub use pipeline::{
 };
 pub use service::{Args, PiperService};
 
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum RequestData {
+    Single(HashMap<String, serde_json::Value>),
+    Multi(Vec<HashMap<String, serde_json::Value>>),
+}
+
+impl Default for RequestData {
+    fn default() -> Self {
+        Self::Single(HashMap::new())
+    }
+}
+
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SingleRequest {
     pub pipeline: String,
-    pub data: HashMap<String, serde_json::Value>,
+    pub data: RequestData,
     #[serde(default)]
     pub validate: bool,
     #[serde(default)]

@@ -6,6 +6,7 @@ use crate::pipeline::{
 
 use super::TransformationBuilder;
 
+#[derive(Debug)]
 pub struct LookupTransformationBuilder {
     fields: Vec<(String, Option<String>, ValueType)>,
     source: String,
