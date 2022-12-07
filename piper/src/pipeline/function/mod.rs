@@ -53,11 +53,11 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     // aes_decrypt
     // aes_encrypt
     // aggregate
-    // any
+    // any, implemented as aggregation function
     // approx_count_distinct
     // approx_percentile
     function_map.insert("array".to_string(), Box::new(MakeArray));
-    // array_agg
+    // array_agg, implemented as aggregation function
     function_map.insert("array_contains".to_string(), binary_fn(array_contains));
     function_map.insert("array_distinct".to_string(), unary_fn(array_distinct));
     function_map.insert("array_except".to_string(), binary_fn(array_except));
@@ -79,7 +79,7 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     function_map.insert("atan".to_string(), unary_fn(f64::atan));
     function_map.insert("atan2".to_string(), binary_fn(f64::atan2));
     function_map.insert("atanh".to_string(), unary_fn(f64::atanh));
-    // avg
+    // avg, implemented as aggregation function
     // base64
     // between
     function_map.insert("bigint".to_string(), Box::new(TypeConverterFunction {to: ValueType::Long}));
@@ -118,8 +118,8 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     function_map.insert("cos".to_string(), unary_fn(f64::cos));
     function_map.insert("cosh".to_string(), unary_fn(f64::cosh));
     function_map.insert("cot".to_string(), unary_fn(|x| 1.0 / f64::tan(x)));
-    // count
-    // count_if
+    // count, implemented as aggregation function
+    // count_if, implemented as aggregation function
     // count_min_sketch
     // covar_pop
     // covar_samp
@@ -165,8 +165,8 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     // factorial
     // filter
     // find_in_set
-    // first
-    // first_value
+    // first, implemented as aggregation function
+    // first_value, implemented as aggregation function
     function_map.insert("flatten".to_string(), unary_fn(array_functions::flatten));
     function_map.insert("float".to_string(), Box::new(TypeConverterFunction {to: ValueType::Float}));
     function_map.insert("floor".to_string(), unary_fn(f64::floor));
@@ -180,7 +180,7 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     function_map.insert("get_json_array".to_string(), Box::new(ExtractJsonArray));  // Added
     function_map.insert("get_json_object".to_string(), Box::new(ExtractJsonObject));
     function_map.insert("getbit".to_string(), binary_fn(|x: u64, y: u64| (x >> y) & 1));
-    // greatest
+    // greatest, implemented as aggregation function
     // grouping
     // grouping_id
     // hash
@@ -213,12 +213,12 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     // json_tuple
     // kurtosis
     // lag
-    // last
+    // last, implemented as aggregation function
     function_map.insert("last_day".to_string(), unary_fn(|v: NaiveDate| v - Duration::days(1)));
-    // last_value
+    // last_value, implemented as aggregation function
     function_map.insert("lcase".to_string(), unary_fn(|s: String| s.to_lowercase()));
     // lead
-    // least
+    // least, implemented as aggregation function
     // left
     function_map.insert("length".to_string(), Box::new(Len));  // Added
     function_map.insert("levenshtein".to_string(), binary_fn(|a: String, b: String| levenshtein::levenshtein(&a, &b)));
@@ -247,12 +247,12 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     // map_keys
     // map_values
     // map_zip_with
-    // max
-    // max_by
+    // max, implemented as aggregation function
+    // max_by, implemented as aggregation function
     // md5
-    // mean
-    // min
-    // min_by
+    // mean, implemented as aggregation function
+    // min, implemented as aggregation function
+    // min_by, implemented as aggregation function
     function_map.insert("minute".to_string(), unary_fn(|t: NaiveDateTime| t.minute()));
     function_map.insert("mod".to_string(), binary_fn(f64::rem_euclid));
     // monotonically_increasing_id
@@ -334,7 +334,7 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     // skewness
     function_map.insert("slice".to_string(), ternary_fn(misc_functions::slice));
     // smallint
-    // some
+    // some, implemented as aggregation function
     // sort_array
     // soundex
     function_map.insert("space".to_string(), unary_fn(|n: usize| " ".repeat(n)));
@@ -353,7 +353,7 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     // struct
     function_map.insert("substring".to_string(), Box::new(SubstringFunction));
     function_map.insert("substring_index".to_string(), ternary_fn(string_functions::substring_index));
-    // sum
+    // sum, implemented as aggregation function
     function_map.insert("tan".to_string(), unary_fn(f64::tan));
     function_map.insert("tanh".to_string(), unary_fn(f64::tanh));
     function_map.insert("timestamp".to_string(), var_fn(to_timestamp));

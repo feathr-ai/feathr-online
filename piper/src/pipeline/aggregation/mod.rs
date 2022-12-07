@@ -129,6 +129,10 @@ pub fn init_built_in_agg_functions() -> HashMap<String, Box<dyn AggregationFunct
         Box::new(all_any::Any::default()) as Box<dyn AggregationFunction>,
     );
     agg.insert(
+        "some".to_string(),
+        Box::new(all_any::Any::default()) as Box<dyn AggregationFunction>,
+    );
+    agg.insert(
         "first".to_string(),
         Box::new(first_last::First::default()) as Box<dyn AggregationFunction>,
     );
