@@ -18,6 +18,7 @@ transformation ::= where_tran
     | lookup_tran
     | take_tran
     | ignore_error_tran
+    | summarize_tran
     ;
 
 where_tran ::= 'where' expr ;
@@ -39,6 +40,12 @@ lookup_tran ::= 'lookup' rename_with_type (',' rename_with_type)* 'from' ID 'on'
 take_tran ::= 'take' number ;
 
 ignore_error_tran ::= 'ignore-error' ;
+
+summarize_tran ::= 'summarize' agg_function '(' expr_list ')' (',' agg_function '(' expr_list ')')* ('by' column_name ('=' expr) (',' column_name ('=' expr))*)?
+
+agg_function ::= ID
+
+column_name ::= ID
 
 sort_dir ::= 'asc' | 'desc' ;
 
