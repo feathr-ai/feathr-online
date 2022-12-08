@@ -9,14 +9,6 @@ This project include 4 components:
 * The Java package, it supports UDF written in Java, the package is published to GitHub Package Registry as `com.github.windoze.feathr:feathrpiper`.
 
 
-To start the standalone executable
-----------------------------------
-
-Start the service with the command:
-```bash
-piper -p <PIPELINE_DEFINITION_FILE_NAME> -l <LOOKUP_SOURCE_JSON_FILE_NAME> [--address <LISTENING_ADDRESS>] [--port <LISTENING_PORT>]
-```
-
 To start the docker container
 -----------------------------
 
@@ -239,6 +231,13 @@ They can be defined in the lookup source definition file, which is a JSON file i
         // For aad auth, the client credential are acquired from the environment variables, Azure CLI, or the managed identity.
         "resource":"resource",
     },
+    // The template of the request body, can be omitted if the request body is not needed.
+    "requestTemplate": {
+        // Any JSON payload, will be used as the request body
+    },
+    // If the request body is used, this value indicates where to put the key in the request body, otherwise can be omitted.
+    "keyPath": "json_path_to_place_the_key",
+    
     // This map defined all available fields from this source, each field is extracted from the HTTP response body by a JSON path.
     "resultPath": {
         "field1": "json_path_to_get_field1",
@@ -246,6 +245,21 @@ They can be defined in the lookup source definition file, which is a JSON file i
         //...
     }
 }
+```
+
+Building from Source
+--------------------
+
+The `feathrpiper` package is written in Rust, so you need to setup the Rust toolchain to build it from source. The Rust toolchain can be installed from [here](https://www.rust-lang.org/tools/install). The development is done in Rust 1.65, older version may not work.
+
+Run `cargo build --release` to build the binary, the standalone executable will be in `target/release/piper`, and the JNI library will be in `target/release/libfeathr_piper_jni.so`.
+
+Running the standalone executable
+----------------------------------
+
+Start the service with the command:
+```bash
+/path/to/piper -p <PIPELINE_DEFINITION_FILE_NAME> -l <LOOKUP_SOURCE_JSON_FILE_NAME> [--address <LISTENING_ADDRESS>] [--port <LISTENING_PORT>]
 ```
 
 TODO:
