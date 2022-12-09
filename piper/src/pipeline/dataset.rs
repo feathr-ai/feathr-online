@@ -3,7 +3,7 @@ use std::collections::{HashMap, VecDeque};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use super::{PiperError, Value, ValueType};
+use super::{expression::Expression, PiperError, Value, ValueType};
 
 /**
  * The column definition
@@ -69,6 +69,16 @@ impl Schema {
         self.columns
             .iter()
             .position(|column| column.name == column_name)
+    }
+
+    pub fn get_col_expr(&self, name: &str) -> Result<Box<dyn Expression>, PiperError> {
+        let col = super::expression::ColumnExpression {
+            column_name: name.to_string(),
+            column_index: self
+                .get_column_index(name)
+                .ok_or_else(|| PiperError::ColumnNotFound(name.to_string()))?,
+        };
+        Ok(Box::new(col))
     }
 
     pub fn dump(&self) -> String {

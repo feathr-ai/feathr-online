@@ -2,6 +2,7 @@ use crate::pipeline::{Schema, transformation::{Transformation, TakeTransformatio
 
 use super::TransformationBuilder;
 
+#[derive(Debug)]
 pub struct TakeTransformationBuilder {
     pub count: usize,
 }

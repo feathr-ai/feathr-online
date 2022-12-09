@@ -4,6 +4,7 @@ use crate::pipeline::{transformation::{ProjectRenameTransformation, Transformati
 
 use super::TransformationBuilder;
 
+#[derive(Debug)]
 pub struct ProjectRenameTransformationBuilder {
     pub renames: HashMap<String, String>,
 }

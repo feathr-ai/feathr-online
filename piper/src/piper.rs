@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
-    time::Instant, sync::Arc,
+    sync::Arc,
+    time::Instant,
 };
 
 use futures::future::join_all;
@@ -8,8 +9,10 @@ use tracing::{debug, instrument};
 
 use crate::{
     common::IgnoreDebug,
-    pipeline::{BuildContext, ErrorCollector, Pipeline, PiperError, ValidationMode, Value},
-    Function, Logged, Request, Response, SingleRequest, SingleResponse, LookupSource,
+    pipeline::{
+        BuildContext, DataSetCreator, ErrorCollector, Pipeline, PiperError, ValidationMode, Value,
+    },
+    Function, Logged, LookupSource, Request, Response, SingleRequest, SingleResponse,
 };
 
 #[derive(Debug)]
@@ -136,30 +139,56 @@ impl Piper {
 
         let schema = &pipeline.input_schema;
 
-        let row: Vec<Value> = schema
-            .columns
-            .iter()
-            .map(|c| {
-                req.data
-                    .get(c.name.as_str())
-                    .map(|v| Value::from(v.clone()))
-                    .unwrap_or_default()
-            })
-            .collect();
-
         let now = Instant::now();
-        let (ret, errors) = pipeline
-            .process_row(
-                row,
-                if req.validate {
-                    ValidationMode::Strict
-                } else {
-                    ValidationMode::Lenient
-                },
-            )?
-            .eval()
-            .await
-            .collect_into_json(req.errors);
+        let (ret, errors) = match req.data {
+            crate::RequestData::Single(data) => {
+                let row = schema
+                    .columns
+                    .iter()
+                    .map(|c| {
+                        data.get(c.name.as_str())
+                            .map(|v| Value::from(v.clone()))
+                            .unwrap_or_default()
+                    })
+                    .collect();
+                pipeline.process_row(
+                    row,
+                    if req.validate {
+                        ValidationMode::Strict
+                    } else {
+                        ValidationMode::Lenient
+                    },
+                )
+            }
+            crate::RequestData::Multi(data) => {
+                let rows = data
+                    .into_iter()
+                    .map(|row| {
+                        schema
+                            .columns
+                            .iter()
+                            .map(|c| {
+                                row.get(c.name.as_str())
+                                    .map(|v| Value::from(v.clone()))
+                                    .unwrap_or_default()
+                            })
+                            .collect()
+                    });
+                let dataset = DataSetCreator::eager(schema.clone(), rows);
+                pipeline.process(
+                    dataset,
+                    if req.validate {
+                        ValidationMode::Strict
+                    } else {
+                        ValidationMode::Lenient
+                    },
+                )
+            }
+        }?
+        .eval()
+        .await
+        .collect_into_json(req.errors);
+
         Ok(SingleResponse {
             pipeline: req.pipeline,
             status: "OK".to_owned(),

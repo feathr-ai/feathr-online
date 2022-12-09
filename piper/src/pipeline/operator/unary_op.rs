@@ -53,7 +53,7 @@ impl Operator for PositiveOperator {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct NegativeOperator;
 
 impl Operator for NegativeOperator {
@@ -104,7 +104,7 @@ impl Operator for NegativeOperator {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct NotOperator;
 
 impl Operator for NotOperator {
@@ -218,5 +218,21 @@ impl Operator for IsNotNullOperator {
 
     fn dump(&self, arguments: Vec<String>) -> String {
         format!("({} is not null)", arguments[0])
+    }
+}
+
+impl std::ops::Neg for Value {
+    type Output = Value;
+
+    fn neg(self) -> Self::Output {
+        NegativeOperator::default().eval(vec![self])
+    }
+}
+
+impl std::ops::Not for Value {
+    type Output = Value;
+
+    fn not(self) -> Self::Output {
+        NotOperator::default().eval(vec![self])
     }
 }

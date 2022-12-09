@@ -1,9 +1,11 @@
+use std::convert::Infallible;
+
 use thiserror::Error;
 
 use super::ValueType;
 
 // All errors that can be returned by the pipeline.
-#[derive(Clone, Debug, Error)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 pub enum PiperError {
     // Unknown error
     #[error("{0}")]
@@ -133,4 +135,13 @@ pub enum PiperError {
 
     #[error("Function with name {0} already exists.")]
     FunctionAlreadyDefined(String),
+}
+
+// This is needed as TryFrom<Value> for Value is automatically implemented and the Error type is Infallible.
+#[allow(clippy::from_over_into)]
+impl Into<PiperError> for Infallible {
+    fn into(self) -> PiperError {
+        // Infallible will never be constructed and returned, so this is unreachable.
+        unreachable!()
+    }
 }

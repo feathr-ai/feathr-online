@@ -7,8 +7,7 @@ use super::Function;
 #[derive(Clone)]
 struct UnaryFunctionWrapper<A, R, F, E>
 where
-    A: Send + Sync + Clone,
-    Value: TryInto<A, Error = E>,
+    A: Send + Sync + Clone + TryFrom<Value, Error = E>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E>: Into<Value>,
     E: Sync + Send + Clone,
@@ -20,8 +19,7 @@ where
 
 impl<A, R, F, E> UnaryFunctionWrapper<A, R, F, E>
 where
-    A: Send + Sync + Clone,
-    Value: TryInto<A, Error = E>,
+    A: Send + Sync + Clone + TryFrom<Value, Error = E>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E>: Into<Value>,
     E: Sync + Send + Clone,
@@ -35,11 +33,11 @@ where
     }
 
     fn invoke(&self, args: &[Value]) -> Value {
-        if args.len() != 1 {
+        if args.len() > 1 {
             return Value::Error(PiperError::InvalidArgumentCount(1, args.len()));
         }
 
-        match args[0].clone().try_into() {
+        match args.get(0).cloned().unwrap_or_default().try_into() {
             Ok(a) => (self.function)(a).into(),
             Err(e) => Err(e).into(),
         }
@@ -48,8 +46,7 @@ where
 
 impl<A, R, F, E> Function for UnaryFunctionWrapper<A, R, F, E>
 where
-    A: Send + Sync + Clone,
-    Value: TryInto<A, Error = E>,
+    A: Send + Sync + Clone + TryFrom<Value, Error = E>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     F: (Fn(A) -> R) + Sync + Send + Clone,
     Result<Value, E>: Into<Value>,
@@ -66,8 +63,7 @@ where
 
 pub fn unary_fn<A, R, F, E>(f: F) -> Box<impl Function>
 where
-    A: Send + Sync + Clone,
-    Value: TryInto<A, Error = E>,
+    A: Send + Sync + Clone + TryFrom<Value, Error = E>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     F: Fn(A) -> R + Sync + Send + Clone,
     Result<Value, E>: Into<Value>,

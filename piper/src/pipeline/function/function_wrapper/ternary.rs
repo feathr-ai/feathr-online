@@ -7,12 +7,9 @@ use super::Function;
 #[derive(Clone)]
 struct TernaryFunctionWrapper<A1, A2, A3, R, F, E1, E2, E3>
 where
-    A1: Send + Sync + Clone,
-    A2: Send + Sync + Clone,
-    A3: Send + Sync + Clone,
-    Value: TryInto<A1, Error = E1>,
-    Value: TryInto<A2, Error = E2>,
-    Value: TryInto<A3, Error = E3>,
+    A1: Send + Sync + Clone + TryFrom<Value, Error = E1>,
+    A2: Send + Sync + Clone + TryFrom<Value, Error = E2>,
+    A3: Send + Sync + Clone + TryFrom<Value, Error = E3>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E1>: Into<Value>,
     Result<Value, E2>: Into<Value>,
@@ -28,12 +25,9 @@ where
 
 impl<A1, A2, A3, R, F, E1, E2, E3> TernaryFunctionWrapper<A1, A2, A3, R, F, E1, E2, E3>
 where
-    A1: Send + Sync + Clone,
-    A2: Send + Sync + Clone,
-    A3: Send + Sync + Clone,
-    Value: TryInto<A1, Error = E1>,
-    Value: TryInto<A2, Error = E2>,
-    Value: TryInto<A3, Error = E3>,
+    A1: Send + Sync + Clone + TryFrom<Value, Error = E1>,
+    A2: Send + Sync + Clone + TryFrom<Value, Error = E2>,
+    A3: Send + Sync + Clone + TryFrom<Value, Error = E3>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E1>: Into<Value>,
     Result<Value, E2>: Into<Value>,
@@ -51,13 +45,13 @@ where
     }
 
     fn invoke(&self, args: &[Value]) -> Value {
-        if args.len() != 3 {
+        if args.len() > 3 {
             return Value::Error(PiperError::InvalidArgumentCount(3, args.len()));
         }
 
-        let a1: Result<A1, E1> = args[0].clone().try_into();
-        let a2: Result<A2, E2> = args[1].clone().try_into();
-        let a3: Result<A3, E3> = args[2].clone().try_into();
+        let a1: Result<A1, E1> = args.get(0).cloned().unwrap_or_default().try_into();
+        let a2: Result<A2, E2> = args.get(1).cloned().unwrap_or_default().try_into();
+        let a3: Result<A3, E3> = args.get(2).cloned().unwrap_or_default().try_into();
 
         match (a1, a2, a3) {
             (Ok(a1), Ok(a2), Ok(a3)) => (self.function)(a1, a2, a3).into(),
@@ -70,12 +64,9 @@ where
 
 impl<A1, A2, A3, R, F, E1, E2, E3> Function for TernaryFunctionWrapper<A1, A2, A3, R, F, E1, E2, E3>
 where
-    A1: Send + Sync + Clone,
-    A2: Send + Sync + Clone,
-    A3: Send + Sync + Clone,
-    Value: TryInto<A1, Error = E1>,
-    Value: TryInto<A2, Error = E2>,
-    Value: TryInto<A3, Error = E3>,
+    A1: Send + Sync + Clone + TryFrom<Value, Error = E1>,
+    A2: Send + Sync + Clone + TryFrom<Value, Error = E2>,
+    A3: Send + Sync + Clone + TryFrom<Value, Error = E3>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     F: Fn(A1, A2, A3) -> R + Sync + Send + Clone,
     Result<Value, E1>: Into<Value>,
@@ -96,12 +87,9 @@ where
 
 pub fn ternary_fn<A1, A2, A3, R, F, E1, E2, E3>(f: F) -> Box<impl Function>
 where
-    A1: Send + Sync + Clone,
-    A2: Send + Sync + Clone,
-    A3: Send + Sync + Clone,
-    Value: TryInto<A1, Error = E1>,
-    Value: TryInto<A2, Error = E2>,
-    Value: TryInto<A3, Error = E3>,
+    A1: Send + Sync + Clone + TryFrom<Value, Error = E1>,
+    A2: Send + Sync + Clone + TryFrom<Value, Error = E2>,
+    A3: Send + Sync + Clone + TryFrom<Value, Error = E3>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E1>: Into<Value>,
     Result<Value, E2>: Into<Value>,

@@ -1,3 +1,4 @@
+mod aggregation_builder;
 mod expression_builders;
 mod operator_builder;
 mod dsl_parser;

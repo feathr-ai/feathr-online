@@ -7,8 +7,7 @@ use super::Function;
 #[derive(Clone)]
 pub struct VariadicFunctionWrapper<A, R, F, E>
 where
-    A: Send + Sync + Clone,
-    Value: TryInto<A, Error = E>,
+    A: Send + Sync + Clone + TryFrom<Value, Error = E>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E>: Into<Value>,
     E: Sync + Send + Clone,
@@ -20,8 +19,7 @@ where
 
 impl<A, R, F, E> VariadicFunctionWrapper<A, R, F, E>
 where
-    A: Send + Sync + Clone,
-    Value: TryInto<A, Error = E>,
+    A: Send + Sync + Clone + TryFrom<Value, Error = E>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E>: Into<Value>,
     E: Sync + Send + Clone,
@@ -46,8 +44,7 @@ where
 
 impl<A, R, F, E> Function for VariadicFunctionWrapper<A, R, F, E>
 where
-    A: Send + Sync + Clone,
-    Value: TryInto<A, Error = E>,
+    A: Send + Sync + Clone + TryFrom<Value, Error = E>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E>: Into<Value>,
     E: Sync + Send + Clone,
@@ -64,8 +61,7 @@ where
 
 pub fn var_fn<A, R, F, E>(f: F) -> Box<impl Function>
 where
-    A: Send + Sync + Clone,
-    Value: TryInto<A, Error = E>,
+    A: Send + Sync + Clone + TryFrom<Value, Error = E>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     F: Fn(Vec<A>) -> R + Sync + Send + Clone,
     Result<Value, E>: Into<Value>,
@@ -86,7 +82,14 @@ mod tests {
 
     #[test]
     fn test_coalesce() {
-        let f = var_fn(|args: Vec<Value>| args.into_iter().find(|v| !v.is_null()).unwrap_or(Value::Null));
-        assert_eq!(f.eval(vec![Value::Null, 42.into(), 2.into(), 3.into()]), 42.into());
+        let f = var_fn(|args: Vec<Value>| {
+            args.into_iter()
+                .find(|v| !v.is_null())
+                .unwrap_or(Value::Null)
+        });
+        assert_eq!(
+            f.eval(vec![Value::Null, 42.into(), 2.into(), 3.into()]),
+            42.into()
+        );
     }
 }

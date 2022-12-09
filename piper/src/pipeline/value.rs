@@ -1,6 +1,4 @@
-#![allow(dead_code, unused_variables)]
-
-use std::{borrow::Cow, collections::HashMap, convert::Infallible, fmt::Display};
+use std::{borrow::Cow, collections::HashMap, fmt::Display};
 
 use chrono::{DateTime, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use serde_json::Number;
@@ -236,6 +234,24 @@ pub enum Value {
     Error(PiperError),
 }
 
+impl Eq for Value {}
+
+impl std::hash::Hash for Value {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match &self {
+            Self::Bool(v) => v.hash(state),
+            Self::Int(v) => v.hash(state),
+            Self::Long(v) => v.hash(state),
+            Self::Float(v) => v.to_bits().hash(state),
+            Self::Double(v) => v.to_bits().hash(state),
+            Self::String(v) => v.hash(state),
+            Self::Array(v) => v.hash(state),
+            Self::DateTime(v) => v.timestamp().hash(state),
+            _ => core::mem::discriminant(self).hash(state),
+        }
+    }
+}
+
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -268,20 +284,8 @@ impl PartialEq for Value {
             (Self::Object(l0), Self::Object(r0)) => l0 == r0,
 
             (Self::DateTime(l0), Self::DateTime(r0)) => l0 == r0,
-            (Self::DateTime(l0), Self::String(r0)) => {
-                *l0 == match str_to_datetime(r0) {
-                    Ok(dt) => dt,
-                    Err(_) => return false,
-                }
-            }
-            (Self::String(l0), Self::DateTime(r0)) => {
-                let l0 = match str_to_datetime(l0) {
-                    Ok(dt) => dt,
-                    Err(_) => return false,
-                };
-                l0 == *r0
-            }
-            (Self::Error(l0), Self::Error(r0)) => false,
+
+            (Self::Error(_), Self::Error(_)) => false,
             _ => core::mem::discriminant(self) == core::mem::discriminant(other),
         }
     }
@@ -357,7 +361,7 @@ impl From<Value> for serde_json::Value {
             Value::DateTime(v) => {
                 serde_json::Value::String(v.format(DEFAULT_DATETIME_FORMAT).to_string())
             }
-            Value::Error(e) => serde_json::Value::Null,
+            Value::Error(_) => serde_json::Value::Null,
         }
     }
 }
@@ -511,23 +515,15 @@ where
     }
 }
 
-impl<T> From<Result<T, Infallible>> for Value
+impl<T, E> From<Result<T, E>> for Value
 where
     T: Into<Value>,
+    E: Into<PiperError>,
 {
-    fn from(value: Result<T, Infallible>) -> Self {
-        value.unwrap().into()
-    }
-}
-
-impl<T> From<Result<T, PiperError>> for Value
-where
-    T: Into<Value>,
-{
-    fn from(value: Result<T, PiperError>) -> Self {
+    fn from(value: Result<T, E>) -> Self {
         match value {
             Ok(v) => v.into(),
-            Err(e) => e.into(),
+            Err(e) => Value::Error(e.into()),
         }
     }
 }
@@ -568,160 +564,279 @@ where
     }
 }
 
-impl TryInto<bool> for Value {
-    type Error = PiperError;
-
-    fn try_into(self) -> Result<bool, PiperError> {
-        self.get_bool()
-    }
-}
-
-impl TryInto<i32> for Value {
-    type Error = PiperError;
-
-    fn try_into(self) -> Result<i32, PiperError> {
-        self.get_int()
-    }
-}
-
-impl TryInto<u32> for Value {
-    type Error = PiperError;
-
-    fn try_into(self) -> Result<u32, PiperError> {
-        self.get_int().map(|v| v as u32)
-    }
-}
-
-impl TryInto<i64> for Value {
-    type Error = PiperError;
-
-    fn try_into(self) -> Result<i64, PiperError> {
-        self.get_long()
-    }
-}
-
-impl TryInto<u64> for Value {
-    type Error = PiperError;
-
-    fn try_into(self) -> Result<u64, PiperError> {
-        self.get_long().map(|v| v as u64)
-    }
-}
-
-impl TryInto<isize> for Value {
-    type Error = PiperError;
-
-    fn try_into(self) -> Result<isize, PiperError> {
-        self.get_long().map(|v| v as isize)
-    }
-}
-
-impl TryInto<usize> for Value {
-    type Error = PiperError;
-
-    fn try_into(self) -> Result<usize, PiperError> {
-        self.get_long().map(|v| v as usize)
-    }
-}
-
-impl TryInto<f32> for Value {
-    type Error = PiperError;
-
-    fn try_into(self) -> Result<f32, PiperError> {
-        self.get_float()
-    }
-}
-
-impl TryInto<f64> for Value {
-    type Error = PiperError;
-
-    fn try_into(self) -> Result<f64, PiperError> {
-        self.get_double()
-    }
-}
-
-impl TryInto<String> for Value {
-    type Error = PiperError;
-
-    fn try_into(self) -> Result<String, PiperError> {
-        self.get_string().map(|s| s.to_string())
-    }
-}
-
-impl TryInto<DateTime<Utc>> for Value {
-    type Error = PiperError;
-
-    fn try_into(self) -> Result<DateTime<Utc>, PiperError> {
-        self.get_datetime()
-    }
-}
-
-impl TryInto<NaiveDate> for Value {
-    type Error = PiperError;
-
-    fn try_into(self) -> Result<NaiveDate, PiperError> {
-        self.get_datetime().map(|d| d.naive_utc().date())
-    }
-}
-
-impl TryInto<NaiveDateTime> for Value {
-    type Error = PiperError;
-
-    fn try_into(self) -> Result<NaiveDateTime, PiperError> {
-        self.get_datetime().map(|d| d.naive_utc())
-    }
-}
-
-impl TryInto<Option<String>> for Value {
-    type Error = PiperError;
-
-    fn try_into(self) -> Result<Option<String>, PiperError> {
-        match self {
-            Value::Null => Ok(None),
-            v => Ok(Some(v.try_into()?)),
+macro_rules! impl_from_for_result {
+    ($t:ty) => {
+        impl From<Value> for Result<$t, PiperError> {
+            fn from(value: Value) -> Result<$t, PiperError> {
+                <$t>::try_from(value)
+            }
         }
-    }
+    };
 }
+impl_from_for_result!(bool);
+impl_from_for_result!(i32);
+impl_from_for_result!(u32);
+impl_from_for_result!(i64);
+impl_from_for_result!(u64);
+impl_from_for_result!(isize);
+impl_from_for_result!(usize);
+impl_from_for_result!(f32);
+impl_from_for_result!(f64);
+impl_from_for_result!(String);
+impl_from_for_result!(DateTime<Utc>);
+impl_from_for_result!(NaiveDate);
+impl_from_for_result!(NaiveDateTime);
 
-impl TryInto<Vec<Value>> for Value {
-    type Error = PiperError;
-
-    fn try_into(self) -> Result<Vec<Value>, PiperError> {
-        self.get_array().cloned()
-    }
-}
-
-impl<T> TryInto<Vec<T>> for Value
+impl<T> From<Value> for Result<Vec<T>, PiperError>
 where
     T: TryFrom<Value, Error = PiperError>,
 {
+    fn from(value: Value) -> Result<Vec<T>, PiperError> {
+        <Vec<T>>::try_from(value)
+    }
+}
+
+impl<T> From<Value> for Result<HashMap<String, T>, PiperError>
+where
+    T: TryFrom<Value, Error = PiperError>,
+{
+    fn from(value: Value) -> Result<HashMap<String, T>, PiperError> {
+        <HashMap<String, T>>::try_from(value)
+    }
+}
+
+impl TryFrom<Value> for bool {
     type Error = PiperError;
 
-    fn try_into(self) -> Result<Vec<T>, PiperError> {
-        match self.get_array() {
-            Ok(array) => array
-                .iter()
-                .map(|v| v.clone().try_into())
-                .collect::<Result<Vec<T>, PiperError>>(),
-            Err(e) => Err(e),
+    fn try_from(value: Value) -> Result<bool, PiperError> {
+        value.get_bool()
+    }
+}
+
+impl TryFrom<Value> for i32 {
+    type Error = PiperError;
+
+    fn try_from(value: Value) -> Result<i32, PiperError> {
+        value.get_int()
+    }
+}
+
+impl TryFrom<Value> for u32 {
+    type Error = PiperError;
+
+    fn try_from(value: Value) -> Result<u32, PiperError> {
+        value.get_int().map(|v| v as u32)
+    }
+}
+
+impl TryFrom<Value> for i64 {
+    type Error = PiperError;
+
+    fn try_from(value: Value) -> Result<i64, PiperError> {
+        value.get_long()
+    }
+}
+
+impl TryFrom<Value> for u64 {
+    type Error = PiperError;
+
+    fn try_from(value: Value) -> Result<u64, PiperError> {
+        value.get_long().map(|v| v as u64)
+    }
+}
+
+impl TryFrom<Value> for isize {
+    type Error = PiperError;
+
+    fn try_from(value: Value) -> Result<isize, PiperError> {
+        value.get_long().map(|v| v as isize)
+    }
+}
+
+impl TryFrom<Value> for usize {
+    type Error = PiperError;
+
+    fn try_from(value: Value) -> Result<usize, PiperError> {
+        value.get_long().map(|v| v as usize)
+    }
+}
+
+impl TryFrom<Value> for f32 {
+    type Error = PiperError;
+
+    fn try_from(value: Value) -> Result<f32, PiperError> {
+        value.get_float()
+    }
+}
+
+impl TryFrom<Value> for f64 {
+    type Error = PiperError;
+
+    fn try_from(value: Value) -> Result<f64, PiperError> {
+        value.get_double()
+    }
+}
+
+impl TryFrom<Value> for String {
+    type Error = PiperError;
+
+    fn try_from(value: Value) -> Result<String, PiperError> {
+        match value {
+            Value::String(s) => Ok(s.into()),
+            _ => Err(PiperError::InvalidTypeCast(
+                value.value_type(),
+                ValueType::Array,
+            )),
         }
     }
 }
 
-impl<T> TryInto<HashMap<String, T>> for Value
+impl TryFrom<Value> for DateTime<Utc> {
+    type Error = PiperError;
+
+    fn try_from(value: Value) -> Result<DateTime<Utc>, PiperError> {
+        value.get_datetime()
+    }
+}
+
+impl TryFrom<Value> for NaiveDate {
+    type Error = PiperError;
+
+    fn try_from(value: Value) -> Result<NaiveDate, PiperError> {
+        value.get_datetime().map(|d| d.naive_utc().date())
+    }
+}
+
+impl TryFrom<Value> for NaiveDateTime {
+    type Error = PiperError;
+
+    fn try_from(value: Value) -> Result<NaiveDateTime, PiperError> {
+        value.get_datetime().map(|d| d.naive_utc())
+    }
+}
+
+impl<T, E> TryFrom<Value> for Vec<T>
 where
-    T: TryFrom<Value, Error = PiperError>,
+    T: TryFrom<Value, Error = E>,
+    E: Into<PiperError>,
 {
     type Error = PiperError;
 
-    fn try_into(self) -> Result<HashMap<String, T>, PiperError> {
-        match self.get_object() {
-            Ok(array) => array
-                .iter()
-                .map(|(k, v)| v.clone().try_into().map(|v| (k.clone(), v)))
-                .collect::<Result<HashMap<String, T>, PiperError>>(),
-            Err(e) => Err(e),
+    fn try_from(value: Value) -> Result<Vec<T>, PiperError> {
+        match value {
+            Value::Array(a) => a
+                .into_iter()
+                .map(|v| T::try_from(v))
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|e| e.into()),
+            _ => Err(PiperError::InvalidTypeCast(
+                value.value_type(),
+                ValueType::Array,
+            )),
         }
+    }
+}
+
+impl<T, E> TryFrom<Value> for HashMap<String, T>
+where
+    T: TryFrom<Value, Error = E>,
+    E: Into<PiperError>,
+{
+    type Error = PiperError;
+
+    fn try_from(value: Value) -> Result<HashMap<String, T>, PiperError> {
+        match value {
+            Value::Object(o) => o
+                .into_iter()
+                .map(|(k, v)| T::try_from(v).map(|v| (k, v)))
+                .collect::<Result<HashMap<_, _>, _>>()
+                .map_err(|e| e.into()),
+            _ => Err(PiperError::InvalidTypeCast(
+                value.value_type(),
+                ValueType::Object,
+            )),
+        }
+    }
+}
+
+macro_rules! impl_try_from_for_option {
+    ($t:ty) => {
+        impl TryFrom<Value> for Option<$t> {
+            type Error = PiperError;
+        
+            fn try_from(value: Value) -> Result<Option<$t>, PiperError> {
+                if value.is_null() {
+                    return Ok(None);
+                }
+                <$t>::try_from(value).map(Some)
+            }
+        }
+    };
+}
+
+impl_try_from_for_option!(bool);
+impl_try_from_for_option!(i32);
+impl_try_from_for_option!(u32);
+impl_try_from_for_option!(i64);
+impl_try_from_for_option!(u64);
+impl_try_from_for_option!(isize);
+impl_try_from_for_option!(usize);
+impl_try_from_for_option!(f32);
+impl_try_from_for_option!(f64);
+impl_try_from_for_option!(String);
+impl_try_from_for_option!(DateTime<Utc>);
+impl_try_from_for_option!(NaiveDate);
+impl_try_from_for_option!(NaiveDateTime);
+
+impl<T, E> TryFrom<Value> for Option<Vec<T>>
+where
+    T: TryFrom<Value, Error = E>,
+    E: Into<PiperError>,
+{
+    type Error = PiperError;
+
+    fn try_from(value: Value) -> Result<Option<Vec<T>>, PiperError> {
+        if value.is_null() {
+            return Ok(None);
+        }
+        match value {
+            Value::Array(a) => a
+                .into_iter()
+                .map(|v| T::try_from(v))
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|e| e.into()),
+            _ => Err(PiperError::InvalidTypeCast(
+                value.value_type(),
+                ValueType::Array,
+            )),
+        }
+        .map(Some)
+    }
+}
+
+impl<T, E> TryFrom<Value> for Option<HashMap<String, T>>
+where
+    T: TryFrom<Value, Error = E>,
+    E: Into<PiperError>,
+{
+    type Error = PiperError;
+
+    fn try_from(value: Value) -> Result<Option<HashMap<String, T>>, PiperError> {
+        if value.is_null() {
+            return Ok(None);
+        }
+        match value {
+            Value::Object(o) => o
+                .into_iter()
+                .map(|(k, v)| T::try_from(v).map(|v| (k, v)))
+                .collect::<Result<HashMap<_, _>, _>>()
+                .map_err(|e| e.into()),
+            _ => Err(PiperError::InvalidTypeCast(
+                value.value_type(),
+                ValueType::Object,
+            )),
+        }
+        .map(Some)
     }
 }
 
@@ -932,7 +1047,7 @@ impl Value {
 
         match self {
             Value::Null => Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type)),
-            Value::Bool(v) => {
+            Value::Bool(_) => {
                 Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type))
             }
             Value::Int(v) => match value_type {
@@ -963,10 +1078,10 @@ impl Value {
                 ValueType::DateTime => str_to_datetime(v.as_ref()).into(),
                 _ => Value::Error(PiperError::InvalidTypeCast(ValueType::String, value_type)),
             },
-            Value::Array(v) => {
+            Value::Array(_) => {
                 Value::Error(PiperError::InvalidTypeCast(ValueType::Array, value_type))
             }
-            Value::Object(v) => {
+            Value::Object(_) => {
                 Value::Error(PiperError::InvalidTypeCast(ValueType::Object, value_type))
             }
             Value::DateTime(v) => match value_type {
@@ -1172,7 +1287,7 @@ fn str_to_datetime(v: &str) -> Result<DateTime<Utc>, PiperError> {
 mod tests {
     use chrono::NaiveDate;
 
-    use crate::pipeline::{Value, value::str_to_datetime};
+    use crate::pipeline::{value::str_to_datetime, Value};
 
     #[test]
     fn value_conv() {
@@ -1213,9 +1328,7 @@ mod tests {
     fn datetime_str_cast() {
         // Auto-cast between string and datetime
         let vs: Value = "2022-03-04".to_string().into();
-        let vd: Value = NaiveDate::from_ymd_opt(2022, 3, 4)
-            .unwrap()
-            .into();
+        let vd: Value = NaiveDate::from_ymd_opt(2022, 3, 4).unwrap().into();
         assert_eq!(vs.get_datetime().unwrap(), vd.get_datetime().unwrap());
         assert_eq!(vd.get_string().unwrap(), "2022-03-04 00:00:00");
     }
@@ -1246,17 +1359,30 @@ mod tests {
         assert_eq!(Value::Float(1f32), Value::Int(1));
         assert_eq!(Value::Long(1), Value::Double(1f64));
 
-        assert!( Value::Int(1) < Value::Int(2));
-        assert!( Value::Long(1) < Value::Int(2));
-        assert!( Value::Float(1f32) < Value::Int(2));
-        assert!( Value::Int(1) < Value::Double(2f64));
+        assert!(Value::Int(1) < Value::Int(2));
+        assert!(Value::Long(1) < Value::Int(2));
+        assert!(Value::Float(1f32) < Value::Int(2));
+        assert!(Value::Int(1) < Value::Double(2f64));
 
-        assert!( Value::Bool(true) != Value::Double(2f64));
+        assert!(Value::Bool(true) != Value::Double(2f64));
 
-        assert_eq!(Value::String("2022-03-04".into()), Value::DateTime(str_to_datetime("2022-03-04").unwrap()));
+        assert_eq!(
+            Value::String("2022-03-04".into()).get_datetime().unwrap(),
+            Value::DateTime(str_to_datetime("2022-03-04").unwrap())
+                .get_datetime()
+                .unwrap()
+        );
 
-        assert!(Value::String("2022-03-01".into()) < Value::DateTime(str_to_datetime("2022-03-04").unwrap()));
+        assert!(
+            Value::String("2022-03-01".into()).get_datetime().unwrap()
+                < Value::DateTime(str_to_datetime("2022-03-04").unwrap())
+                    .get_datetime()
+                    .unwrap()
+        );
 
-        assert_eq!(Value::Array(vec![Value::Int(1), Value::Int(2)]), Value::Array(vec![Value::Int(1), Value::Int(2)]));
+        assert_eq!(
+            Value::Array(vec![Value::Int(1), Value::Int(2)]),
+            Value::Array(vec![Value::Int(1), Value::Int(2)])
+        );
     }
 }

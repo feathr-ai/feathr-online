@@ -7,6 +7,7 @@ use crate::pipeline::{
 
 use super::TransformationBuilder;
 
+#[derive(Debug)]
 pub struct ProjectTransformationBuilder {
     pub columns: Vec<(String, Box<dyn ExpressionBuilder>)>,
 }
