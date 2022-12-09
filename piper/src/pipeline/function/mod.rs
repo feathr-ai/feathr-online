@@ -242,7 +242,7 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     function_map.insert("map_contains_key".to_string(), binary_fn(|m: HashMap<String, Value>, key: String| m.contains_key(&key)));
     // map_entries
     // map_filter
-    // map_from_arrays
+    function_map.insert("map_from_arrays".to_string(), binary_fn(|keys: Vec<String>, values: Vec<Value>| keys.into_iter().zip(values).collect::<HashMap<_, _>>()));
     // map_from_entries
     function_map.insert("map_keys".to_string(), unary_fn(|m: HashMap<String, Value>| m.into_keys().collect::<Vec<_>>()));
     function_map.insert("map_values".to_string(), unary_fn(|m: HashMap<String, Value>| m.into_values().collect::<Vec<_>>()));

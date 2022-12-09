@@ -7,14 +7,10 @@ use super::Function;
 #[derive(Clone)]
 struct QuaternaryFunctionWrapper<A1, A2, A3, A4, R, F, E1, E2, E3, E4>
 where
-    A1: Send + Sync + Clone,
-    A2: Send + Sync + Clone,
-    A3: Send + Sync + Clone,
-    A4: Send + Sync + Clone,
-    Value: TryInto<A1, Error = E1>,
-    Value: TryInto<A2, Error = E2>,
-    Value: TryInto<A3, Error = E3>,
-    Value: TryInto<A4, Error = E4>,
+    A1: Send + Sync + Clone + TryFrom<Value, Error = E1>,
+    A2: Send + Sync + Clone + TryFrom<Value, Error = E2>,
+    A3: Send + Sync + Clone + TryFrom<Value, Error = E3>,
+    A4: Send + Sync + Clone + TryFrom<Value, Error = E4>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E1>: Into<Value>,
     Result<Value, E2>: Into<Value>,
@@ -31,16 +27,13 @@ where
     _phantom: PhantomData<(A1, A2, A3, A4, R, E1, E2, E3, E4)>,
 }
 
-impl<A1, A2, A3, A4, R, F, E1, E2, E3, E4> QuaternaryFunctionWrapper<A1, A2, A3, A4, R, F, E1, E2, E3, E4>
+impl<A1, A2, A3, A4, R, F, E1, E2, E3, E4>
+    QuaternaryFunctionWrapper<A1, A2, A3, A4, R, F, E1, E2, E3, E4>
 where
-    A1: Send + Sync + Clone,
-    A2: Send + Sync + Clone,
-    A3: Send + Sync + Clone,
-    A4: Send + Sync + Clone,
-    Value: TryInto<A1, Error = E1>,
-    Value: TryInto<A2, Error = E2>,
-    Value: TryInto<A3, Error = E3>,
-    Value: TryInto<A4, Error = E4>,
+    A1: Send + Sync + Clone + TryFrom<Value, Error = E1>,
+    A2: Send + Sync + Clone + TryFrom<Value, Error = E2>,
+    A3: Send + Sync + Clone + TryFrom<Value, Error = E3>,
+    A4: Send + Sync + Clone + TryFrom<Value, Error = E4>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E1>: Into<Value>,
     Result<Value, E2>: Into<Value>,
@@ -79,16 +72,13 @@ where
     }
 }
 
-impl<A1, A2, A3, A4, R, F, E1, E2, E3, E4> Function for QuaternaryFunctionWrapper<A1, A2, A3, A4, R, F, E1, E2, E3, E4>
+impl<A1, A2, A3, A4, R, F, E1, E2, E3, E4> Function
+    for QuaternaryFunctionWrapper<A1, A2, A3, A4, R, F, E1, E2, E3, E4>
 where
-    A1: Send + Sync + Clone,
-    A2: Send + Sync + Clone,
-    A3: Send + Sync + Clone,
-    A4: Send + Sync + Clone,
-    Value: TryInto<A1, Error = E1>,
-    Value: TryInto<A2, Error = E2>,
-    Value: TryInto<A3, Error = E3>,
-    Value: TryInto<A4, Error = E4>,
+    A1: Send + Sync + Clone + TryFrom<Value, Error = E1>,
+    A2: Send + Sync + Clone + TryFrom<Value, Error = E2>,
+    A3: Send + Sync + Clone + TryFrom<Value, Error = E3>,
+    A4: Send + Sync + Clone + TryFrom<Value, Error = E4>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     F: Fn(A1, A2, A3, A4) -> R + Sync + Send + Clone,
     Result<Value, E1>: Into<Value>,
@@ -111,14 +101,10 @@ where
 
 pub fn quaternary_fn<A1, A2, A3, A4, R, F, E1, E2, E3, E4>(f: F) -> Box<impl Function>
 where
-    A1: Send + Sync + Clone,
-    A2: Send + Sync + Clone,
-    A3: Send + Sync + Clone,
-    A4: Send + Sync + Clone,
-    Value: TryInto<A1, Error = E1>,
-    Value: TryInto<A2, Error = E2>,
-    Value: TryInto<A3, Error = E3>,
-    Value: TryInto<A4, Error = E4>,
+    A1: Send + Sync + Clone + TryFrom<Value, Error = E1>,
+    A2: Send + Sync + Clone + TryFrom<Value, Error = E2>,
+    A3: Send + Sync + Clone + TryFrom<Value, Error = E3>,
+    A4: Send + Sync + Clone + TryFrom<Value, Error = E4>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E1>: Into<Value>,
     Result<Value, E2>: Into<Value>,

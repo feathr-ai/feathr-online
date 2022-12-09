@@ -128,7 +128,7 @@ macro_rules! binary_math_op {
                     [ValueType::Double, ValueType::Long] => Ok(ValueType::Double),
                     [ValueType::Double, ValueType::Float] => Ok(ValueType::Double),
                     [ValueType::Double, ValueType::Double] => Ok(ValueType::Double),
-            
+
                     [ValueType::Dynamic, _] => Ok(ValueType::Dynamic),
                     [_, ValueType::Dynamic] => Ok(ValueType::Dynamic),
 
@@ -227,7 +227,7 @@ impl Operator for DivOperator {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ModOperator;
 
 impl Operator for ModOperator {
@@ -255,5 +255,69 @@ impl Operator for ModOperator {
 
     fn dump(&self, arguments: Vec<String>) -> String {
         format!("({} % {})", arguments[0], arguments[1])
+    }
+}
+
+impl std::ops::Add for Value {
+    type Output = Value;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        PlusOperator::default().eval(vec![self, rhs])
+    }
+}
+
+impl std::ops::Sub for Value {
+    type Output = Value;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        MinusOperator::default().eval(vec![self, rhs])
+    }
+}
+
+impl std::ops::Mul for Value {
+    type Output = Value;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        MultiplyOperator::default().eval(vec![self, rhs])
+    }
+}
+
+impl std::ops::Div for Value {
+    type Output = Value;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        DivideOperator::default().eval(vec![self, rhs])
+    }
+}
+
+impl std::ops::Rem for Value {
+    type Output = Value;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        ModOperator::default().eval(vec![self, rhs])
+    }
+}
+
+impl std::ops::AddAssign for Value {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = PlusOperator::default().eval(vec![self.clone(), rhs]);
+    }
+}
+
+impl std::ops::SubAssign for Value {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = MinusOperator::default().eval(vec![self.clone(), rhs]);
+    }
+}
+
+impl std::ops::MulAssign for Value {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = MultiplyOperator::default().eval(vec![self.clone(), rhs]);
+    }
+}
+
+impl std::ops::DivAssign for Value {
+    fn div_assign(&mut self, rhs: Self) {
+        *self = DivideOperator::default().eval(vec![self.clone(), rhs]);
     }
 }

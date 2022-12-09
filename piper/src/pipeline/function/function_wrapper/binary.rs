@@ -8,10 +8,8 @@ use super::Function;
 #[derive(Clone)]
 struct BinaryFunctionWrapper<A1, A2, R, F, E1, E2>
 where
-    A1: Send + Sync,
-    A2: Send + Sync,
-    Value: TryInto<A1, Error = E1>,
-    Value: TryInto<A2, Error = E2>,
+    A1: Send + Sync + TryFrom<Value, Error = E1>,
+    A2: Send + Sync + TryFrom<Value, Error = E2>,
     R: Into<Value> + Sync + Send + ValueTypeOf,
     Result<Value, E1>: Into<Value>,
     Result<Value, E2>: Into<Value>,
@@ -25,10 +23,8 @@ where
 
 impl<A1, A2, R, F, E1, E2> BinaryFunctionWrapper<A1, A2, R, F, E1, E2>
 where
-    A1: Send + Sync,
-    A2: Send + Sync,
-    Value: TryInto<A1, Error = E1>,
-    Value: TryInto<A2, Error = E2>,
+    A1: Send + Sync + TryFrom<Value, Error = E1>,
+    A2: Send + Sync + TryFrom<Value, Error = E2>,
     R: Into<Value> + Sync + Send + ValueTypeOf,
     Result<Value, E1>: Into<Value>,
     Result<Value, E2>: Into<Value>,
@@ -61,10 +57,8 @@ where
 
 impl<A1, A2, R, F, E1, E2> Function for BinaryFunctionWrapper<A1, A2, R, F, E1, E2>
 where
-    A1: Send + Sync + Clone,
-    A2: Send + Sync + Clone,
-    Value: TryInto<A1, Error = E1>,
-    Value: TryInto<A2, Error = E2>,
+    A1: Send + Sync + Clone + TryFrom<Value, Error = E1>,
+    A2: Send + Sync + Clone + TryFrom<Value, Error = E2>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     F: Fn(A1, A2) -> R + Sync + Send + Clone,
     Result<Value, E1>: Into<Value>,
@@ -83,10 +77,8 @@ where
 
 pub fn binary_fn<A1, A2, R, F, E1, E2>(f: F) -> Box<impl Function>
 where
-    A1: Send + Sync + Clone,
-    A2: Send + Sync + Clone,
-    Value: TryInto<A1, Error = E1>,
-    Value: TryInto<A2, Error = E2>,
+    A1: Send + Sync + Clone + TryFrom<Value, Error = E1>,
+    A2: Send + Sync + Clone + TryFrom<Value, Error = E2>,
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     Result<Value, E1>: Into<Value>,
     Result<Value, E2>: Into<Value>,
