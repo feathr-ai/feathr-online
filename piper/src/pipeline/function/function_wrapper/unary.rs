@@ -33,11 +33,11 @@ where
     }
 
     fn invoke(&self, args: &[Value]) -> Value {
-        if args.len() != 1 {
+        if args.len() > 1 {
             return Value::Error(PiperError::InvalidArgumentCount(1, args.len()));
         }
 
-        match args[0].clone().try_into() {
+        match args.get(0).cloned().unwrap_or_default().try_into() {
             Ok(a) => (self.function)(a).into(),
             Err(e) => Err(e).into(),
         }

@@ -564,6 +564,47 @@ where
     }
 }
 
+macro_rules! impl_from_for_result {
+    ($t:ty) => {
+        impl From<Value> for Result<$t, PiperError> {
+            fn from(value: Value) -> Result<$t, PiperError> {
+                <$t>::try_from(value)
+            }
+        }
+    };
+}
+impl_from_for_result!(bool);
+impl_from_for_result!(i32);
+impl_from_for_result!(u32);
+impl_from_for_result!(i64);
+impl_from_for_result!(u64);
+impl_from_for_result!(isize);
+impl_from_for_result!(usize);
+impl_from_for_result!(f32);
+impl_from_for_result!(f64);
+impl_from_for_result!(String);
+impl_from_for_result!(DateTime<Utc>);
+impl_from_for_result!(NaiveDate);
+impl_from_for_result!(NaiveDateTime);
+
+impl<T> From<Value> for Result<Vec<T>, PiperError>
+where
+    T: TryFrom<Value, Error = PiperError>,
+{
+    fn from(value: Value) -> Result<Vec<T>, PiperError> {
+        <Vec<T>>::try_from(value)
+    }
+}
+
+impl<T> From<Value> for Result<HashMap<String, T>, PiperError>
+where
+    T: TryFrom<Value, Error = PiperError>,
+{
+    fn from(value: Value) -> Result<HashMap<String, T>, PiperError> {
+        <HashMap<String, T>>::try_from(value)
+    }
+}
+
 impl TryFrom<Value> for bool {
     type Error = PiperError;
 
@@ -718,152 +759,34 @@ where
     }
 }
 
-impl TryFrom<Value> for Option<bool> {
-    type Error = PiperError;
-
-    fn try_from(value: Value) -> Result<Option<bool>, PiperError> {
-        if value.is_null() {
-            return Ok(None);
+macro_rules! impl_try_from_for_option {
+    ($t:ty) => {
+        impl TryFrom<Value> for Option<$t> {
+            type Error = PiperError;
+        
+            fn try_from(value: Value) -> Result<Option<$t>, PiperError> {
+                if value.is_null() {
+                    return Ok(None);
+                }
+                <$t>::try_from(value).map(Some)
+            }
         }
-        value.get_bool().map(Some)
-    }
+    };
 }
 
-impl TryFrom<Value> for Option<i32> {
-    type Error = PiperError;
-
-    fn try_from(value: Value) -> Result<Option<i32>, PiperError> {
-        if value.is_null() {
-            return Ok(None);
-        }
-        value.get_int().map(Some)
-    }
-}
-
-impl TryFrom<Value> for Option<u32> {
-    type Error = PiperError;
-
-    fn try_from(value: Value) -> Result<Option<u32>, PiperError> {
-        if value.is_null() {
-            return Ok(None);
-        }
-        value.get_int().map(|v| v as u32).map(Some)
-    }
-}
-
-impl TryFrom<Value> for Option<i64> {
-    type Error = PiperError;
-
-    fn try_from(value: Value) -> Result<Option<i64>, PiperError> {
-        if value.is_null() {
-            return Ok(None);
-        }
-        value.get_long().map(Some)
-    }
-}
-
-impl TryFrom<Value> for Option<u64> {
-    type Error = PiperError;
-
-    fn try_from(value: Value) -> Result<Option<u64>, PiperError> {
-        if value.is_null() {
-            return Ok(None);
-        }
-        value.get_long().map(|v| v as u64).map(Some)
-    }
-}
-
-impl TryFrom<Value> for Option<isize> {
-    type Error = PiperError;
-
-    fn try_from(value: Value) -> Result<Option<isize>, PiperError> {
-        if value.is_null() {
-            return Ok(None);
-        }
-        value.get_long().map(|v| v as isize).map(Some)
-    }
-}
-
-impl TryFrom<Value> for Option<usize> {
-    type Error = PiperError;
-
-    fn try_from(value: Value) -> Result<Option<usize>, PiperError> {
-        if value.is_null() {
-            return Ok(None);
-        }
-        value.get_long().map(|v| v as usize).map(Some)
-    }
-}
-
-impl TryFrom<Value> for Option<f32> {
-    type Error = PiperError;
-
-    fn try_from(value: Value) -> Result<Option<f32>, PiperError> {
-        if value.is_null() {
-            return Ok(None);
-        }
-        value.get_float().map(Some)
-    }
-}
-
-impl TryFrom<Value> for Option<f64> {
-    type Error = PiperError;
-
-    fn try_from(value: Value) -> Result<Option<f64>, PiperError> {
-        if value.is_null() {
-            return Ok(None);
-        }
-        value.get_double().map(Some)
-    }
-}
-
-impl TryFrom<Value> for Option<String> {
-    type Error = PiperError;
-
-    fn try_from(value: Value) -> Result<Option<String>, PiperError> {
-        match value {
-            Value::String(s) => Ok(Some(s.into())),
-            Value::Null => Ok(None),
-            _ => Err(PiperError::InvalidTypeCast(
-                value.value_type(),
-                ValueType::String,
-            )),
-        }
-    }
-}
-
-impl TryFrom<Value> for Option<DateTime<Utc>> {
-    type Error = PiperError;
-
-    fn try_from(value: Value) -> Result<Option<DateTime<Utc>>, PiperError> {
-        if value.is_null() {
-            return Ok(None);
-        }
-        value.get_datetime().map(Some)
-    }
-}
-
-impl TryFrom<Value> for Option<NaiveDate> {
-    type Error = PiperError;
-
-    fn try_from(value: Value) -> Result<Option<NaiveDate>, PiperError> {
-        if value.is_null() {
-            return Ok(None);
-        }
-        value.get_datetime().map(|d| d.naive_utc().date()).map(Some)
-    }
-}
-
-impl TryFrom<Value> for Option<NaiveDateTime> {
-    type Error = PiperError;
-
-    fn try_from(value: Value) -> Result<Option<NaiveDateTime>, PiperError> {
-        if value.is_null() {
-            return Ok(None);
-        }
-        value.get_datetime().map(|d| d.naive_utc()).map(Some)
-    }
-}
+impl_try_from_for_option!(bool);
+impl_try_from_for_option!(i32);
+impl_try_from_for_option!(u32);
+impl_try_from_for_option!(i64);
+impl_try_from_for_option!(u64);
+impl_try_from_for_option!(isize);
+impl_try_from_for_option!(usize);
+impl_try_from_for_option!(f32);
+impl_try_from_for_option!(f64);
+impl_try_from_for_option!(String);
+impl_try_from_for_option!(DateTime<Utc>);
+impl_try_from_for_option!(NaiveDate);
+impl_try_from_for_option!(NaiveDateTime);
 
 impl<T, E> TryFrom<Value> for Option<Vec<T>>
 where

@@ -45,13 +45,13 @@ where
     }
 
     fn invoke(&self, args: &[Value]) -> Value {
-        if args.len() != 3 {
+        if args.len() > 3 {
             return Value::Error(PiperError::InvalidArgumentCount(3, args.len()));
         }
 
-        let a1: Result<A1, E1> = args[0].clone().try_into();
-        let a2: Result<A2, E2> = args[1].clone().try_into();
-        let a3: Result<A3, E3> = args[2].clone().try_into();
+        let a1: Result<A1, E1> = args.get(0).cloned().unwrap_or_default().try_into();
+        let a2: Result<A2, E2> = args.get(1).cloned().unwrap_or_default().try_into();
+        let a3: Result<A3, E3> = args.get(2).cloned().unwrap_or_default().try_into();
 
         match (a1, a2, a3) {
             (Ok(a1), Ok(a2), Ok(a3)) => (self.function)(a1, a2, a3).into(),
