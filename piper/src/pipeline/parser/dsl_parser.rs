@@ -14,6 +14,7 @@ peg::parser! {
         use super::super::operator_builder::*;
         use super::super::transformation_builder::*;
         use super::super::pipeline_builder::*;
+        use super::super::super::transformation::JoinKind;
 
         pub rule program() -> Vec<PipelineBuilder>
             = ps:( _ p:pipeline(){ p } )* _ { ps }
@@ -105,9 +106,15 @@ peg::parser! {
                 ExplodeTransformationBuilder::create(column.to_string(), exploded_type)
             }
         pub rule lookup_transformation() ->  Box<dyn TransformationBuilder>
-            = "lookup" _ columns:(rename_with_type() **<1,> list_sep()) _ "from" _ source:identifier() _ "on" _ key:expression() {
-                LookupTransformationBuilder::new(columns, source, key)
+            = "lookup" join_kind:("kind" _ "=" _ kind:join_kind() { kind })? _ columns:(rename_with_type() **<1,> list_sep()) _ "from" _ source:identifier() _ "on" _ key:expression() {
+                LookupTransformationBuilder::new(join_kind.unwrap_or_default(), columns, source, key)
             }
+        
+        rule join_kind() -> JoinKind
+            = "single" { JoinKind::Single }
+            / "left-inner" { JoinKind::LeftInner }
+            / "left-outer" { JoinKind::LeftOuter }
+
         rule top_transformation() -> Box<dyn TransformationBuilder>
             = "top" _ count:u64_lit() _ "by" _ exp:expression()  _ order:sort_order()? _ null:null_pos()? {
                 TopTransformationBuilder::create(count.get_long().unwrap() as usize, exp, order, null)

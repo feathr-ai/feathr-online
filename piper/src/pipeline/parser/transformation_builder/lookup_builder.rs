@@ -1,6 +1,6 @@
 use crate::pipeline::{
     parser::expression_builders::ExpressionBuilder,
-    transformation::{LookupTransformation, Transformation},
+    transformation::{LookupTransformation, Transformation, JoinKind},
     PiperError, Schema, ValueType, pipelines::BuildContext,
 };
 
@@ -8,6 +8,7 @@ use super::TransformationBuilder;
 
 #[derive(Debug)]
 pub struct LookupTransformationBuilder {
+    join_kind: JoinKind,
     fields: Vec<(String, Option<String>, ValueType)>,
     source: String,
     key: Box<dyn ExpressionBuilder>,
@@ -15,11 +16,13 @@ pub struct LookupTransformationBuilder {
 
 impl LookupTransformationBuilder {
     pub fn new(
+        join_kind: JoinKind,
         fields: Vec<(String, Option<String>, ValueType)>,
         source: String,
         key: Box<dyn ExpressionBuilder>,
     ) -> Box<Self> {
         Box::new(Self {
+            join_kind,
             fields,
             source,
             key,
@@ -36,6 +39,7 @@ impl TransformationBuilder for LookupTransformationBuilder {
             }
         }
         LookupTransformation::create(
+            self.join_kind,
             input_schema,
             self.source.clone(),
             ctx.get_lookup_source(&self.source)?,
