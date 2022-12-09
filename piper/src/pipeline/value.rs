@@ -285,7 +285,7 @@ impl PartialEq for Value {
 
             (Self::DateTime(l0), Self::DateTime(r0)) => l0 == r0,
 
-            (Self::Error(_), Self::Error(_)) => false,
+            (Self::Error(l0), Self::Error(r0)) => l0 == r0,
             _ => core::mem::discriminant(self) == core::mem::discriminant(other),
         }
     }
@@ -763,7 +763,7 @@ macro_rules! impl_try_from_for_option {
     ($t:ty) => {
         impl TryFrom<Value> for Option<$t> {
             type Error = PiperError;
-        
+
             fn try_from(value: Value) -> Result<Option<$t>, PiperError> {
                 if value.is_null() {
                     return Ok(None);
@@ -1046,7 +1046,7 @@ impl Value {
         }
 
         match self {
-            Value::Null => Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type)),
+            Value::Null => Value::Null,
             Value::Bool(_) => {
                 Value::Error(PiperError::InvalidTypeCast(self.value_type(), value_type))
             }
@@ -1108,7 +1108,7 @@ impl Value {
         match self {
             Value::Null => match value_type {
                 ValueType::Bool => false.into(),
-                _ => PiperError::InvalidTypeCast(self.value_type(), value_type).into(),
+                _ => Value::Null,
             },
             Value::Bool(v) => match value_type {
                 ValueType::Int => i32::from(v).into(),
