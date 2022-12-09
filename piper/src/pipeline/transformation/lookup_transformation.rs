@@ -105,30 +105,48 @@ impl Transformation for LookupTransformation {
     }
 
     fn dump(&self) -> String {
-        format!(
-            "lookup {} from {} on {}",
-            self.lookup_fields
-                .columns
-                .iter()
-                .zip(
-                    self.output_schema
-                        .columns
-                        .iter()
-                        .skip(self.output_schema.columns.len() - self.lookup_fields.columns.len())
-                )
-                .map(|(field, new_field)| if field.name == new_field.name {
+        let fields = self
+            .lookup_fields
+            .columns
+            .iter()
+            .zip(
+                self.output_schema
+                    .columns
+                    .iter()
+                    .skip(self.output_schema.columns.len() - self.lookup_fields.columns.len()),
+            )
+            .map(|(field, new_field)| {
+                if field.name == new_field.name {
                     format!("{} as {}", field.name, field.column_type)
                 } else {
                     format!(
                         "{} = {} as {}",
                         new_field.name, field.name, field.column_type
                     )
-                })
-                .collect::<Vec<String>>()
-                .join(", "),
-            self.lookup_source_name,
-            self.key.dump()
-        )
+                }
+            })
+            .collect::<Vec<String>>()
+            .join(", ");
+        if self.join_kind == JoinKind::Single {
+            format!(
+                "lookup {} from {} on {}",
+                fields,
+                self.lookup_source_name,
+                self.key.dump()
+            )
+        } else {
+            format!(
+                "join kind={} {} from {} on {}",
+                match self.join_kind {
+                    JoinKind::Single => unreachable!(),
+                    JoinKind::LeftInner => "left-inner",
+                    JoinKind::LeftOuter => "left-outer",
+                },
+                fields,
+                self.lookup_source_name,
+                self.key.dump()
+            )
+        }
     }
 }
 

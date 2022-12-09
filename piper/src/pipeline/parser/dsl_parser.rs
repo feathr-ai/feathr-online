@@ -106,13 +106,15 @@ peg::parser! {
                 ExplodeTransformationBuilder::create(column.to_string(), exploded_type)
             }
         pub rule lookup_transformation() ->  Box<dyn TransformationBuilder>
-            = "lookup" join_kind:("kind" _ "=" _ kind:join_kind() { kind })? _ columns:(rename_with_type() **<1,> list_sep()) _ "from" _ source:identifier() _ "on" _ key:expression() {
-                LookupTransformationBuilder::new(join_kind.unwrap_or_default(), columns, source, key)
+            = "lookup" _ columns:(rename_with_type() **<1,> list_sep()) _ "from" _ source:identifier() _ "on" _ key:expression() {
+                LookupTransformationBuilder::new(JoinKind::Single, columns, source, key)
+            }
+            / "join" _ "kind" _ "=" _ kind:join_kind() _ columns:(rename_with_type() **<1,> list_sep()) _ "from" _ source:identifier() _ "on" _ key:expression() {
+                LookupTransformationBuilder::new(kind, columns, source, key)
             }
         
-        rule join_kind() -> JoinKind
-            = "single" { JoinKind::Single }
-            / "left-inner" { JoinKind::LeftInner }
+        pub rule join_kind() -> JoinKind
+            = "left-inner" { JoinKind::LeftInner }
             / "left-outer" { JoinKind::LeftOuter }
 
         rule top_transformation() -> Box<dyn TransformationBuilder>
@@ -441,6 +443,19 @@ mod tests {
         // The `by` part can be omitted
         let input = "summarize a=f(x), b=g(y+z), c=count()";
         let result = pipeline_parser::summarize_transformation(input);
+        println!("{:?}", result);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_lookup() {
+        let input = "lookup a, b,c from name on k";
+        let result = pipeline_parser::lookup_transformation(input);
+        println!("{:?}", result);
+        assert!(result.is_ok());
+
+        let input = "join kind=left-inner a=f1 as int,b,c from name on a+b-c";
+        let result = pipeline_parser::lookup_transformation(input);
         println!("{:?}", result);
         assert!(result.is_ok());
     }
