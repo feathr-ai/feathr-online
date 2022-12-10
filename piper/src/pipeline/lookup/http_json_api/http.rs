@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use async_trait::async_trait;
 use once_cell::sync::OnceCell;
@@ -6,7 +6,10 @@ use reqwest::{Client, Method};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, instrument};
 
-use crate::pipeline::{PiperError, Value, ValueType};
+use crate::{
+    pipeline::{PiperError, Value, ValueType},
+    Logged,
+};
 
 use super::{
     super::{get_secret, LookupSource},
@@ -52,21 +55,13 @@ pub struct HttpJsonApi {
     // TODO: Support extraction from response headers
     result_path: HashMap<String, String>,
 
-    /**
-     * JSONPath always returns array, even though it is only one element.
-     * This flag indicates that the result should be an array if there is only one element.
-     * Result will always be treated as array if it has multiple elements.
-     */
-    #[serde(skip_serializing_if = "HashSet::is_empty", default)]
-    result_is_array: HashSet<String>,
-
     #[serde(skip, default)]
     client: OnceCell<Client>,
     // TODO: Support auth, for now only static key in header or query param is supported
 }
 
 impl HttpJsonApi {
-    async fn do_lookup(&self, k: &Value, fields: &[String]) -> Result<Vec<Value>, PiperError> {
+    async fn do_lookup(&self, k: &Value, fields: &[String]) -> Result<Vec<Vec<Value>>, PiperError> {
         // The key string will be used in url, header, and query param, but not in request body.
         let key = k
             .clone()
@@ -83,6 +78,7 @@ impl HttpJsonApi {
         };
         let m = self.method.clone().unwrap_or_else(|| "GET".to_string());
         let method = Method::from_bytes(m.to_uppercase().as_bytes())
+            .log()
             .map_err(|_| PiperError::InvalidMethod(m))?;
         let client = self.client.get_or_init(Client::new);
         let req = self.auth.auth(client.request(method, url)).await?;
@@ -111,6 +107,7 @@ impl HttpJsonApi {
                     let t = t.clone();
                     // We use original key value here, not the stringified one.
                     let t = jsonpath_lib::replace_with(t, p, &mut |_| Some(k.clone().into()))
+                        .log()
                         .map_err(|e| PiperError::InvalidJsonPath(e.to_string()))?;
                     req.json(&t)
                 }
@@ -121,13 +118,17 @@ impl HttpJsonApi {
         let resp = req
             .send()
             .await
+            .log()
             .map_err(|e| PiperError::HttpError(e.to_string()))?
             .error_for_status()
+            .log()
             .map_err(|e| PiperError::HttpError(e.to_string()))?
             .json::<serde_json::Value>()
             .await
+            .log()
             .map_err(|e| PiperError::HttpError(e.to_string()))?;
-        fields
+        // Each element in this vector is a column of field values, so we need to transpose before returning.
+        let fields_data: Vec<Vec<serde_json::Value>> = fields
             .iter()
             .map(|f| {
                 let path = self
@@ -135,22 +136,27 @@ impl HttpJsonApi {
                     .get(f)
                     .ok_or_else(|| PiperError::ColumnNotFound(f.clone()))?;
                 let v = jsonpath_lib::select(&resp, path)
+                    .log()
                     .map_err(|e| PiperError::InvalidJsonPath(e.to_string()))?;
                 if v.is_empty() {
                     debug!("JSONPath selected no elements");
-                    Ok(Value::Null)
-                } else if !self.result_is_array.contains(f) && v.len() == 1 {
-                    // The result should not be an array, and there is only one element.
-                    // Treat it as single value.
-                    Ok(v[0].clone().into())
+                    Ok(vec![])
                 } else {
                     debug!("JSONPath selected array with {} elements", v.len());
-                    Ok(Value::Array(
-                        v.into_iter().map(|v| v.clone().into()).collect(),
-                    ))
+                    Ok(v.into_iter().cloned().collect())
                 }
             })
-            .collect()
+            .collect::<Result<_, _>>()?;
+        // Transpose the result
+        let mut ret = vec![];
+        for i in 0..fields_data[0].len() {
+            let mut row = vec![];
+            (0..fields_data.len()).for_each(|j| {
+                row.push(Value::from(fields_data.get(j).and_then(|v| v.get(i))));
+            });
+            ret.push(row);
+        }
+        Ok(ret)
     }
 }
 
@@ -160,9 +166,23 @@ impl LookupSource for HttpJsonApi {
     async fn lookup(&self, k: &Value, fields: &[String]) -> Vec<Value> {
         let ret = self.do_lookup(k, fields).await;
         match ret {
-            Ok(v) => v,
+            Ok(v) => v
+                .get(0)
+                .cloned()
+                .unwrap_or_else(|| vec![Value::Null; fields.len()]),
             Err(e) => {
                 vec![e.into(); fields.len()]
+            }
+        }
+    }
+
+    #[instrument(level = "trace", skip(self))]
+    async fn join(&self, k: &Value, fields: &[String]) -> Vec<Vec<Value>> {
+        let ret = self.do_lookup(k, fields).await;
+        match ret {
+            Ok(v) => v,
+            Err(e) => {
+                vec![vec![e.into(); fields.len()]]
             }
         }
     }
@@ -172,7 +192,8 @@ impl LookupSource for HttpJsonApi {
     }
 
     fn batch_size(&self) -> usize {
-        self.concurrency.unwrap_or(super::super::DEFAULT_CONCURRENCY)
+        self.concurrency
+            .unwrap_or(super::super::DEFAULT_CONCURRENCY)
     }
 }
 

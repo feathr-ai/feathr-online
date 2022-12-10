@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     common::IgnoreDebug,
     pipeline::{lookup::get_secret, PiperError},
+    Logged,
 };
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -63,10 +64,12 @@ impl Auth {
                         DefaultAzureCredential::default(),
                     )),
                 });
-                let token =
-                    credential.inner.get_token(&resource).await.map_err(|e| {
-                        PiperError::AuthError(format!("Failed to get token: {}", e))
-                    })?;
+                let token = credential
+                    .inner
+                    .get_token(&resource)
+                    .await
+                    .log()
+                    .map_err(|e| PiperError::AuthError(format!("Failed to get token: {}", e)))?;
                 request.bearer_auth(token.token.secret())
             }
         })

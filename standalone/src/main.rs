@@ -6,6 +6,7 @@ use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> Result<(), PiperError> {
+    dotenvy::dotenv().ok();
     let filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::INFO.into())
         .with_env_var("LOG_LEVEL")

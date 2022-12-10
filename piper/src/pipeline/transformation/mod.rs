@@ -16,7 +16,7 @@ mod where_transformation;
 
 pub use explode_transformation::ExplodeTransformation;
 pub use ignore_error_transformation::IgnoreErrorTransformation;
-pub use lookup_transformation::LookupTransformation;
+pub use lookup_transformation::{JoinKind, LookupTransformation};
 pub use project_keep_transformation::ProjectKeepTransformation;
 pub use project_remove_transformation::ProjectRemoveTransformation;
 pub use project_rename_transformation::ProjectRenameTransformation;

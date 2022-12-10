@@ -6,6 +6,8 @@
         "jshort",
         "jvalue",
         "Ljava",
+        "ossdb",
+        "rusqlite",
         "sdist"
     ]
 }

@@ -37,6 +37,8 @@ explode_tran ::= ('mv-expand' | 'explode') ID ('as' TYPES)? ;
 
 lookup_tran ::= 'lookup' rename_with_type (',' rename_with_type)* 'from' ID 'on' expr ;
 
+join_tran ::= 'join' 'kind' '=' ('left-inner'|'left-outer') rename_with_type (',' rename_with_type)* 'from' ID 'on' expr ;
+
 take_tran ::= 'take' number ;
 
 ignore_error_tran ::= 'ignore-error' ;

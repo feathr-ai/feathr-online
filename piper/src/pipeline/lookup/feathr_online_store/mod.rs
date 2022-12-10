@@ -66,12 +66,14 @@ impl RedisConnectionPool {
                 get_secret(Some(url).as_ref())?
             )
         };
-        let manager =
-            RedisConnectionManager::new(url).map_err(|e| PiperError::RedisError(e.to_string()))?;
+        let manager = RedisConnectionManager::new(url)
+            .log()
+            .map_err(|e| PiperError::RedisError(e.to_string()))?;
 
         let pool = Pool::builder()
             .build(manager)
             .await
+            .log()
             .map_err(|e| PiperError::RedisError(e.to_string()))?;
         debug!("New Redis connection pool created");
         Ok(RedisConnectionPool { pool })
@@ -93,6 +95,7 @@ impl FeathrOnlineStore {
             .pool
             .get()
             .await
+            .log()
             .map_err(|e| PiperError::RedisError(e.to_string()))?;
 
         let mut cmd = cmd("HMGET");
@@ -117,6 +120,7 @@ impl FeathrOnlineStore {
             .into_iter()
             .map(|s| {
                 base64::decode(s)
+                    .log()
                     .map_err(|e| PiperError::Base64Error(e.to_string()))
                     .and_then(|v| {
                         FeatureValue::parse_from_bytes(&v)

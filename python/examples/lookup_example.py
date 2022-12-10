@@ -15,8 +15,8 @@ async def lookup_source(key, fields):
     """
     # Pretend to do some slow lookup
     await asyncio.sleep(0.5)
-    # Returned list must be align with `fields``
-    return [FAKE_DATA[str(key)][f] for f in fields]
+    # Returned value must be a list or list, each list must be align with `fields``
+    return [[FAKE_DATA[str(key)][f] for f in fields]]
 
 pipelines = r'''
 t(x)

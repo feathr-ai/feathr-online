@@ -156,12 +156,25 @@ All the keywords are case sensitive and must be in lowered case.
 The list of built-in functions can be found in the [`piper/src/pipeline/function/mod.rs`](piper/src/pipeline/function/mod.rs) file.
 
 
-Lookup Data Source Definition
------------------------------
+Lookup Data Source
+------------------
 
-There are 2 types of builtin lookup data source:
+Lookup Data Source is used to integrate with external data, it can return multiple rows of data for a given key expression.
+
+Lookup data sources can be used in `lookup` and `join` transformations, the former is always 1:1 mapping, it will still return a row with null values in all lookup fields even when the lookup failed, while the latter is 1:N mapping, it may turn single input row into a set of rows.
+
+There are 2 kinds of joining operations, `left-inner` and `left-outer`, right or full/outer joins are not supported.
+
+* `left-inner` join will remove all input rows that cannot be joined with any row from the lookup data source.
+* `left-outer` join will keep all input rows, and fill the lookup fields with null values when the lookup failed.
+
+When lookup data source is used in a `lookup` transformation, it acts like `left-outer` but only the first row of lookup result is used for each key.
+
+There are 4 types of builtin lookup data source:
 * Feathr Online Store
 * JSON-based HTTP API
+* SqlServer 2008 and up / AzureSQL
+* Sqlite3
 
 They can be defined in the lookup source definition file, which is a JSON file in following format:
 ```json
@@ -247,6 +260,48 @@ They can be defined in the lookup source definition file, which is a JSON file i
 }
 ```
 
+* SqlServer 2008 and up / AzureSQL
+```json
+{
+    // This field indicates this is a Feathr Online Store
+    "class": "mssql",
+    // The name of the source
+    "name": "SOME_NAME",
+    // ADO.Net format connection string
+    "connectionString": "CONNECTION_STRING_IN_ADO_NET_FORMAT",
+    // The template SQL to fetch rows by key, the key will be replaced with the value of `@P1`
+    "sqlTemplate": "select f1, f2, f3 from some_table where key_field = @P1",
+    // All fields returned by the SQL query, the field names and order must be aligned with the SQL query.
+    "availableFields": [
+        "f1",
+        "f2",
+        "f3",
+    ]
+}
+```
+
+* Sqlite3
+```json
+{
+    // This field indicates this is a Feathr Online Store
+    "class": "sqlite",
+    // The name of the source
+    "name": "SOME_NAME",
+    "dbPath": "PATH_TO_DB_FILE",
+    // The template SQL to fetch rows by key, the key will be replaced with the value of `:key`
+    "sqlTemplate": "select f1, f2, f3 from some_table where key_field = :key",
+    // All fields returned by the SQL query, the field names and order must be aligned with the SQL query.
+    "availableFields": [
+        "f1",
+        "f2",
+        "f3",
+    ]
+}
+```
+
+Fields that may contain secrets can use `${ENV_VAR_NAME}` as its value, the value will be replaced with the value of the environment variable `ENV_VAR_NAME` when the lookup source is loaded. In this way, you can make the lookup definition file open while still keep the secrets safe, and you can use different set of environment variables to work with different dat sources.
+
+
 Building from Source
 --------------------
 
@@ -265,9 +320,9 @@ Start the service with the command:
 TODO:
 ------
 
-* Error tracing, for now only a string representation of the error is recorded, need to record full stack trace under the debug mode.
-* Aggregation, group by, count, avg, etc.
-* Hosted data, Parquet, CSV, Delta Lake, etc.?
-* Join?
-* UDF in WASM?
+- [x] Aggregation, group by, count, avg, etc.
+- [x] Join
+- [ ] Error tracing, for now only a string representation of the error is recorded, need to record full stack trace under the debug mode.
+- [ ] Hosted data, Parquet, CSV, Delta Lake, etc.?
+- [ ] UDF in WASM?
 

@@ -10,6 +10,8 @@ use super::{PiperError, Value};
 
 mod feathr_online_store;
 mod http_json_api;
+mod mssql;
+mod sqlite;
 
 use feathr_online_store::FeathrOnlineStore;
 use http_json_api::HttpJsonApi;
@@ -23,7 +25,17 @@ pub trait LookupSource: Sync + Send + Debug {
         DEFAULT_CONCURRENCY
     }
 
+    /**
+     * Return single row for one key
+     */
     async fn lookup(&self, key: &Value, fields: &[String]) -> Vec<Value>;
+
+    /**
+     * It can return multiple rows in a join operation, if the lookup source supports it.
+     */
+    async fn join(&self, key: &Value, fields: &[String]) -> Vec<Vec<Value>> {
+        vec![self.lookup(key, fields).await]
+    }
 
     fn dump(&self) -> serde_json::Value;
 }
@@ -40,11 +52,7 @@ pub fn init_lookup_sources(
         sources: Vec<LookupSourceEntry>,
     }
 
-    let cfg = if cfg.is_empty() {
-        "{}"
-    } else {
-        cfg
-    };
+    let cfg = if cfg.is_empty() { "{}" } else { cfg };
 
     let cfg: HashMap<String, Arc<dyn LookupSource>> = serde_json::from_str::<LookupSources>(cfg)
         .map_err(|e| PiperError::Unknown(format!("Failed to parse lookup source config: {}", e)))?
@@ -68,6 +76,10 @@ enum LookupSourceType {
     HttpJsonApi(HttpJsonApi),
     #[serde(alias = "FeathrRedisSource", alias = "feathr")]
     FeathrOnlineStore(FeathrOnlineStore),
+    #[serde(alias = "MsSqlSource", alias = "mssql")]
+    MsSqlLSource(mssql::MsSqlLookupSource),
+    #[serde(alias = "SqliteSource", alias = "sqlite")]
+    SqliteLSource(sqlite::SqliteLookupSource),
     // TODO: Add more lookup sources here
     // CosmosDb(CosmosDb),
     // MongoDb(MongoDb),
@@ -79,6 +91,17 @@ impl LookupSource for LookupSourceType {
         match self {
             LookupSourceType::HttpJsonApi(s) => s.lookup(key, fields).await,
             LookupSourceType::FeathrOnlineStore(s) => s.lookup(key, fields).await,
+            LookupSourceType::MsSqlLSource(s) => s.lookup(key, fields).await,
+            LookupSourceType::SqliteLSource(s) => s.lookup(key, fields).await,
+        }
+    }
+
+    async fn join(&self, key: &Value, fields: &[String]) -> Vec<Vec<Value>> {
+        match self {
+            LookupSourceType::HttpJsonApi(s) => s.join(key, fields).await,
+            LookupSourceType::FeathrOnlineStore(s) => s.join(key, fields).await,
+            LookupSourceType::MsSqlLSource(s) => s.join(key, fields).await,
+            LookupSourceType::SqliteLSource(s) => s.join(key, fields).await,
         }
     }
 
