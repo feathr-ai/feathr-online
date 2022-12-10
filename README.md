@@ -1,5 +1,4 @@
-README
-=====
+# README
 
 This project include 4 components:
 
@@ -9,8 +8,7 @@ This project include 4 components:
 * The Java package, it supports UDF written in Java, the package is published to GitHub Package Registry as `com.github.windoze.feathr:feathrpiper`.
 
 
-To start the docker container
------------------------------
+## To start the docker container
 
 Run the following command:
 
@@ -63,8 +61,8 @@ The response will be like:
 }
 ```
 
-The HTTP API spec
------------------
+## The HTTP API spec
+
 The request is a POST request to `host:port/process`, and the body is a JSON object with the following fields (some comments added for clarity but they should not be included in the actual request):
 ```json
 {
@@ -146,8 +144,8 @@ The response will be in following format:
 }
 ```
 
-DSL
----
+## DSL
+
 
 The DSL syntax in EBNF format is in the [`DSL-syntax.txt`](DSL-syntax.txt) file.
 
@@ -155,9 +153,32 @@ All the keywords are case sensitive and must be in lowered case.
 
 The list of built-in functions can be found in the [`piper/src/pipeline/function/mod.rs`](piper/src/pipeline/function/mod.rs) file.
 
+## Transformations
 
-Lookup Data Source
-------------------
+
+Piper DSL supports a set of transformations that can be used to manipulate the data in the pipeline. The transformations are chained together to form a pipeline, and the data flows through the pipeline from the source to the sink.Each transformation takes a row set as the input, and outputs a new row set that is passed to the next transformation. The transformations are categorized into two groups: data manipulation and data lookup. The data manipulation transformations are used to manipulate the data in the pipeline, and the data lookup transformations are used to lookup data from [lookup data sources](#lookup-data-source).
+
+### Data Manipulation Transformations
+
+The data manipulation transformations are used to manipulate the data in the pipeline. The data manipulation transformations are:
+
+* `where`: filter the data in the pipeline by a condition.
+* `take`: take the first N rows from the input row set and discards the rest.
+* `project`/`project-remove`/`project-rename`/`project-keep`: project the fields in the row set.
+* `top`: sort the input row set by the specified criteria and take the first N rows.
+* `ignore-errors`: ignore the rows that contain error value in the input row set.
+* `summarize`: group the input row set by the specified criteria, and apply aggregations on each group.
+* `explode`: explode, or transpose, the input row set by the specified criteria, distributes array value into multiple rows.
+
+### Lookup Transformations
+
+* `lookup`: lookup data from a lookup data source, applies exactly 1:1 mapping for each input row, and fills the lookup fields with `null` if the lookup failed.
+* `join`: lookup data from a lookup data source, applies 1:N mapping for each input row, 2 kinds of joining are supported:
+    * `left-inner`, or inner-join, only the rows that have a match in the lookup data source are kept.
+    * `left-outer`, or left-join, all the rows are kept, and the lookup fields are filled with `null` if the lookup failed.
+
+## Lookup Data Source
+
 
 Lookup Data Source is used to integrate with external data, it can return multiple rows of data for a given key expression.
 
@@ -302,23 +323,23 @@ They can be defined in the lookup source definition file, which is a JSON file i
 Fields that may contain secrets can use `${ENV_VAR_NAME}` as its value, the value will be replaced with the value of the environment variable `ENV_VAR_NAME` when the lookup source is loaded. In this way, you can make the lookup definition file open while still keep the secrets safe, and you can use different set of environment variables to work with different data sources.
 
 
-Building from Source
---------------------
+## Building from Source
+
 
 The `feathrpiper` package is written in Rust, so you need to setup the Rust toolchain to build it from source. The Rust toolchain can be installed from [here](https://www.rust-lang.org/tools/install). The development is done in Rust 1.65, older version may not work.
 
 Run `cargo build --release` to build the binary, the standalone executable will be in `target/release/piper`, and the JNI library will be in `target/release/libfeathr_piper_jni.so`.
 
-Running the standalone executable
-----------------------------------
+## Running the standalone executable
+
 
 Start the service with the command:
 ```bash
 /path/to/piper -p <PIPELINE_DEFINITION_FILE_NAME> -l <LOOKUP_SOURCE_JSON_FILE_NAME> [--address <LISTENING_ADDRESS>] [--port <LISTENING_PORT>]
 ```
 
-TODO:
-------
+## TODO:
+
 
 - [x] Aggregation, group by, count, avg, etc.
 - [x] Join

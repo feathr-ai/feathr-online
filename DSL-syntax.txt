@@ -16,6 +16,7 @@ transformation ::= where_tran
     | project_keep_tran
     | explode_tran
     | lookup_tran
+    | join_tran
     | take_tran
     | ignore_error_tran
     | summarize_tran
