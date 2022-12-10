@@ -28,7 +28,7 @@ All values returned by the pipeline will also be in above types.
 
 NOTE: When using Python big integer, exception will be thrown if any it exceeds the range of 64-bit signed integer.
 
-##User Defined Function (UDF) in Python
+## User Defined Function (UDF) in Python
 
 The UDF is implemented as ordinary Python function, and it must be registered to the service before it can be used in the pipeline.
 
