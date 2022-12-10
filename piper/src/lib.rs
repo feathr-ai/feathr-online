@@ -30,6 +30,20 @@ impl Default for RequestData {
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct LookupRequest {
+    pub source: String,
+    pub keys: Vec<serde_json::Value>,
+    pub features: Vec<String>,
+}
+
+#[derive(Debug, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LookupResponse {
+    pub data: Vec<HashMap<String, serde_json::Value>>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SingleRequest {
     pub pipeline: String,
     pub data: RequestData,

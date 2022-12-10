@@ -12,7 +12,8 @@ use crate::{
     pipeline::{
         BuildContext, DataSetCreator, ErrorCollector, Pipeline, PiperError, ValidationMode, Value,
     },
-    Function, Logged, LookupSource, Request, Response, SingleRequest, SingleResponse,
+    Function, Logged, LookupRequest, LookupResponse, LookupSource, Request, Response,
+    SingleRequest, SingleResponse,
 };
 
 #[derive(Debug)]
@@ -98,6 +99,28 @@ impl Piper {
     }
 
     #[instrument(level = "trace", skip(self))]
+    pub async fn lookup(&self, req: LookupRequest) -> Result<LookupResponse, PiperError> {
+        let src = self
+            .ctx
+            .inner
+            .lookup_sources
+            .get(&req.source)
+            .ok_or_else(|| PiperError::LookupSourceNotFound(req.source.clone()))?;
+        let mut data: Vec<HashMap<String, serde_json::Value>> = vec![];
+        for key in req.keys.iter() {
+            let features = src.lookup(&Value::from(key), &req.features).await;
+            data.push(
+                req.features
+                    .iter()
+                    .zip(features.into_iter())
+                    .map(|(f, v)| (f.clone(), v.into()))
+                    .collect(),
+            );
+        }
+        Ok(LookupResponse { data })
+    }
+
+    #[instrument(level = "trace", skip(self))]
     pub async fn process(&self, req: Request) -> Result<Response, PiperError> {
         debug!(
             "Received request, contains {} sub-requests",
@@ -161,19 +184,17 @@ impl Piper {
                 )
             }
             crate::RequestData::Multi(data) => {
-                let rows = data
-                    .into_iter()
-                    .map(|row| {
-                        schema
-                            .columns
-                            .iter()
-                            .map(|c| {
-                                row.get(c.name.as_str())
-                                    .map(|v| Value::from(v.clone()))
-                                    .unwrap_or_default()
-                            })
-                            .collect()
-                    });
+                let rows = data.into_iter().map(|row| {
+                    schema
+                        .columns
+                        .iter()
+                        .map(|c| {
+                            row.get(c.name.as_str())
+                                .map(|v| Value::from(v.clone()))
+                                .unwrap_or_default()
+                        })
+                        .collect()
+                });
                 let dataset = DataSetCreator::eager(schema.clone(), rows);
                 pipeline.process(
                     dataset,

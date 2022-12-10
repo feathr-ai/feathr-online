@@ -161,6 +161,7 @@ impl PiperService {
             .at("/version", get(get_version))
             .at("/metrics", metrics_process.exporter())
             .at("/process", post(process).with(metrics_process))
+            .at("/lookup", post(lookup_feature))
             .at("/healthz", get(health_check))
             .at("/pipelines", get(get_pipelines))
             .at("/lookup-sources", get(get_lookup_sources))
@@ -252,6 +253,33 @@ async fn process(data: Data<&HandlerData>, req: Json<Request>) -> poem::Result<J
             .await
         }
         None => Ok(Json(data.piper.process(req.0).await.map_err(BadRequest)?)),
+    }
+}
+
+#[cfg(not(feature = "python"))]
+#[handler]
+async fn lookup_feature(
+    data: Data<&HandlerData>,
+    req: Json<crate::LookupRequest>,
+) -> poem::Result<Json<crate::LookupResponse>> {
+    Ok(Json(data.0.piper.lookup(req.0).await.map_err(BadRequest)?))
+}
+
+#[cfg(feature = "python")]
+#[handler]
+async fn lookup_feature(
+    data: Data<&HandlerData>,
+    req: Json<crate::LookupRequest>,
+) -> poem::Result<Json<crate::LookupResponse>> {
+    let data = data.0.clone();
+    match data.locals.clone() {
+        Some(locals) => {
+            pyo3_asyncio::tokio::scope(locals, async move {
+                Ok(Json(data.piper.lookup(req.0).await.map_err(BadRequest)?))
+            })
+            .await
+        }
+        None => Ok(Json(data.piper.lookup(req.0).await.map_err(BadRequest)?)),
     }
 }
 
