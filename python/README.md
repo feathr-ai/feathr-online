@@ -38,27 +38,39 @@ Lookup Data Source in Python
 
 Usually `lookup` is to fetch external data, such as a database or a web service, so the lookup data source is implemented as a Python async functions, and it must be registered to the piper or the service before it can be used in the pipeline:
 
-The lookup function is called with a single key and a list of requested field names, and it should return a list of values for the requested fields.
+The lookup function is called with a single key and a list of requested field names, and it should return a list of rows that each row is a list that aligns with the requested fields, or an empty list when lookup failed.
 ```
-async def lookup(key: Any, fields: List[str]):
+async def my_fancy_lookup_function(key: Any, fields: List[str]) -> List[List[Any]]:
     ...
-    return [some_data[f] for f in fields]
+    return [
+        [some_data[f] for f in fields],
+        [some_other_data[f] for f in fields],
+    ]
 ```
 
 It must be added to the `Piper` or `PiperService` before it can be used in the pipeline:
 ```
-piper = Piper(pipeline_def, {"lookup_name": lookup_function})
+piper = Piper(pipeline_def, {"lookup_name": my_fancy_lookup_function})
 ```
 or
 ```
-svc = PiperService(pipeline_def, {"lookup_name": lookup_function})
+svc = PiperService(pipeline_def, {"lookup_name": my_fancy_lookup_function})
 ```
 
-Then you can use the lookup data source in the pipeline:
+Then you can use the lookup data source in the pipeline in a `lookup` transformation:
 ```
 pipeline_name(...)
 | ...
 | lookup field1, field2 from lookup_name on key
+| ...
+;
+```
+
+or a `join` transformation:
+```
+pipeline_name(...)
+| ...
+| join kind=left-inner field1, field2 from lookup_name on key
 | ...
 ;
 ```
@@ -81,6 +93,7 @@ NOTE:
 * Because of the asynchronous nature of the lookup function, it's recommended to use `asyncio` compatible libraries to implement the lookup function, traditional blocking libraries may cause the performance issue, e.g. use [`aiohttp`](https://pypi.org/project/aiohttp/) or [`HTTPX`](https://pypi.org/project/httpx/) instead of `Requests`.
 * This package only supports `asyncio`,  `Twisted` or `Gevent` based libraries are not supported.
 * In order to lookup data from a standard JSON-based HTTP API, you can use builtin HTTP client instead of implementing your own lookup function, register the lookup data source either in a JSON string or a `dict` with correct content, detailed doc is at [here](https://github.com/windoze/piper#lookup-data-source-definition).
+* The `feathrpiper` also has built support of SqlServer/AzureSQL and Sqlite3, you can use them directly without implementing your own lookup function.
 
 Integration with Other Web-Service Frameworks
 ---------------------------------------------

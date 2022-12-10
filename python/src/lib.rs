@@ -80,7 +80,7 @@ impl piper::LookupSource for PyLookupSource {
         )
     }
 
-    async fn lookup(&self, key: &piper::Value, fields: &[String]) -> Vec<piper::Value> {
+    async fn join(&self, key: &piper::Value, fields: &[String]) -> Vec<Vec<piper::Value>> {
         let fields = fields.iter().map(|s| s.to_string()).collect::<Vec<_>>();
         let fut = Python::with_gil(|py| {
             self.lookup_fun
@@ -103,35 +103,57 @@ impl piper::LookupSource for PyLookupSource {
                 let v = match v.extract::<Py<PyList>>(py) {
                     Ok(v) => v,
                     Err(e) => {
-                        return vec![
+                        return vec![vec![
                             piper::Value::Error(piper::PiperError::ExternalError(
                                 e.to_string()
                             ));
                             fields.len()
-                        ];
+                        ]];
                     }
                 };
-                let mut ret = vec![];
-                let v = v.as_ref(py);
-                for idx in 0..fields.len() {
-                    let e = match v
-                        .get_item(idx)
-                        .and_then(|v| v.into_py(py).extract::<Value>(py))
-                    {
-                        Ok(v) => v,
-                        Err(e) => Value(piper::Value::Error(piper::PiperError::ExternalError(
-                            e.to_string(),
-                        ))),
-                    };
-                    ret.push(e.0);
+                let mut rows = vec![];
+                for src_row in v.as_ref(py).iter() {
+                    let mut row = vec![];
+                    match src_row.extract::<Py<PyList>>() {
+                        Ok(r) => {
+                            for e in r.as_ref(py).iter() {
+                                let e = match e.extract::<Value>() {
+                                    Ok(v) => v,
+                                    Err(e) => Value(piper::Value::Error(
+                                        piper::PiperError::ExternalError(e.to_string()),
+                                    )),
+                                };
+                                row.push(e.0);
+                            }
+                        }
+                        Err(e) => {
+                            row = vec![
+                                piper::Value::Error(piper::PiperError::ExternalError(
+                                    e.to_string()
+                                ));
+                                fields.len()
+                            ];
+                        }
+                    }
+                    rows.push(row);
                 }
-                ret
+                rows
             }),
-            Err(e) => vec![
-                piper::Value::Error(piper::PiperError::ExternalError(e.to_string()));
+            Err(e) => vec![vec![
+                piper::Value::Error(piper::PiperError::ExternalError(
+                    e.to_string()
+                ));
                 fields.len()
-            ],
+            ]],
         }
+    }
+
+    async fn lookup(&self, key: &piper::Value, fields: &[String]) -> Vec<piper::Value> {
+        self.join(key, fields)
+            .await
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| vec![piper::Value::Null; fields.len()])
     }
 }
 
