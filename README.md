@@ -299,7 +299,7 @@ They can be defined in the lookup source definition file, which is a JSON file i
 }
 ```
 
-Fields that may contain secrets can use `${ENV_VAR_NAME}` as its value, the value will be replaced with the value of the environment variable `ENV_VAR_NAME` when the lookup source is loaded. In this way, you can make the lookup definition file open while still keep the secrets safe, and you can use different set of environment variables to work with different dat sources.
+Fields that may contain secrets can use `${ENV_VAR_NAME}` as its value, the value will be replaced with the value of the environment variable `ENV_VAR_NAME` when the lookup source is loaded. In this way, you can make the lookup definition file open while still keep the secrets safe, and you can use different set of environment variables to work with different data sources.
 
 
 Building from Source
