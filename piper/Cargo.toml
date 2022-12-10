@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1"
-tokio = "1"
+tokio = { version = "1", features = ["rt"] }
 futures = "0.3"
 anyhow = "1"
 thiserror = "1"
@@ -35,6 +35,7 @@ dyn-clonable = "0.9"
 poem = { version = "1", features = ["tokio-metrics"] }
 tiberius = { version = "0.11", default-features = false, features = ["chrono", "tds73", "sql-browser-tokio", "rustls"] }
 bb8-tiberius = "0.13"
+rusqlite = { version = "0.28", features = ["modern-full", "bundled"] }
 
 pyo3 = { version = "0.17", optional = true }
 pyo3-asyncio = { version = "0.17", features = ["tokio-runtime"], optional = true }

@@ -11,6 +11,7 @@ use super::{PiperError, Value};
 mod feathr_online_store;
 mod http_json_api;
 mod mssql;
+mod sqlite;
 
 use feathr_online_store::FeathrOnlineStore;
 use http_json_api::HttpJsonApi;
@@ -77,6 +78,8 @@ enum LookupSourceType {
     FeathrOnlineStore(FeathrOnlineStore),
     #[serde(alias = "MsSqlSource", alias = "mssql")]
     MsSqlLSource(mssql::MsSqlLookupSource),
+    #[serde(alias = "SqliteSource", alias = "sqlite")]
+    SqliteLSource(sqlite::SqliteLookupSource),
     // TODO: Add more lookup sources here
     // CosmosDb(CosmosDb),
     // MongoDb(MongoDb),
@@ -89,6 +92,7 @@ impl LookupSource for LookupSourceType {
             LookupSourceType::HttpJsonApi(s) => s.lookup(key, fields).await,
             LookupSourceType::FeathrOnlineStore(s) => s.lookup(key, fields).await,
             LookupSourceType::MsSqlLSource(s) => s.lookup(key, fields).await,
+            LookupSourceType::SqliteLSource(s) => s.lookup(key, fields).await,
         }
     }
 
@@ -97,6 +101,7 @@ impl LookupSource for LookupSourceType {
             LookupSourceType::HttpJsonApi(s) => s.join(key, fields).await,
             LookupSourceType::FeathrOnlineStore(s) => s.join(key, fields).await,
             LookupSourceType::MsSqlLSource(s) => s.join(key, fields).await,
+            LookupSourceType::SqliteLSource(s) => s.join(key, fields).await,
         }
     }
 

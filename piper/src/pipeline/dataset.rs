@@ -31,6 +31,10 @@ impl Column {
             column_type,
         }
     }
+
+    pub fn convert(&self, value: Value) -> Value {
+        value.convert_to(self.column_type)
+    }
 }
 
 /**
@@ -79,6 +83,13 @@ impl Schema {
                 .ok_or_else(|| PiperError::ColumnNotFound(name.to_string()))?,
         };
         Ok(Box::new(col))
+    }
+
+    pub fn convert(&self, row: Vec<Value>) -> Vec<Value> {
+        row.into_iter()
+            .zip(self.columns.iter())
+            .map(|(v, c)| c.convert(v))
+            .collect()
     }
 
     pub fn dump(&self) -> String {

@@ -227,7 +227,7 @@ impl LookupDataSet {
                     .zip(fields.into_iter())
                     .map(|(t, v)| v.cast_to(*t));
                 input_row.extend(additional_fields);
-                vec![input_row]
+                vec![self.schema().convert(input_row)]
             }
             JoinKind::LeftInner => {
                 // In LeftInner mode, return empty vec if the lookup result is empty
@@ -243,7 +243,7 @@ impl LookupDataSet {
                             .map(|(t, v)| v.cast_to(*t));
                         let mut ret = input_row.clone();
                         ret.extend(additional_fields);
-                        ret
+                        self.schema().convert(ret)
                     })
                     .collect()
             }
@@ -266,7 +266,7 @@ impl LookupDataSet {
                             .map(|(t, v)| v.cast_to(*t));
                         let mut ret = input_row.clone();
                         ret.extend(additional_fields);
-                        ret
+                        self.schema().convert(ret)
                     })
                     .collect()
             }
