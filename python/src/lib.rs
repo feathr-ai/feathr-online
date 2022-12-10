@@ -477,6 +477,64 @@ impl Piper {
             }),
         )
     }
+
+    fn lookup(
+        &self,
+        source: &str,
+        keys: Vec<Value>,
+        fields: Vec<String>,
+        py: Python<'_>,
+    ) -> PyResult<Vec<HashMap<String, Value>>> {
+        let req = piper::LookupRequest {
+            source: source.to_string(),
+            keys: keys.into_iter().map(|v| v.0.into()).collect(),
+            features: fields,
+        };
+        let resp = py.allow_threads(|| {
+            block_on(cancelable_wait(async move {
+                self.piper
+                    .lookup(req)
+                    .await
+                    .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))
+            }))
+        })?;
+        let data = resp
+            .data
+            .into_iter()
+            .map(|v| v.into_iter().map(|(k, v)| (k, Value(v.into()))).collect())
+            .collect();
+        Ok(data)
+    }
+
+    fn lookup_async<'p>(
+        &self,
+        source: &str,
+        keys: Vec<Value>,
+        fields: Vec<String>,
+        py: Python<'p>,
+    ) -> PyResult<&'p PyAny> {
+        let piper = self.piper.clone();
+        let req = piper::LookupRequest {
+            source: source.to_string(),
+            keys: keys.into_iter().map(|v| v.0.into()).collect(),
+            features: fields,
+        };
+        pyo3_asyncio::tokio::future_into_py(
+            py,
+            cancelable_wait(async move {
+                let resp = piper
+                    .lookup(req)
+                    .await
+                    .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))?;
+                let data: Vec<HashMap<String, Value>> = resp
+                    .data
+                    .into_iter()
+                    .map(|v| v.into_iter().map(|(k, v)| (k, Value(v.into()))).collect())
+                    .collect();
+                Ok(data)
+            }),
+        )
+    }
 }
 
 #[pyclass]
