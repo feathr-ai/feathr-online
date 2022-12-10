@@ -63,6 +63,16 @@
         "id": "$.id",
         "name": "$.name"
       }
+    },
+    {
+      "class": "mssql",
+      "name": "join_test",
+      "connectionString": "${CONN_STR}",
+      "sqlTemplate": "select name, age from join_test where group_id = @P1",
+      "availableFields": [
+        "name",
+        "age"
+      ]
     }
   ]
 }

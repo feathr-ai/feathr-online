@@ -32,7 +32,12 @@
                     "kind": "bin"
                 }
             },
-            "args": [],
+            "args": [
+                "--pipeline",
+                "conf/pipeline.conf",
+                "--lookup",
+                "conf/lookup.json"
+            ],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "rust: cargo build"
         },

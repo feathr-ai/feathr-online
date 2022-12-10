@@ -1,7 +1,7 @@
 use std::{collections::VecDeque, sync::Arc};
 
 use async_trait::async_trait;
-use tracing::{debug, instrument};
+use tracing::{instrument, trace};
 
 use crate::pipeline::{DataSet, PiperError, Schema, Value, ValueType};
 
@@ -72,14 +72,14 @@ impl DataSet for ExplodedDataSet {
     #[instrument(level = "trace", skip(self))]
     async fn next(&mut self) -> Option<Vec<Value>> {
         while self.current_exploded_column.is_empty() {
-            debug!("current_exploded_column is empty, fetching next row from upstream");
+            trace!("current_exploded_column is empty, fetching next row from upstream");
             match self.get_next_row().await {
                 Some(_) => {
                     // We do have a new row, but loop again to check if the array is empty
                     // We should skip such rows
                 }
                 None => {
-                    debug!("Upstream returned None");
+                    trace!("Upstream returned None");
                     return None;
                 }
             }
@@ -88,7 +88,7 @@ impl DataSet for ExplodedDataSet {
         let mut row = match &self.current_row {
             Some(row) => row.clone(),
             None => {
-                debug!("Data set is exhausted");
+                trace!("Data set is exhausted");
                 return None;
             }
         };
@@ -105,19 +105,19 @@ impl ExplodedDataSet {
     #[instrument(level = "trace", skip(self))]
     async fn get_next_row(&mut self) -> Option<Vec<Value>> {
         while let Some(row) = self.input.next().await {
-            debug!("Fetched 1 row from upstream");
+            trace!("Fetched 1 row from upstream");
             self.current_row = Some(row.clone());
             self.current_exploded_column = match row[self.column_idx].get_array() {
                 Ok(array) => array.clone().into_iter().collect(),
                 // Keep an error row when the exploded column is not an array so downstream can know what happened
                 Err(e) => return Some(vec![Value::Error(e)]),
             };
-            debug!(
+            trace!(
                 "Exploded column has {} elements",
                 self.current_exploded_column.len()
             );
             if self.current_exploded_column.is_empty() {
-                debug!("Exploded column is empty, fetching next row from upstream");
+                trace!("Exploded column is empty, fetching next row from upstream");
                 continue;
             } else {
                 return Some(row);

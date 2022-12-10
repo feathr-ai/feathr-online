@@ -10,6 +10,7 @@ use super::{PiperError, Value};
 
 mod feathr_online_store;
 mod http_json_api;
+mod mssql;
 
 use feathr_online_store::FeathrOnlineStore;
 use http_json_api::HttpJsonApi;
@@ -74,6 +75,8 @@ enum LookupSourceType {
     HttpJsonApi(HttpJsonApi),
     #[serde(alias = "FeathrRedisSource", alias = "feathr")]
     FeathrOnlineStore(FeathrOnlineStore),
+    #[serde(alias = "MsSqlSource", alias = "mssql")]
+    MsSqlLSource(mssql::MsSqlLookupSource),
     // TODO: Add more lookup sources here
     // CosmosDb(CosmosDb),
     // MongoDb(MongoDb),
@@ -85,6 +88,15 @@ impl LookupSource for LookupSourceType {
         match self {
             LookupSourceType::HttpJsonApi(s) => s.lookup(key, fields).await,
             LookupSourceType::FeathrOnlineStore(s) => s.lookup(key, fields).await,
+            LookupSourceType::MsSqlLSource(s) => s.lookup(key, fields).await,
+        }
+    }
+
+    async fn join(&self, key: &Value, fields: &[String]) -> Vec<Vec<Value>> {
+        match self {
+            LookupSourceType::HttpJsonApi(s) => s.join(key, fields).await,
+            LookupSourceType::FeathrOnlineStore(s) => s.join(key, fields).await,
+            LookupSourceType::MsSqlLSource(s) => s.join(key, fields).await,
         }
     }
 

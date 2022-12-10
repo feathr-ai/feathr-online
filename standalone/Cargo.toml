@@ -4,6 +4,7 @@ version = "0.2.0"
 edition = "2021"
 
 [dependencies]
+dotenvy = "0.15"
 piper = { path = "../piper", features = [] }
 tokio = { version = "1.0", features = ["full"] }
 poem = { version = "1", features = ["tokio-metrics"] }

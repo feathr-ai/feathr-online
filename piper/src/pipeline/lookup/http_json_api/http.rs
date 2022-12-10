@@ -6,7 +6,10 @@ use reqwest::{Client, Method};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, instrument};
 
-use crate::pipeline::{PiperError, Value, ValueType};
+use crate::{
+    pipeline::{PiperError, Value, ValueType},
+    Logged,
+};
 
 use super::{
     super::{get_secret, LookupSource},
@@ -75,6 +78,7 @@ impl HttpJsonApi {
         };
         let m = self.method.clone().unwrap_or_else(|| "GET".to_string());
         let method = Method::from_bytes(m.to_uppercase().as_bytes())
+            .log()
             .map_err(|_| PiperError::InvalidMethod(m))?;
         let client = self.client.get_or_init(Client::new);
         let req = self.auth.auth(client.request(method, url)).await?;
@@ -103,6 +107,7 @@ impl HttpJsonApi {
                     let t = t.clone();
                     // We use original key value here, not the stringified one.
                     let t = jsonpath_lib::replace_with(t, p, &mut |_| Some(k.clone().into()))
+                        .log()
                         .map_err(|e| PiperError::InvalidJsonPath(e.to_string()))?;
                     req.json(&t)
                 }
@@ -113,11 +118,14 @@ impl HttpJsonApi {
         let resp = req
             .send()
             .await
+            .log()
             .map_err(|e| PiperError::HttpError(e.to_string()))?
             .error_for_status()
+            .log()
             .map_err(|e| PiperError::HttpError(e.to_string()))?
             .json::<serde_json::Value>()
             .await
+            .log()
             .map_err(|e| PiperError::HttpError(e.to_string()))?;
         // Each element in this vector is a column of field values, so we need to transpose before returning.
         let fields_data: Vec<Vec<serde_json::Value>> = fields
@@ -128,6 +136,7 @@ impl HttpJsonApi {
                     .get(f)
                     .ok_or_else(|| PiperError::ColumnNotFound(f.clone()))?;
                 let v = jsonpath_lib::select(&resp, path)
+                    .log()
                     .map_err(|e| PiperError::InvalidJsonPath(e.to_string()))?;
                 if v.is_empty() {
                     debug!("JSONPath selected no elements");
