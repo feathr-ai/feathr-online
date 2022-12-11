@@ -186,11 +186,12 @@ Lookup data sources can be used in `lookup` and `join` transformations, the form
 
 When lookup data source is used in a `lookup` transformation, it acts like `left-outer` but only the first row of lookup result is used for each key.
 
-There are 4 types of builtin lookup data sources:
+There are 5 types of builtin lookup data sources:
 * Feathr Online Store
 * JSON-based HTTP API
 * SqlServer 2008 and up / AzureSQL
 * Sqlite3
+* Azure Cosmos DB
 
 They can be defined in the lookup source definition file, which is a JSON file in following format:
 ```json
@@ -279,7 +280,7 @@ They can be defined in the lookup source definition file, which is a JSON file i
 * SqlServer 2008 and up / AzureSQL
 ```json
 {
-    // This field indicates this is a Feathr Online Store
+    // This field indicates this is a MSSQL source
     "class": "mssql",
     // The name of the source
     "name": "SOME_NAME",
@@ -299,7 +300,7 @@ They can be defined in the lookup source definition file, which is a JSON file i
 * Sqlite3
 ```json
 {
-    // This field indicates this is a Feathr Online Store
+    // This field indicates this is a Sqlite3 source
     "class": "sqlite",
     // The name of the source
     "name": "SOME_NAME",
@@ -312,6 +313,26 @@ They can be defined in the lookup source definition file, which is a JSON file i
         "f2",
         "f3",
     ]
+}
+```
+
+* Azure CosmosDb
+```json
+{
+    // This field indicates this is a CosmosDb source
+    "class": "cosmosdb",
+    // The name of the source
+    "name": "SOME_NAME",
+    // The CosmosDb account
+    "account": "${COSMOS_ACCOUNT}",
+    // The CosmosDb API Key
+    "apiKey": "${COSMOS_API_KEY}",
+    // The CosmosDb Database
+    "database": "${COSMOS_DATABASE}",
+    // The CosmosDb collection
+    "collection": "table1",
+    // Optional, use this field to specify the SQL query to fetch the row by condition, the `@key` will be replaced with the key value.
+    "query": "SELECT * FROM table1 c WHERE c.key0 = @key"
 }
 ```
 

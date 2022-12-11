@@ -4,15 +4,15 @@ use std::{collections::HashMap, env};
 
 use async_trait::async_trait;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 
 use super::{PiperError, Value};
 
+mod cosmosdb;
 mod feathr_online_store;
 mod http_json_api;
 mod mssql;
 mod sqlite;
-mod cosmosdb;
 
 use feathr_online_store::FeathrOnlineStore;
 use http_json_api::HttpJsonApi;
@@ -143,4 +143,18 @@ where
         }
         None => Ok(Default::default()),
     }
+}
+
+pub fn deserialize_field_list<'de, D>(deserializer: D) -> Result<HashMap<String, usize>, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    let v: Vec<String> = de::Deserialize::deserialize(deserializer)?;
+    Ok(v.into_iter().enumerate().map(|(i, f)| (f, i)).collect())
+}
+
+pub fn serialize_field_list(fields: &HashMap<String, usize>) -> Vec<&String> {
+    let mut entries = fields.iter().map(|(k, v)| (k, *v)).collect::<Vec<_>>();
+    entries.sort_by_key(|(_, v)| *v);
+    entries.into_iter().map(|(k, _)| k).collect::<Vec<_>>()
 }

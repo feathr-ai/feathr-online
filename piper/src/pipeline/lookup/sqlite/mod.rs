@@ -19,7 +19,8 @@ mod db_conv;
 pub struct SqliteLookupSource {
     db_path: String,
     sql_template: String,
-    available_fields: Vec<String>,
+    #[serde(deserialize_with = "super::deserialize_field_list")]
+    available_fields: HashMap<String, usize>,
     #[serde(skip)]
     client: OnceCell<Arc<Mutex<rusqlite::Connection>>>,
 }
@@ -83,13 +84,6 @@ impl super::LookupSource for SqliteLookupSource {
             ]];
         }
 
-        let idx_map: HashMap<String, usize> = self
-            .available_fields
-            .iter()
-            .enumerate()
-            .map(|(i, f)| (f.clone(), i))
-            .collect();
-
         let rows = self.make_query(key).await;
         match rows {
             Ok(v) => v
@@ -98,7 +92,7 @@ impl super::LookupSource for SqliteLookupSource {
                     fields
                         .iter()
                         .map(|f| {
-                            idx_map
+                            self.available_fields
                                 .get(f)
                                 .and_then(|idx| row.get(*idx).cloned())
                                 .unwrap_or(Value::Null)
@@ -116,7 +110,7 @@ impl super::LookupSource for SqliteLookupSource {
         json!(
             {
                 "sql_template": self.sql_template,
-                "available_fields": self.available_fields,
+                "available_fields": super::serialize_field_list(&self.available_fields),
             }
         )
     }

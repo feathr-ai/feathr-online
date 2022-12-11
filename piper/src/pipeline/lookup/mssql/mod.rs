@@ -19,7 +19,8 @@ use db_conv::row_to_values;
 pub struct MsSqlLookupSource {
     connection_string: String,
     sql_template: String,
-    available_fields: Vec<String>,
+    #[serde(deserialize_with = "super::deserialize_field_list")]
+    available_fields: HashMap<String, usize>,
     #[serde(skip)]
     pool: IgnoreDebug<OnceCell<bb8::Pool<bb8_tiberius::ConnectionManager>>>,
 }
@@ -94,13 +95,6 @@ impl LookupSource for MsSqlLookupSource {
             ]];
         }
 
-        let idx_map: HashMap<String, usize> = self
-            .available_fields
-            .iter()
-            .enumerate()
-            .map(|(i, f)| (f.clone(), i))
-            .collect();
-
         let rows = self.make_query(key).await;
         match rows {
             Ok(v) => v
@@ -109,7 +103,7 @@ impl LookupSource for MsSqlLookupSource {
                     fields
                         .iter()
                         .map(|f| {
-                            idx_map
+                            self.available_fields
                                 .get(f)
                                 .and_then(|idx| row.get(*idx).cloned())
                                 .unwrap_or(Value::Null)
@@ -127,7 +121,7 @@ impl LookupSource for MsSqlLookupSource {
         json!(
             {
                 "sql_template": self.sql_template,
-                "available_fields": self.available_fields,
+                "available_fields": super::serialize_field_list(&self.available_fields),
             }
         )
     }
