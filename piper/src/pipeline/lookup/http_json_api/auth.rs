@@ -59,17 +59,15 @@ impl Auth {
                 credential,
             } => {
                 let resource = get_secret(Some(resource))?;
-                let credential = credential.get_or_init(|| IgnoreDebug {
-                    inner: AutoRefreshingTokenCredential::new(Arc::new(
+                let credential = credential.get_or_init(|| {
+                    IgnoreDebug::new(AutoRefreshingTokenCredential::new(Arc::new(
                         DefaultAzureCredential::default(),
-                    )),
+                    )))
                 });
-                let token = credential
-                    .inner
-                    .get_token(&resource)
-                    .await
-                    .log()
-                    .map_err(|e| PiperError::AuthError(format!("Failed to get token: {}", e)))?;
+                let token =
+                    &credential.get_token(&resource).await.log().map_err(|e| {
+                        PiperError::AuthError(format!("Failed to get token: {}", e))
+                    })?;
                 request.bearer_auth(token.token.secret())
             }
         })

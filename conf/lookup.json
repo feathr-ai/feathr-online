@@ -83,6 +83,23 @@
         "name",
         "age"
       ]
+    },
+    {
+      "class": "cosmosdb",
+      "name": "cosmos1",
+      "account": "${COSMOS_ACCOUNT}",
+      "apiKey": "${COSMOS_API_KEY}",
+      "database": "${COSMOS_DATABASE}",
+      "collection": "abcde"
+    },
+    {
+      "class": "cosmosdb",
+      "name": "cosmos2",
+      "account": "${COSMOS_ACCOUNT}",
+      "apiKey": "${COSMOS_API_KEY}",
+      "database": "${COSMOS_DATABASE}",
+      "collection": "table1",
+      "query": "SELECT * FROM table1 c WHERE c.key0 = @key"
     }
   ]
 }

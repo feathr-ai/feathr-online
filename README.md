@@ -184,18 +184,14 @@ Lookup Data Source is used to integrate with external data, it can return multip
 
 Lookup data sources can be used in `lookup` and `join` transformations, the former is always 1:1 mapping, it will still return a row with null values in all lookup fields even when the lookup failed, while the latter is 1:N mapping, it may turn single input row into a set of rows.
 
-There are 2 kinds of joining operations, `left-inner` and `left-outer`, right or full/outer joins are not supported.
-
-* `left-inner` join will remove all input rows that cannot be joined with any row from the lookup data source.
-* `left-outer` join will keep all input rows, and fill the lookup fields with null values when the lookup failed.
-
 When lookup data source is used in a `lookup` transformation, it acts like `left-outer` but only the first row of lookup result is used for each key.
 
-There are 4 types of builtin lookup data source:
+There are 5 types of builtin lookup data sources:
 * Feathr Online Store
 * JSON-based HTTP API
 * SqlServer 2008 and up / AzureSQL
 * Sqlite3
+* Azure Cosmos DB
 
 They can be defined in the lookup source definition file, which is a JSON file in following format:
 ```json
@@ -284,7 +280,7 @@ They can be defined in the lookup source definition file, which is a JSON file i
 * SqlServer 2008 and up / AzureSQL
 ```json
 {
-    // This field indicates this is a Feathr Online Store
+    // This field indicates this is a MSSQL source
     "class": "mssql",
     // The name of the source
     "name": "SOME_NAME",
@@ -304,7 +300,7 @@ They can be defined in the lookup source definition file, which is a JSON file i
 * Sqlite3
 ```json
 {
-    // This field indicates this is a Feathr Online Store
+    // This field indicates this is a Sqlite3 source
     "class": "sqlite",
     // The name of the source
     "name": "SOME_NAME",
@@ -317,6 +313,26 @@ They can be defined in the lookup source definition file, which is a JSON file i
         "f2",
         "f3",
     ]
+}
+```
+
+* Azure CosmosDb
+```json
+{
+    // This field indicates this is a CosmosDb source
+    "class": "cosmosdb",
+    // The name of the source
+    "name": "SOME_NAME",
+    // The CosmosDb account
+    "account": "${COSMOS_ACCOUNT}",
+    // The CosmosDb API Key
+    "apiKey": "${COSMOS_API_KEY}",
+    // The CosmosDb Database
+    "database": "${COSMOS_DATABASE}",
+    // The CosmosDb collection
+    "collection": "table1",
+    // Optional, use this field to specify the SQL query to fetch the row by condition, the `@key` will be replaced with the key value.
+    "query": "SELECT * FROM table1 c WHERE c.key0 = @key"
 }
 ```
 

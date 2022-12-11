@@ -19,7 +19,8 @@ use db_conv::row_to_values;
 pub struct MsSqlLookupSource {
     connection_string: String,
     sql_template: String,
-    available_fields: Vec<String>,
+    #[serde(deserialize_with = "super::deserialize_field_list")]
+    available_fields: HashMap<String, usize>,
     #[serde(skip)]
     pool: IgnoreDebug<OnceCell<bb8::Pool<bb8_tiberius::ConnectionManager>>>,
 }
@@ -27,7 +28,6 @@ pub struct MsSqlLookupSource {
 impl MsSqlLookupSource {
     async fn get_pool(&self) -> Result<&Pool<ConnectionManager>, PiperError> {
         self.pool
-            .inner
             .get_or_try_init(|| async {
                 let mgr = bb8_tiberius::ConnectionManager::build(
                     get_secret(Some(&self.connection_string))?.as_str(),
@@ -72,14 +72,6 @@ impl MsSqlLookupSource {
 
 #[async_trait::async_trait]
 impl LookupSource for MsSqlLookupSource {
-    async fn lookup(&self, key: &Value, fields: &[String]) -> Vec<Value> {
-        self.join(key, fields)
-            .await
-            .get(0)
-            .cloned()
-            .unwrap_or_else(|| vec![Value::Null; fields.len()])
-    }
-
     async fn join(&self, key: &Value, fields: &[String]) -> Vec<Vec<Value>> {
         // Propagate error
         if matches!(key, Value::Error(_)) {
@@ -102,13 +94,6 @@ impl LookupSource for MsSqlLookupSource {
             ]];
         }
 
-        let idx_map: HashMap<String, usize> = self
-            .available_fields
-            .iter()
-            .enumerate()
-            .map(|(i, f)| (f.clone(), i))
-            .collect();
-
         let rows = self.make_query(key).await;
         match rows {
             Ok(v) => v
@@ -117,7 +102,7 @@ impl LookupSource for MsSqlLookupSource {
                     fields
                         .iter()
                         .map(|f| {
-                            idx_map
+                            self.available_fields
                                 .get(f)
                                 .and_then(|idx| row.get(*idx).cloned())
                                 .unwrap_or(Value::Null)
@@ -135,7 +120,7 @@ impl LookupSource for MsSqlLookupSource {
         json!(
             {
                 "sql_template": self.sql_template,
-                "available_fields": self.available_fields,
+                "available_fields": super::serialize_field_list(&self.available_fields),
             }
         )
     }

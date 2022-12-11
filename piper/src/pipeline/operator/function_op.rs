@@ -12,11 +12,11 @@ pub struct FunctionOperator {
 
 impl Operator for FunctionOperator {
     fn get_output_type(&self, argument_types: &[ValueType]) -> Result<ValueType, PiperError> {
-        self.function.inner.get_output_type(argument_types)
+        self.function.get_output_type(argument_types)
     }
 
     fn eval(&self, arguments: Vec<Value>) -> Value {
-        self.function.inner.eval(arguments)
+        self.function.eval(arguments)
     }
 
     fn dump(&self, arguments: Vec<String>) -> String {

@@ -4,10 +4,11 @@ use std::{collections::HashMap, env};
 
 use async_trait::async_trait;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Serialize};
 
 use super::{PiperError, Value};
 
+mod cosmosdb;
 mod feathr_online_store;
 mod http_json_api;
 mod mssql;
@@ -28,7 +29,13 @@ pub trait LookupSource: Sync + Send + Debug {
     /**
      * Return single row for one key
      */
-    async fn lookup(&self, key: &Value, fields: &[String]) -> Vec<Value>;
+    async fn lookup(&self, key: &Value, fields: &[String]) -> Vec<Value> {
+        self.join(key, fields)
+            .await
+            .get(0)
+            .cloned()
+            .unwrap_or_else(|| vec![Value::Null; fields.len()])
+    }
 
     /**
      * It can return multiple rows in a join operation, if the lookup source supports it.
@@ -80,8 +87,9 @@ enum LookupSourceType {
     MsSqlLSource(mssql::MsSqlLookupSource),
     #[serde(alias = "SqliteSource", alias = "sqlite")]
     SqliteLSource(sqlite::SqliteLookupSource),
+    #[serde(alias = "cosmosdb", alias = "cosmos")]
+    CosmosDb(cosmosdb::CosmosDbSource),
     // TODO: Add more lookup sources here
-    // CosmosDb(CosmosDb),
     // MongoDb(MongoDb),
 }
 
@@ -93,6 +101,7 @@ impl LookupSource for LookupSourceType {
             LookupSourceType::FeathrOnlineStore(s) => s.lookup(key, fields).await,
             LookupSourceType::MsSqlLSource(s) => s.lookup(key, fields).await,
             LookupSourceType::SqliteLSource(s) => s.lookup(key, fields).await,
+            LookupSourceType::CosmosDb(s) => s.lookup(key, fields).await,
         }
     }
 
@@ -102,6 +111,7 @@ impl LookupSource for LookupSourceType {
             LookupSourceType::FeathrOnlineStore(s) => s.join(key, fields).await,
             LookupSourceType::MsSqlLSource(s) => s.join(key, fields).await,
             LookupSourceType::SqliteLSource(s) => s.join(key, fields).await,
+            LookupSourceType::CosmosDb(s) => s.join(key, fields).await,
         }
     }
 
@@ -133,4 +143,18 @@ where
         }
         None => Ok(Default::default()),
     }
+}
+
+pub fn deserialize_field_list<'de, D>(deserializer: D) -> Result<HashMap<String, usize>, D::Error>
+where
+    D: de::Deserializer<'de>,
+{
+    let v: Vec<String> = de::Deserialize::deserialize(deserializer)?;
+    Ok(v.into_iter().enumerate().map(|(i, f)| (f, i)).collect())
+}
+
+pub fn serialize_field_list(fields: &HashMap<String, usize>) -> Vec<&String> {
+    let mut entries = fields.iter().map(|(k, v)| (k, *v)).collect::<Vec<_>>();
+    entries.sort_by_key(|(_, v)| *v);
+    entries.into_iter().map(|(k, _)| k).collect::<Vec<_>>()
 }

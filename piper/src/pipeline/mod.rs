@@ -22,4 +22,4 @@ pub use function::{
 };
 pub use lookup::{init_lookup_sources, load_lookup_source, LookupSource};
 pub use pipelines::{BuildContext, Pipeline};
-pub use value::{Value, ValueType, ValueTypeOf};
+pub use value::{IntoValue, Value, ValueType, ValueTypeOf};
