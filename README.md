@@ -184,14 +184,9 @@ Lookup Data Source is used to integrate with external data, it can return multip
 
 Lookup data sources can be used in `lookup` and `join` transformations, the former is always 1:1 mapping, it will still return a row with null values in all lookup fields even when the lookup failed, while the latter is 1:N mapping, it may turn single input row into a set of rows.
 
-There are 2 kinds of joining operations, `left-inner` and `left-outer`, right or full/outer joins are not supported.
-
-* `left-inner` join will remove all input rows that cannot be joined with any row from the lookup data source.
-* `left-outer` join will keep all input rows, and fill the lookup fields with null values when the lookup failed.
-
 When lookup data source is used in a `lookup` transformation, it acts like `left-outer` but only the first row of lookup result is used for each key.
 
-There are 4 types of builtin lookup data source:
+There are 4 types of builtin lookup data sources:
 * Feathr Online Store
 * JSON-based HTTP API
 * SqlServer 2008 and up / AzureSQL

@@ -12,6 +12,7 @@ mod feathr_online_store;
 mod http_json_api;
 mod mssql;
 mod sqlite;
+mod cosmosdb;
 
 use feathr_online_store::FeathrOnlineStore;
 use http_json_api::HttpJsonApi;
@@ -28,7 +29,13 @@ pub trait LookupSource: Sync + Send + Debug {
     /**
      * Return single row for one key
      */
-    async fn lookup(&self, key: &Value, fields: &[String]) -> Vec<Value>;
+    async fn lookup(&self, key: &Value, fields: &[String]) -> Vec<Value> {
+        self.join(key, fields)
+            .await
+            .get(0)
+            .cloned()
+            .unwrap_or_else(|| vec![Value::Null; fields.len()])
+    }
 
     /**
      * It can return multiple rows in a join operation, if the lookup source supports it.
@@ -80,8 +87,9 @@ enum LookupSourceType {
     MsSqlLSource(mssql::MsSqlLookupSource),
     #[serde(alias = "SqliteSource", alias = "sqlite")]
     SqliteLSource(sqlite::SqliteLookupSource),
+    #[serde(alias = "cosmosdb", alias = "cosmos")]
+    CosmosDb(cosmosdb::CosmosDbSource),
     // TODO: Add more lookup sources here
-    // CosmosDb(CosmosDb),
     // MongoDb(MongoDb),
 }
 
@@ -93,6 +101,7 @@ impl LookupSource for LookupSourceType {
             LookupSourceType::FeathrOnlineStore(s) => s.lookup(key, fields).await,
             LookupSourceType::MsSqlLSource(s) => s.lookup(key, fields).await,
             LookupSourceType::SqliteLSource(s) => s.lookup(key, fields).await,
+            LookupSourceType::CosmosDb(s) => s.lookup(key, fields).await,
         }
     }
 
@@ -102,6 +111,7 @@ impl LookupSource for LookupSourceType {
             LookupSourceType::FeathrOnlineStore(s) => s.join(key, fields).await,
             LookupSourceType::MsSqlLSource(s) => s.join(key, fields).await,
             LookupSourceType::SqliteLSource(s) => s.join(key, fields).await,
+            LookupSourceType::CosmosDb(s) => s.join(key, fields).await,
         }
     }
 

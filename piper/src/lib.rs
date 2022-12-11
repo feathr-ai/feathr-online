@@ -10,7 +10,7 @@ mod service;
 pub use crate::piper::Piper;
 pub use common::{Appliable, Logged};
 pub use pipeline::{
-    load_lookup_source, ErrorCollectingMode, ErrorRecord, Function, LookupSource, PiperError,
+    load_lookup_source, ErrorCollectingMode, ErrorRecord, Function, IntoValue, LookupSource, PiperError,
     Value, ValueType,
 };
 pub use service::{Args, PiperService};

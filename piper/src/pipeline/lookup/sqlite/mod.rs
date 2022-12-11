@@ -61,14 +61,6 @@ impl SqliteLookupSource {
 
 #[async_trait::async_trait]
 impl super::LookupSource for SqliteLookupSource {
-    async fn lookup(&self, key: &Value, fields: &[String]) -> Vec<Value> {
-        self.join(key, fields)
-            .await
-            .get(0)
-            .cloned()
-            .unwrap_or_else(|| vec![Value::Null; fields.len()])
-    }
-
     async fn join(&self, key: &Value, fields: &[String]) -> Vec<Vec<Value>> {
         // Propagate error
         if matches!(key, Value::Error(_)) {
