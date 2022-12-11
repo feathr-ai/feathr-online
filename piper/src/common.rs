@@ -1,4 +1,7 @@
-use std::fmt::{Debug, Display};
+use std::{
+    fmt::{Debug, Display},
+    ops::{Deref, DerefMut},
+};
 
 use tracing::error;
 
@@ -45,8 +48,15 @@ where
 impl<T> Appliable for T where T: Sized {}
 
 /// Ignore field from `Debug` auto trait
+#[repr(transparent)]
 pub struct IgnoreDebug<T> {
     pub inner: T,
+}
+
+impl<T> IgnoreDebug<T> {
+    pub fn new(inner: T) -> Self {
+        Self { inner }
+    }
 }
 
 impl<T> Debug for IgnoreDebug<T> {
@@ -55,7 +65,7 @@ impl<T> Debug for IgnoreDebug<T> {
     }
 }
 
-// Implementation of most common auto traits
+// Implementation of the most common auto traits
 
 impl<T> Copy for IgnoreDebug<T> where T: Copy {}
 
@@ -72,11 +82,44 @@ where
 
 impl<T> Default for IgnoreDebug<T>
 where
-    T: Default
+    T: Default,
 {
     fn default() -> Self {
         Self {
             inner: T::default(),
         }
+    }
+}
+
+/// Some conveniences
+impl<T> From<T> for IgnoreDebug<T> {
+    fn from(inner: T) -> Self {
+        Self { inner }
+    }
+}
+
+impl<T> AsRef<T> for IgnoreDebug<T> {
+    fn as_ref(&self) -> &T {
+        &self.inner
+    }
+}
+
+impl<T> AsMut<T> for IgnoreDebug<T> {
+    fn as_mut(&mut self) -> &mut T {
+        &mut self.inner
+    }
+}
+
+impl<T> Deref for IgnoreDebug<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<T> DerefMut for IgnoreDebug<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
     }
 }

@@ -31,7 +31,7 @@ impl Piper {
         pipelines.insert("%health".to_string(), Pipeline::get_health_checker());
         Ok(Self {
             pipelines,
-            ctx: IgnoreDebug { inner: ctx },
+            ctx: IgnoreDebug::new(ctx),
         })
     }
 
@@ -47,7 +47,7 @@ impl Piper {
         pipelines.insert("%health".to_string(), Pipeline::get_health_checker());
         Ok(Self {
             pipelines,
-            ctx: IgnoreDebug { inner: ctx },
+            ctx: IgnoreDebug::new(ctx),
         })
     }
 
@@ -63,12 +63,12 @@ impl Piper {
         pipelines.insert("%health".to_string(), Pipeline::get_health_checker());
         Ok(Self {
             pipelines,
-            ctx: IgnoreDebug { inner: ctx },
+            ctx: IgnoreDebug::new(ctx),
         })
     }
 
     pub fn get_functions(&self) -> HashSet<String> {
-        self.ctx.inner.functions.keys().cloned().collect()
+        self.ctx.functions.keys().cloned().collect()
     }
 
     pub async fn health_check(&self) -> bool {
@@ -95,14 +95,13 @@ impl Piper {
     }
 
     pub fn get_lookup_sources(&self) -> serde_json::Value {
-        self.ctx.inner.dump_lookup_sources()
+        self.ctx.dump_lookup_sources()
     }
 
     #[instrument(level = "trace", skip(self))]
     pub async fn lookup(&self, req: LookupRequest) -> Result<LookupResponse, PiperError> {
         let src = self
             .ctx
-            .inner
             .lookup_sources
             .get(&req.source)
             .ok_or_else(|| PiperError::LookupSourceNotFound(req.source.clone()))?;

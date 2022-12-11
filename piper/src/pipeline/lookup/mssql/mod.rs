@@ -28,7 +28,6 @@ pub struct MsSqlLookupSource {
 impl MsSqlLookupSource {
     async fn get_pool(&self) -> Result<&Pool<ConnectionManager>, PiperError> {
         self.pool
-            .inner
             .get_or_try_init(|| async {
                 let mgr = bb8_tiberius::ConnectionManager::build(
                     get_secret(Some(&self.connection_string))?.as_str(),

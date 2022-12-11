@@ -24,9 +24,7 @@ impl OperatorBuilder for FunctionOperatorBuilder {
         match ctx.functions.get(&self.name) {
             Some(function) => Ok(Box::new(FunctionOperator {
                 name: self.name.clone(),
-                function: crate::common::IgnoreDebug {
-                    inner: function.clone(),
-                },
+                function: crate::common::IgnoreDebug::new(function.clone()),
             })),
             None => Err(PiperError::UnknownFunction(self.name.clone())),
         }
@@ -40,7 +38,8 @@ mod tests {
             expression_builders::{LiteralExpressionBuilder, OperatorExpressionBuilder},
             operator_builder::FunctionOperatorBuilder,
         },
-        Schema, pipelines::BuildContext,
+        pipelines::BuildContext,
+        Schema,
     };
 
     #[test]
@@ -54,8 +53,6 @@ mod tests {
                 LiteralExpressionBuilder::create(2),
             ],
         );
-        let _ = expression
-            .build(&schema, &BuildContext::default())
-            .unwrap();
+        let _ = expression.build(&schema, &BuildContext::default()).unwrap();
     }
 }
