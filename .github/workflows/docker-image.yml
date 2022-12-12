@@ -30,4 +30,4 @@ jobs:
           DOCKER_FILE=Dockerfile.$(echo "${{ matrix.docker_target }}" | cut -f1 -d:)
           DOCKER_IMAGE=windoze/feathrpiper:latest
           DOCKER_PLATFORM=$(echo "${{ matrix.docker_target }}" | cut -f2 -d:)
-          docker buildx build . --no-cache --platform ${DOCKER_PLATFORM} -t "${DOCKER_IMAGE}" -f "${DOCKER_FILE}" --push
+          docker buildx build . --no-cache --platform ${DOCKER_PLATFORM} -t "${DOCKER_IMAGE}" -f "${DOCKER_FILE}" -m 4g --push
