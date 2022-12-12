@@ -9,6 +9,9 @@ on:
 jobs:
   docker:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        docker_target: [ 'amd64:linux/amd64', 'arm64:linux/arm64']
     steps:
       -
         name: Checkout
@@ -25,11 +28,9 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Build and push
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          platforms: linux/amd64
-          push: true
-          tags: windoze/feathrpiper:latest,windoze/feathrpiper:${{ github.sha }}
+      - name: docker buildx ${{ matrix.docker_target }}
+        run: |
+          DOCKER_FILE=Dockerfile.$(echo "${{ matrix.docker_target }}" | cut -f1 -d:)
+          DOCKER_IMAGE=windoze/feathrpiper:latest
+          DOCKER_PLATFORM=$(echo "${{ matrix.docker_target }}" | cut -f2 -d:)
+          docker buildx build . --no-cache --platform ${DOCKER_PLATFORM} -t "${DOCKER_IMAGE}" -f "${DOCKER_FILE}" --push
