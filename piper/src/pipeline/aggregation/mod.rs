@@ -156,5 +156,9 @@ pub fn init_built_in_agg_functions() -> HashMap<String, Box<dyn AggregationFunct
         "array_agg".to_string(),
         Box::new(array_agg::ArrayAgg::default()) as Box<dyn AggregationFunction>,
     );
+    agg.insert(
+        "array_agg_if".to_string(),
+        Box::new(array_agg::ArrayAggIf::default()) as Box<dyn AggregationFunction>,
+    );
     agg
 }
