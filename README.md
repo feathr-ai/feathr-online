@@ -169,6 +169,7 @@ The data manipulation transformations are used to manipulate the data in the pip
 * `ignore-errors`: ignore the rows that contain error value in the input row set.
 * `summarize`: group the input row set by the specified criteria, and apply aggregations on each group.
 * `explode`: explode, or transpose, the input row set by the specified criteria, distributes array value into multiple rows.
+* `distinct`: remove duplicate rows from the input row set.
 
 ### Lookup Transformations
 

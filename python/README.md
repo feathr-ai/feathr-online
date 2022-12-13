@@ -1,5 +1,6 @@
 # README
 
+[![PyPI version](https://badge.fury.io/py/feathrpiper.svg)](https://badge.fury.io/py/feathrpiper) 
 
 This is the Python wrapper of the Feathr online transformation service.
 
@@ -122,7 +123,7 @@ In most cases, the packaging process could be like:
 1. Prepare the `requirements.txt` file which includes the `feathrpiper` package and all the other dependencies.
     ```
     # This package
-    feathrpiper >= 0.4.1
+    feathrpiper >= 0.4.3
     # Any other dependencies
     pandas == 1.5.2
     pytorch >= 1.0.0
