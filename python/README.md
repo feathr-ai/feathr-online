@@ -112,6 +112,8 @@ The `feathrpiper` contains built-in web service, but it doesn't support HTTPS an
 * FastAPI: FastAPI is fully async-based, use `process_async` to process the request.
 * Any other Web framework that doesn't support async: You can use `process` in non-async context, but the user-defined lookup function feature will be unavailable.
 
+A demo of integrating with FastAPI is at [here](https://github.com/windoze/piper/blob/main/python/examples/fastapi_example.py)
+
 ## Packaging and Deployment
 
 The `feathrpiper` package is a standard Python package without external dependency, you need to write your own code using the package to implement your own transformation service.
