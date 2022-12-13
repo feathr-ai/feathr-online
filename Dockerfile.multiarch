@@ -1,0 +1,23 @@
+FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
+ARG TARGETARCH
+
+FROM messense/rust-musl-cross:x86_64-musl-amd64 AS builder-amd64
+FROM messense/rust-musl-cross:aarch64-musl-amd64 AS builder-arm64
+
+FROM builder-${TARGETARCH} as builder
+ARG TARGETARCH
+ARG TARGETPLATFORM
+COPY --from=xx / /
+WORKDIR /usr/src/
+COPY . ./
+RUN cargo build --release --target=$(xx-info march)-unknown-linux-musl --package=standalone && \
+    cp /usr/src/target/$(xx-info march)-unknown-linux-musl/release/piper /
+
+# Bundle Stage
+FROM alpine
+COPY --from=builder /piper /app/piper
+COPY --from=builder /usr/src/conf /conf
+# USER 1000
+WORKDIR /conf
+EXPOSE 8000
+CMD ["/app/piper", "-p", "/conf/pipeline.conf", "-l", "/conf/lookup.json", "--port", "8000"]

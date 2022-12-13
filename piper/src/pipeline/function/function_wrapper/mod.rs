@@ -12,20 +12,35 @@ mod variadic;
  *
  * E.g. following code does not compile:
  ``` ignore
- trait IntoFunction {
-     fn into_function(self) -> Box<dyn Function>;
- }
+trait IntoFunction {
+    fn into_function(self) -> Box<dyn Function>;
+}
 
+// This compiles
 impl<R, F> IntoFunction for F
 where
-    Self: Fn()->R + Sync + Send
-    R: Into<Value> + Sync + Send + ValueTypeOf,
+   Self: Fn()->R + Sync + Send + Clone + 'static,
+   R: Into<Value> + Sync + Send + ValueTypeOf + Clone + 'static,
 {
-    fn into_function(self) -> Box<dyn Function> {
-        nullary::nullary_fn(self)
-    }
+   fn into_function(self) -> Box<dyn Function> {
+       nullary::nullary_fn(self)
+   }
 }
- ```
+
+// But this doesn't because `E` are not directly bounded by `Self: Fn(A)->R + ...`
+impl<R, F, A, E> IntoFunction for F
+where
+   Self: Fn(A)->R + Sync + Send + Clone + 'static,
+   R: Into<Value> + Sync + Send + ValueTypeOf + Clone + 'static,
+   A: Send + Sync + Clone + TryFrom<Value, Error = E>,
+   Result<Value, E>: Into<Value>,
+   E: Sync + Send + Clone,
+{
+   fn into_function(self) -> Box<dyn Function> {
+       unary::unary_fn(self)
+   }
+}
+```
  */
 
 /**
