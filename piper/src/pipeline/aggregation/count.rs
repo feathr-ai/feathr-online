@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{PiperError, Value, ValueType};
 
 use super::AggregationFunction;
@@ -59,3 +61,31 @@ impl AggregationFunction for CountIf {
         "count_if".to_string()
     }
 }
+
+#[derive(Clone, Debug, Default)]
+pub struct DistinctCount {
+    buckets: HashSet<Vec<Value>>,
+}
+
+impl AggregationFunction for DistinctCount {
+    fn get_output_type(&self, input_type: &[ValueType]) -> Result<ValueType, PiperError> {
+        if input_type.is_empty() {
+            return Err(PiperError::InvalidArgumentCount(1, input_type.len()));
+        }
+        Ok(ValueType::Long)
+    }
+
+    fn feed(&mut self, arguments: &[Value]) -> Result<(), PiperError> {
+        self.buckets.insert(arguments.to_vec());
+        Ok(())
+    }
+
+    fn get_result(&self) -> Result<Value, PiperError> {
+        Ok(self.buckets.len().into())
+    }
+
+    fn dump(&self) -> String {
+        "distinct_count".to_string()
+    }
+}
+

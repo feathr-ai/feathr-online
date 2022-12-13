@@ -85,6 +85,10 @@ pub fn init_built_in_agg_functions() -> HashMap<String, Box<dyn AggregationFunct
         Box::new(count::CountIf::default()) as Box<dyn AggregationFunction>,
     );
     agg.insert(
+        "distinct_count".to_string(),
+        Box::new(count::DistinctCount::default()) as Box<dyn AggregationFunction>,
+    );
+    agg.insert(
         "sum".to_string(),
         Box::new(sum::Sum::default()) as Box<dyn AggregationFunction>,
     );

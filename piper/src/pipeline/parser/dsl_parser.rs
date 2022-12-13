@@ -77,6 +77,7 @@ peg::parser! {
                 / top_transformation()
                 / ignore_error_transformation()
                 / summarize_transformation()
+                / distinct_transformation()
             ) {t}
 
         pub rule ignore_error_transformation() -> Box<dyn TransformationBuilder>
@@ -131,6 +132,13 @@ peg::parser! {
         rule project_rename_column() -> (String, String)
             = new:identifier() _ "=" _ old:identifier() {
                 (old.to_string(), new.to_string())
+            }
+
+        pub rule distinct_transformation() -> Box<dyn TransformationBuilder>
+            = "distinct" _ group_by:("by" _ g:(group_key_def() **<1,> list_sep()) { g })? {
+                Box::new(DistinctTransformationBuilder{
+                    keys: group_by.unwrap_or_default(),
+                })
             }
 
         rule rename_with_type() -> (String, Option<String>, ValueType)
@@ -456,6 +464,19 @@ mod tests {
 
         let input = "join kind=left-inner a=f1 as int,b,c from name on a+b-c";
         let result = pipeline_parser::lookup_transformation(input);
+        println!("{:?}", result);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_distinct() {
+        let input = "distinct by a=1, b=2, c=3, d";
+        let result = pipeline_parser::distinct_transformation(input);
+        println!("{:?}", result);
+        assert!(result.is_ok());
+
+        let input = "distinct";
+        let result = pipeline_parser::distinct_transformation(input);
         println!("{:?}", result);
         assert!(result.is_ok());
     }

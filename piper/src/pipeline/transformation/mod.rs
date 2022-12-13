@@ -2,6 +2,7 @@ use std::fmt::Debug;
 
 use super::{DataSet, PiperError, Schema};
 
+mod distinct_transformation;
 mod explode_transformation;
 mod ignore_error_transformation;
 mod lookup_transformation;
@@ -14,6 +15,7 @@ mod take_transformation;
 mod top_transformation;
 mod where_transformation;
 
+pub use distinct_transformation::DistinctTransformation;
 pub use explode_transformation::ExplodeTransformation;
 pub use ignore_error_transformation::IgnoreErrorTransformation;
 pub use lookup_transformation::{JoinKind, LookupTransformation};
