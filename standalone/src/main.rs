@@ -1,4 +1,7 @@
+use std::pin::Pin;
+
 use clap::Parser;
+use futures::{Future, TryFutureExt};
 use piper::{Args, PiperError, PiperService};
 
 use tracing::{info, metadata::LevelFilter};
@@ -18,5 +21,10 @@ async fn main() -> Result<(), PiperError> {
 
     let mut svc = PiperService::new(args).await?;
 
-    svc.start().await
+    let ctrl_c: Pin<Box<dyn Future<Output = Result<(), PiperError>>>> =
+        Box::pin(tokio::signal::ctrl_c().map_err(|e| PiperError::Unknown(e.to_string())));
+    let task: Pin<Box<dyn Future<Output = Result<(), PiperError>>>> = Box::pin(svc.start());
+
+    futures::future::select(ctrl_c, task).await;
+    Ok(())
 }

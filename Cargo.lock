@@ -1662,7 +1662,7 @@ dependencies = [
  "protobuf-codegen",
  "pyo3",
  "pyo3-asyncio",
- "rand 0.7.3",
+ "rand 0.8.5",
  "redis",
  "regex",
  "reqwest",
@@ -2425,6 +2425,7 @@ version = "0.4.3"
 dependencies = [
  "clap",
  "dotenvy",
+ "futures",
  "openssl",
  "piper",
  "poem",
