@@ -11,6 +11,7 @@ mod lookup_builder;
 mod top_builder;
 mod ignore_error_builder;
 mod summarize_builder;
+mod distinct_builder;
 
 pub use take_builder::TakeTransformationBuilder;
 pub use where_builder::WhereTransformationBuilder;
@@ -23,6 +24,7 @@ pub use lookup_builder::LookupTransformationBuilder;
 pub use top_builder::TopTransformationBuilder;
 pub use ignore_error_builder::IgnoreErrorTransformationBuilder;
 pub use summarize_builder::SummarizeTransformationBuilder;
+pub use distinct_builder::DistinctTransformationBuilder;
 
 pub trait TransformationBuilder: std::fmt::Debug {
     fn build(&self, input_schema: &Schema, ctx: &BuildContext) -> Result<Box<dyn Transformation>, PiperError>;
