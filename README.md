@@ -3,7 +3,7 @@
 This project include 4 components:
 
 * The transformation core, it's a shared component used by all the other components.
-* The standalone executable, which is a HTTP server that can be used to transform data, it doesn't support UDF, and the docker image is published to DockerHub as `windoze/feathrpiper:latest`.
+* The standalone executable, which is a HTTP server that can be used to transform data, it doesn't support UDF, and the docker image is published to DockerHub as `feathrfeaturestore/feathrpiper:latest`.
 * The Python package, it supports UDF written in Python, the package is published to PyPI as `feathrpiper` and can be installed with `pip`.
 * The Java package, it supports UDF written in Java, the package is published to GitHub Package Registry as `com.github.windoze.feathr:feathrpiper`.
 
@@ -13,7 +13,7 @@ This project include 4 components:
 Run the following command:
 
 ```bash
-docker run -p 8000:8000 windoze/feathrpiper:latest
+docker run -p 8000:8000 feathrfeaturestore/feathrpiper:latest
 ```
 
 The service will listen on port 8000, and you can send HTTP request to it to transform data, it uses the pre-packaged config located under the `conf` directory.
@@ -32,7 +32,7 @@ cat > conf/lookup.json <<EOF
 {}
 EOF
 
-docker run -p 8000:8000 -v $(pwd)/conf:/conf windoze/feathrpiper:latest
+docker run -p 8000:8000 -v $(pwd)/conf:/conf feathrfeaturestore/feathrpiper:latest
 ```
 
 Then you can try out the service with the following command:
