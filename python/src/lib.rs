@@ -4,7 +4,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use futures::{pin_mut, Future};
-use piper::RequestData;
+use piper::{Logged, RequestData};
 use pyo3::exceptions::PyException;
 use pyo3::types::{PyDict, PyList, PyTuple};
 use pyo3::{create_exception, prelude::*};
@@ -173,7 +173,7 @@ fn obj_to_lookup_source(o: &PyObject, py: Python<'_>) -> PyResult<Arc<dyn piper:
     }
 }
 
-#[pyclass]
+#[pyclass(module = "feathrpiper")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum ErrorCollectingMode {
     On,
@@ -384,21 +384,38 @@ impl IntoPy<PyObject> for SingleResponse {
     }
 }
 
-#[pyclass]
+#[pyclass(module = "feathrpiper")]
 struct Piper {
-    piper: Arc<piper::Piper>,
+    pipelines: String,
+    lookups: PyObject,
+    functions: HashMap<String, PyObject>,
+    piper: Option<Arc<piper::Piper>>,
 }
 
 #[pymethods]
 impl Piper {
     #[new]
-    #[args(functions = "HashMap::new()")]
+    #[args(pipelines = "None", lookups = "None", functions = "HashMap::new()")]
     fn new(
-        pipelines: &str,
-        lookups: PyObject,
+        pipelines: Option<&str>,
+        lookups: Option<PyObject>,
         functions: HashMap<String, PyObject>,
         py: Python<'_>,
     ) -> PyResult<Self> {
+        if pipelines.is_none() {
+            return Ok(Self {
+                pipelines: "".to_string(),
+                lookups: py.None(),
+                functions: HashMap::new(),
+                piper: None,
+            });
+        }
+        let lookups = match lookups {
+            Some(lookups) => lookups,
+            None => PyDict::new(py).into_py(py),
+        };
+        let l = lookups.clone();
+        let f = functions.clone();
         let functions = functions
             .into_iter()
             .map(|(k, v)| {
@@ -410,10 +427,13 @@ impl Piper {
             .collect();
         match lookups.as_ref(py).extract::<String>() {
             Ok(lookups) => Ok(Self {
-                piper: Arc::new(
-                    piper::Piper::new_with_udf(pipelines, &lookups, functions)
+                pipelines: pipelines.as_ref().unwrap().to_string(),
+                lookups: l,
+                functions: f,
+                piper: Some(Arc::new(
+                    piper::Piper::new_with_udf(pipelines.unwrap(), &lookups, functions)
                         .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))?,
-                ),
+                )),
             }),
             Err(_) => {
                 let lookups = lookups.as_ref(py).extract::<Py<PyDict>>()?;
@@ -427,10 +447,13 @@ impl Piper {
                     })
                     .collect::<PyResult<HashMap<_, _>>>()?;
                 Ok(Self {
-                    piper: Arc::new(
-                        piper::Piper::new_with_lookup_udf(pipelines, lookups, functions)
+                    pipelines: pipelines.as_ref().unwrap().to_string(),
+                    lookups: l,
+                    functions: f,
+                    piper: Some(Arc::new(
+                        piper::Piper::new_with_lookup_udf(pipelines.unwrap(), lookups, functions)
                             .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))?,
-                    ),
+                    )),
                 })
             }
         }
@@ -444,10 +467,17 @@ impl Piper {
         error_report: ErrorCollectingMode,
         py: Python<'_>,
     ) -> PyResult<Py<PyTuple>> {
+        if self.piper.is_none() {
+            return Err(PyErr::new::<PiperError, _>(
+                "Piper has not been initialized",
+            ));
+        }
         let req = pyobj_to_request(py, pipeline, object, error_report)?;
         let resp = py.allow_threads(|| {
             block_on(cancelable_wait(async move {
                 self.piper
+                    .as_ref()
+                    .unwrap()
                     .process_single_request(req)
                     .await
                     .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))
@@ -464,18 +494,57 @@ impl Piper {
         error_report: ErrorCollectingMode,
         py: Python<'p>,
     ) -> PyResult<&'p PyAny> {
+        if self.piper.is_none() {
+            return Err(PyErr::new::<PiperError, _>(
+                "Piper has not been initialized",
+            ));
+        }
         let req = pyobj_to_request(py, pipeline, object, error_report)?;
         let piper = self.piper.clone();
         pyo3_asyncio::tokio::future_into_py(
             py,
             cancelable_wait(async move {
                 piper
+                    .unwrap()
                     .process_single_request(req)
                     .await
                     .map(SingleResponse)
                     .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))
             }),
         )
+    }
+
+    fn __getstate__(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let dict = PyDict::new(py);
+        dict.set_item("pipelines", self.pipelines.clone()).log()?;
+        dict.set_item("lookups", self.lookups.clone()).log()?;
+        dict.set_item("functions", self.functions.clone()).log()?;
+        Ok(dict.into())
+    }
+
+    fn __setstate__(&mut self, state: PyObject, py: Python<'_>) -> PyResult<()> {
+        let state = state.extract::<Py<PyDict>>(py)?;
+        let pipelines: String = state
+            .as_ref(py)
+            .get_item("pipelines")
+            .ok_or_else(|| PyErr::new::<PiperError, _>("Missing field 'pipelines'"))
+            .and_then(|v| v.extract())?;
+        let lookups: PyObject = state
+            .as_ref(py)
+            .get_item("lookups")
+            .ok_or_else(|| PyErr::new::<PiperError, _>("Missing field 'lookups'"))
+            .and_then(|v| v.extract())?;
+        let functions: HashMap<String, PyObject> = state
+            .as_ref(py)
+            .get_item("functions")
+            .ok_or_else(|| PyErr::new::<PiperError, _>("Missing field 'functions'"))
+            .and_then(|v| v.extract())?;
+        let new_me = Self::new(Some(&pipelines), Some(lookups.clone()), functions.clone(), py)?;
+        self.pipelines = pipelines;
+        self.lookups = lookups;
+        self.functions = functions;
+        self.piper = new_me.piper;
+        Ok(())
     }
 
     fn lookup(
@@ -485,6 +554,11 @@ impl Piper {
         fields: Vec<String>,
         py: Python<'_>,
     ) -> PyResult<Vec<HashMap<String, Value>>> {
+        if self.piper.is_none() {
+            return Err(PyErr::new::<PiperError, _>(
+                "Piper has not been initialized",
+            ));
+        }
         let req = piper::LookupRequest {
             source: source.to_string(),
             keys: keys.into_iter().map(|v| v.0.into()).collect(),
@@ -493,6 +567,8 @@ impl Piper {
         let resp = py.allow_threads(|| {
             block_on(cancelable_wait(async move {
                 self.piper
+                    .as_ref()
+                    .unwrap()
                     .lookup(req)
                     .await
                     .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))
@@ -513,6 +589,11 @@ impl Piper {
         fields: Vec<String>,
         py: Python<'p>,
     ) -> PyResult<&'p PyAny> {
+        if self.piper.is_none() {
+            return Err(PyErr::new::<PiperError, _>(
+                "Piper has not been initialized",
+            ));
+        }
         let piper = self.piper.clone();
         let req = piper::LookupRequest {
             source: source.to_string(),
@@ -523,6 +604,7 @@ impl Piper {
             py,
             cancelable_wait(async move {
                 let resp = piper
+                    .unwrap()
                     .lookup(req)
                     .await
                     .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))?;
@@ -537,7 +619,7 @@ impl Piper {
     }
 }
 
-#[pyclass]
+#[pyclass(module = "feathrpiper")]
 #[pyo3(text_signature = "(pipelines lookups functions /)")]
 struct PiperService {
     service: Arc<RwLock<piper::PiperService>>,
