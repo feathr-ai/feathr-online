@@ -28,7 +28,7 @@ piper = Piper(pipelines, functions = {"convertCase": convertCase})
 
 # Then use Piper in PySpark UDF, pretty much like Matryoshka doll
 #
-# `Piper.process` returns ([[{"field", value}, ...], ...], error_list)
+# `Piper.process` returns ([{"field", value}, ...], error_list)
 convertUDF = udf(lambda z: piper.process("test_udf", {"x": z})[0][0]["y"])
 
 # Create DataFrame

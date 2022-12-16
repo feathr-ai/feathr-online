@@ -9,7 +9,6 @@ RUN cargo build --release --target=x86_64-unknown-linux-musl --package=standalon
 # Bundle Stage
 FROM alpine
 ARG TARGETPLATFORM
-RUN apk add --update openssl bash
 COPY --from=builder /usr/src/target/x86_64-unknown-linux-musl/release/piper /app/piper
 COPY --from=builder /usr/src/conf /conf
 # USER 1000
