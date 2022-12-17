@@ -11,7 +11,7 @@ COPY --from=xx / /
 WORKDIR /usr/src/
 COPY . ./
 RUN cargo build --release --target=$(xx-info march)-unknown-linux-musl --package=standalone && \
-    strip -s target/$(xx-info march)-unknown-linux-musl/release/piper && \
+    strip -s /usr/src/target/$(xx-info march)-unknown-linux-musl/release/piper && \
     cp /usr/src/target/$(xx-info march)-unknown-linux-musl/release/piper /
 
 # Bundle Stage
