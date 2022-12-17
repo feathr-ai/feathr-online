@@ -211,7 +211,7 @@ impl Pipeline {
     #[allow(dead_code)]
     pub fn to_json(&self) -> serde_json::Value {
         let input_schema = serde_json::to_value(
-            &self
+            self
                 .input_schema
                 .columns
                 .iter()
@@ -220,7 +220,7 @@ impl Pipeline {
         )
         .unwrap();
         let output_schema = serde_json::to_value(
-            &self
+            self
                 .output_schema
                 .columns
                 .iter()

@@ -78,87 +78,87 @@ pub fn init_built_in_agg_functions() -> HashMap<String, Box<dyn AggregationFunct
     let mut agg = HashMap::new();
     agg.insert(
         "count".to_string(),
-        Box::new(count::Count::default()) as Box<dyn AggregationFunction>,
+        Box::<count::Count>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "count_if".to_string(),
-        Box::new(count::CountIf::default()) as Box<dyn AggregationFunction>,
+        Box::<count::CountIf>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "distinct_count".to_string(),
-        Box::new(count::DistinctCount::default()) as Box<dyn AggregationFunction>,
+        Box::<count::DistinctCount>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "sum".to_string(),
-        Box::new(sum::Sum::default()) as Box<dyn AggregationFunction>,
+        Box::<sum::Sum>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "avg".to_string(),
-        Box::new(sum::Avg::default()) as Box<dyn AggregationFunction>,
+        Box::<sum::Avg>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "mean".to_string(),
-        Box::new(sum::Avg::default()) as Box<dyn AggregationFunction>,
+        Box::<sum::Avg>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "min".to_string(),
-        Box::new(min_max::Min::default()) as Box<dyn AggregationFunction>,
+        Box::<min_max::Min>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "max".to_string(),
-        Box::new(min_max::Max::default()) as Box<dyn AggregationFunction>,
+        Box::<min_max::Max>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "least".to_string(),
-        Box::new(min_max::Min::default()) as Box<dyn AggregationFunction>,
+        Box::<min_max::Min>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "greatest".to_string(),
-        Box::new(min_max::Max::default()) as Box<dyn AggregationFunction>,
+        Box::<min_max::Max>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "min_by".to_string(),
-        Box::new(min_max::MinBy::default()) as Box<dyn AggregationFunction>,
+        Box::<min_max::MinBy>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "max_by".to_string(),
-        Box::new(min_max::MaxBy::default()) as Box<dyn AggregationFunction>,
+        Box::<min_max::MaxBy>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "every".to_string(),
-        Box::new(all_any::All::default()) as Box<dyn AggregationFunction>,
+        Box::<all_any::All>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "any".to_string(),
-        Box::new(all_any::Any::default()) as Box<dyn AggregationFunction>,
+        Box::<all_any::Any>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "some".to_string(),
-        Box::new(all_any::Any::default()) as Box<dyn AggregationFunction>,
+        Box::<all_any::Any>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "first".to_string(),
-        Box::new(first_last::First::default()) as Box<dyn AggregationFunction>,
+        Box::<first_last::First>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "last".to_string(),
-        Box::new(first_last::Last::default()) as Box<dyn AggregationFunction>,
+        Box::<first_last::Last>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "first_value".to_string(),
-        Box::new(first_last::First::default()) as Box<dyn AggregationFunction>,
+        Box::<first_last::First>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "last_value".to_string(),
-        Box::new(first_last::Last::default()) as Box<dyn AggregationFunction>,
+        Box::<first_last::Last>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "array_agg".to_string(),
-        Box::new(array_agg::ArrayAgg::default()) as Box<dyn AggregationFunction>,
+        Box::<array_agg::ArrayAgg>::default() as Box<dyn AggregationFunction>,
     );
     agg.insert(
         "array_agg_if".to_string(),
-        Box::new(array_agg::ArrayAggIf::default()) as Box<dyn AggregationFunction>,
+        Box::<array_agg::ArrayAggIf>::default() as Box<dyn AggregationFunction>,
     );
     agg
 }

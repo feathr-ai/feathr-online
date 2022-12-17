@@ -267,7 +267,7 @@ impl PartialEq for Value {
             (Self::Long(l0), Self::Int(r0)) => *l0 == *r0 as i64,
             (Self::Long(l0), Self::Long(r0)) => l0 == r0,
             (Self::Long(l0), Self::Float(r0)) => *l0 as f64 == *r0 as f64,
-            (Self::Long(l0), Self::Double(r0)) => *l0 as f64 == *r0 as f64,
+            (Self::Long(l0), Self::Double(r0)) => *l0 as f64 == *r0,
 
             (Self::Float(l0), Self::Int(r0)) => *l0 as f64 == *r0 as f64,
             (Self::Float(l0), Self::Long(r0)) => *l0 as f64 == *r0 as f64,
@@ -913,7 +913,7 @@ impl Value {
     pub fn get_long(&self) -> Result<i64, PiperError> {
         match self {
             Value::Int(v) => Ok(*v as i64),
-            Value::Long(v) => Ok(*v as i64),
+            Value::Long(v) => Ok(*v),
             Value::Float(v) => Ok(*v as i64),
             Value::Double(v) => Ok(*v as i64),
             Value::Error(e) => Err(e.clone())?,
@@ -932,7 +932,7 @@ impl Value {
         match self {
             Value::Int(v) => Ok(*v as f32),
             Value::Long(v) => Ok(*v as f32),
-            Value::Float(v) => Ok(*v as f32),
+            Value::Float(v) => Ok(*v),
             Value::Double(v) => Ok(*v as f32),
             Value::Error(e) => Err(e.clone())?,
             _ => Err(PiperError::InvalidValueType(
@@ -951,7 +951,7 @@ impl Value {
             Value::Int(v) => Ok(*v as f64),
             Value::Long(v) => Ok(*v as f64),
             Value::Float(v) => Ok(*v as f64),
-            Value::Double(v) => Ok(*v as f64),
+            Value::Double(v) => Ok(*v),
             Value::Error(e) => Err(e.clone())?,
             _ => Err(PiperError::InvalidValueType(
                 self.value_type(),
