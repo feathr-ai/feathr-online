@@ -71,12 +71,12 @@ impl Operator for PlusOperator {
             [Value::Float(a), Value::Int(b)] => (*a as f64 + *b as f64).into(),
             [Value::Float(a), Value::Long(b)] => (*a as f64 + *b as f64).into(),
             [Value::Float(a), Value::Float(b)] => (a + b).into(),
-            [Value::Float(a), Value::Double(b)] => (*a as f64 + *b as f64).into(),
+            [Value::Float(a), Value::Double(b)] => (*a as f64 + *b).into(),
 
             [Value::Double(a), Value::Int(b)] => (a + *b as f64).into(),
             [Value::Double(a), Value::Long(b)] => (a + *b as f64).into(),
             [Value::Double(a), Value::Float(b)] => (a + *b as f64).into(),
-            [Value::Double(a), Value::Double(b)] => (a + *b as f64).into(),
+            [Value::Double(a), Value::Double(b)] => (a + *b).into(),
 
             // String concat
             [Value::String(a), Value::String(b)] => (format!("{}{}", a, b)).into(),

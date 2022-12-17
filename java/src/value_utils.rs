@@ -57,7 +57,7 @@ pub fn to_jvalue<'a>(value: piper::Value, env: &JNIEnv<'a>) -> JObject<'a> {
             m.into()
         }
         piper::Value::DateTime(v) => {
-            let sec = v.timestamp() as i64;
+            let sec = v.timestamp();
             let ns = v.timestamp_subsec_nanos() as i64;
             let instant_cls = &get_jvm().instant_cls;
             let new_instant = get_jvm().new_instant;
