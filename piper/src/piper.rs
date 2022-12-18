@@ -23,6 +23,9 @@ pub struct Piper {
 }
 
 impl Piper {
+    /**
+     * Create a new Piper instance from a pipeline definition and a lookup source definition.
+     */
     pub fn new(pipeline_def: &str, lookup_def: &str) -> Result<Self, PiperError> {
         let ctx = BuildContext::from_config(lookup_def)?;
 
@@ -35,6 +38,9 @@ impl Piper {
         })
     }
 
+    /**
+     * Create a new Piper instance from a pipeline definition and a lookup source definition.
+     */
     pub fn new_with_udf(
         pipeline_def: &str,
         lookup_def: &str,
@@ -51,6 +57,9 @@ impl Piper {
         })
     }
 
+    /**
+     * Create a new Piper instance from a pipeline definition and a lookup source map and UDF map.
+     */
     pub fn new_with_lookup_udf(
         pipeline_def: &str,
         lookup: HashMap<String, Arc<dyn LookupSource>>,
@@ -67,10 +76,16 @@ impl Piper {
         })
     }
 
+    /**
+     * Get a list of all predefined functions, include UDF.
+     */
     pub fn get_functions(&self) -> HashSet<String> {
         self.ctx.functions.keys().cloned().collect()
     }
 
+    /**
+     *  Run basic health check on the pipeline.
+     */
     pub async fn health_check(&self) -> bool {
         let (_, ret) = self
             .pipelines
@@ -87,6 +102,9 @@ impl Piper {
         }
     }
 
+    /**
+     * Return string representations of all pipelines.
+     */
     pub fn get_pipelines(&self) -> HashMap<String, serde_json::Value> {
         self.pipelines
             .values()
@@ -94,10 +112,16 @@ impl Piper {
             .collect()
     }
 
+    /**
+     * Return a JSON representation of all lookup sources.
+     */
     pub fn get_lookup_sources(&self) -> serde_json::Value {
         self.ctx.dump_lookup_sources()
     }
 
+    /**
+     * Lookup a single key.
+     */
     #[instrument(level = "trace", skip(self))]
     pub async fn lookup(&self, req: LookupRequest) -> Result<LookupResponse, PiperError> {
         let src = self
@@ -119,6 +143,9 @@ impl Piper {
         Ok(LookupResponse { data })
     }
 
+    /**
+     * Process a composited request.
+     */
     #[instrument(level = "trace", skip(self))]
     pub async fn process(&self, req: Request) -> Result<Response, PiperError> {
         debug!(
@@ -148,6 +175,9 @@ impl Piper {
         Ok(Response { results })
     }
 
+    /**
+     * Process a single request.
+     */
     #[instrument(level = "trace", skip(self))]
     pub async fn process_single_request(
         &self,

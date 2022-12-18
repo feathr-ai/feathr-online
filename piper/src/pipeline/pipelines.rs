@@ -208,7 +208,6 @@ impl Pipeline {
     /**
      * Dump the pipeline to JSON.
      */
-    #[allow(dead_code)]
     pub fn to_json(&self) -> serde_json::Value {
         let input_schema = serde_json::to_value(
             self

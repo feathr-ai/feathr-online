@@ -17,31 +17,6 @@ where
     _phantom: PhantomData<(A, R, E)>,
 }
 
-impl<A, R, F, E> VariadicFunctionWrapper<A, R, F, E>
-where
-    A: Send + Sync + Clone + TryFrom<Value, Error = E>,
-    R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
-    Result<Value, E>: Into<Value>,
-    E: Sync + Send + Clone,
-    F: Fn(Vec<A>) -> R + Clone,
-{
-    pub fn new(function: F) -> Self {
-        Self {
-            function,
-            _phantom: PhantomData,
-        }
-    }
-
-    pub fn invoke(&self, args: &[Value]) -> Value {
-        args.iter()
-            .map(|arg| arg.clone().try_into())
-            .collect::<Result<Vec<A>, E>>()
-            .map(|a| (self.function)(a))
-            .map(|r| r.into())
-            .into()
-    }
-}
-
 impl<A, R, F, E> Function for VariadicFunctionWrapper<A, R, F, E>
 where
     A: Send + Sync + Clone + TryFrom<Value, Error = E>,
@@ -55,7 +30,14 @@ where
     }
 
     fn eval(&self, arguments: Vec<Value>) -> Value {
-        self.invoke(&arguments)
+        let args = arguments
+            .into_iter()
+            .map(|arg| arg.try_into())
+            .collect::<Result<Vec<A>, E>>();
+        match args {
+            Ok(args) => (self.function)(args).into(),
+            Err(e) => Err(e).into(),
+        }
     }
 }
 
@@ -67,7 +49,10 @@ where
     Result<Value, E>: Into<Value>,
     E: Sync + Send + Clone,
 {
-    Box::new(VariadicFunctionWrapper::new(f))
+    Box::new(VariadicFunctionWrapper {
+        function: f,
+        _phantom: PhantomData,
+    })
 }
 
 #[cfg(test)]

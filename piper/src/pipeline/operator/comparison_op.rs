@@ -153,3 +153,26 @@ macro_rules! compare_op {
 
 compare_op!(EqualOperator, ==);
 compare_op!(NotEqualOperator, !=);
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_cmp() {
+        use super::*;
+        use crate::Value;
+
+        let op = super::EqualOperator;
+        assert_eq!(op.eval(vec![Value::Int(42), Value::Int(42)]), Value::Bool(true));
+        assert_eq!(op.eval(vec![Value::Int(42), Value::Long(42)]), Value::Bool(true));
+        assert_eq!(op.eval(vec![Value::Int(42), Value::Long(43)]), Value::Bool(false));
+        assert!(op.eval(vec![Value::Int(42), Value::String("42".into())]).is_error());
+        assert_eq!(op.eval(vec![Value::String("42".into()), Value::String("42".into())]), Value::Bool(true));
+
+        let op = super::NotEqualOperator;
+        assert_eq!(op.eval(vec![Value::Int(42), Value::Int(42)]), Value::Bool(false));
+        assert_eq!(op.eval(vec![Value::Int(42), Value::Long(42)]), Value::Bool(false));
+        assert_eq!(op.eval(vec![Value::Int(42), Value::Long(43)]), Value::Bool(true));
+        assert!(op.eval(vec![Value::Int(42), Value::String("42".into())]).is_error());
+        assert_eq!(op.eval(vec![Value::String("42".into()), Value::String("42".into())]), Value::Bool(false));
+    }
+}
