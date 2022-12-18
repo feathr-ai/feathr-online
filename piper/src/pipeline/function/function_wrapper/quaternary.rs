@@ -90,7 +90,10 @@ where
     E3: Sync + Send + Clone,
     E4: Sync + Send + Clone,
 {
-    fn get_output_type(&self, _argument_types: &[ValueType]) -> Result<ValueType, PiperError> {
+    fn get_output_type(&self, argument_types: &[ValueType]) -> Result<ValueType, PiperError> {
+        if argument_types.len() != 4 {
+            return Err(PiperError::InvalidArgumentCount(4, argument_types.len()));
+        }
         Ok(R::value_type())
     }
 
@@ -117,4 +120,20 @@ where
     F: Fn(A1, A2, A3, A4) -> R + Sync + Send + Clone,
 {
     Box::new(QuaternaryFunctionWrapper::new(f))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{ValueType, Function};
+
+    #[test]
+    fn test_quat() {
+        let f = super::quaternary_fn(|a: i32, b: i32, c: i32, d: i32| a + b - c - d);
+        assert_eq!(f.eval(vec![1.into(), 5.into(), 2.into(), 1.into()]), 3.into());
+        assert!(f.get_output_type(&[ValueType::Int]).is_err());
+        assert!(f.get_output_type(&[ValueType::Int, ValueType::Int]).is_err());
+        assert!(f.get_output_type(&[ValueType::Int, ValueType::Int, ValueType::Int]).is_err());
+        assert!(f.get_output_type(&[ValueType::Int, ValueType::Int, ValueType::Int, ValueType::Int]).is_ok());
+        assert!(f.get_output_type(&[ValueType::Int, ValueType::Int, ValueType::Int, ValueType::Int, ValueType::Int]).is_err());
+    }
 }

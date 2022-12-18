@@ -90,3 +90,62 @@ impl AggregationFunction for Avg {
         "avg".to_string()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::AggregationFunction;
+    use super::{Avg, Sum};
+    use crate::{Value, ValueType};
+
+    #[test]
+    fn test_sum() {
+        let mut sum = Sum::default();
+        assert_eq!(
+            sum.get_output_type(&[ValueType::Long]).unwrap(),
+            ValueType::Long
+        );
+        assert_eq!(
+            sum.get_output_type(&[ValueType::Double]).unwrap(),
+            ValueType::Double
+        );
+        assert!(sum
+            .get_output_type(&[ValueType::Long, ValueType::Long])
+            .is_err());
+
+        sum.feed(&[Value::Long(1)]).unwrap();
+        sum.feed(&[Value::Long(2)]).unwrap();
+        sum.feed(&[Value::Long(3)]).unwrap();
+        assert_eq!(sum.get_result().unwrap(), Value::Long(6));
+
+        sum.feed(&[Value::Double(1.0)]).unwrap();
+        sum.feed(&[Value::Double(2.0)]).unwrap();
+        sum.feed(&[Value::Double(3.0)]).unwrap();
+        assert_eq!(sum.get_result().unwrap(), Value::Double(12.0));
+    }
+
+    #[test]
+    fn test_avg() {
+        let mut avg = Avg::default();
+        assert_eq!(
+            avg.get_output_type(&[ValueType::Long]).unwrap(),
+            ValueType::Long
+        );
+        assert_eq!(
+            avg.get_output_type(&[ValueType::Double]).unwrap(),
+            ValueType::Double
+        );
+        assert!(avg
+            .get_output_type(&[ValueType::Long, ValueType::Long])
+            .is_err());
+
+        avg.feed(&[Value::Long(1)]).unwrap();
+        avg.feed(&[Value::Long(2)]).unwrap();
+        avg.feed(&[Value::Long(3)]).unwrap();
+        assert_eq!(avg.get_result().unwrap(), Value::Long(2));
+
+        avg.feed(&[Value::Double(1.0)]).unwrap();
+        avg.feed(&[Value::Double(2.0)]).unwrap();
+        avg.feed(&[Value::Double(3.0)]).unwrap();
+        assert_eq!(avg.get_result().unwrap(), Value::Double(2.0));
+    }
+}

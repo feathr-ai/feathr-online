@@ -66,7 +66,10 @@ where
     E1: Sync + Send + Clone,
     E2: Sync + Send + Clone,
 {
-    fn get_output_type(&self, _argument_types: &[ValueType]) -> Result<ValueType, PiperError> {
+    fn get_output_type(&self, argument_types: &[ValueType]) -> Result<ValueType, PiperError> {
+        if argument_types.len() != 2 {
+            return Err(PiperError::InvalidArgumentCount(2, argument_types.len()));
+        }
         Ok(R::value_type())
     }
 
@@ -87,4 +90,17 @@ where
     F: Fn(A1, A2) -> R + Sync + Send + Clone,
 {
     Box::new(BinaryFunctionWrapper::new(f))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{ValueType, Function};
+
+    #[test]
+    fn test_bin() {
+        let f = super::binary_fn(|a: i32, b: i32| a + b);
+        assert_eq!(f.eval(vec![1.into(), 2.into()]), 3.into());
+        assert!(f.get_output_type(&[ValueType::Int, ValueType::Int]).is_ok());
+        assert!(f.get_output_type(&[ValueType::Int, ValueType::Int, ValueType::Int]).is_err());
+    }
 }

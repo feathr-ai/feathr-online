@@ -58,3 +58,16 @@ where
 {
     Box::new(NullaryFunctionWrapper::new(f))
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{ValueType, Function};
+
+    #[test]
+    fn test_nullary() {
+        let f = super::nullary_fn(|| 42i32);
+        assert_eq!(f.eval(vec![]), 42.into());
+        assert!(f.get_output_type(&[]).is_ok());
+        assert!(f.get_output_type(&[ValueType::Int]).is_err());
+    }
+}
