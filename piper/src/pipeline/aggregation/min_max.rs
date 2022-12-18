@@ -117,7 +117,7 @@ impl AggregationFunction for MinBy {
         if input_type.len() != 2 {
             return Err(PiperError::InvalidArgumentCount(2, input_type.len()));
         }
-        Ok(input_type[0])
+        Ok(input_type[1])
     }
 
     fn feed(&mut self, arguments: &[Value]) -> Result<(), PiperError> {
@@ -170,7 +170,7 @@ impl AggregationFunction for MaxBy {
         if input_type.len() != 2 {
             return Err(PiperError::InvalidArgumentCount(2, input_type.len()));
         }
-        Ok(input_type[0])
+        Ok(input_type[1])
     }
 
     fn feed(&mut self, arguments: &[Value]) -> Result<(), PiperError> {
@@ -208,5 +208,68 @@ impl AggregationFunction for MaxBy {
 
     fn dump(&self) -> String {
         "max_by".to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_min() {
+        use super::*;
+        let mut min = Min::default();
+        assert_eq!(min.get_output_type(&[ValueType::String]).unwrap(), ValueType::String);
+        assert_eq!(min.get_output_type(&[ValueType::Null]).unwrap(), ValueType::Null);
+        assert!(min.get_output_type(&[]).is_err());
+
+        min.feed(&[Value::Int(2)]).unwrap();
+        min.feed(&[Value::Int(3)]).unwrap();
+        min.feed(&[Value::Int(1)]).unwrap();
+        min.feed(&[Value::Int(4)]).unwrap();
+        assert_eq!(min.get_result().unwrap(), Value::Int(1));
+    }
+
+    #[test]
+    fn test_max() {
+        use super::*;
+        let mut max = Max::default();
+        assert_eq!(max.get_output_type(&[ValueType::String]).unwrap(), ValueType::String);
+        assert_eq!(max.get_output_type(&[ValueType::Null]).unwrap(), ValueType::Null);
+        assert!(max.get_output_type(&[]).is_err());
+
+        max.feed(&[Value::Int(2)]).unwrap();
+        max.feed(&[Value::Int(3)]).unwrap();
+        max.feed(&[Value::Int(4)]).unwrap();
+        max.feed(&[Value::Int(1)]).unwrap();
+        assert_eq!(max.get_result().unwrap(), Value::Int(4));
+    }
+
+    #[test]
+    fn test_min_by() {
+        use super::*;
+        let mut min = MinBy::default();
+        assert_eq!(min.get_output_type(&[ValueType::String, ValueType::String]).unwrap(), ValueType::String);
+        assert_eq!(min.get_output_type(&[ValueType::Int, ValueType::String]).unwrap(), ValueType::String);
+        assert!(min.get_output_type(&[]).is_err());
+
+        min.feed(&[Value::Int(2), "b".into()]).unwrap();
+        min.feed(&[Value::Int(3), "c".into()]).unwrap();
+        min.feed(&[Value::Int(1), "a".into()]).unwrap();
+        min.feed(&[Value::Int(4), "d".into()]).unwrap();
+        assert_eq!(min.get_result().unwrap(), Value::String("a".into()));
+    }
+
+    #[test]
+    fn test_max_by() {
+        use super::*;
+        let mut max = MaxBy::default();
+        assert_eq!(max.get_output_type(&[ValueType::String, ValueType::String]).unwrap(), ValueType::String);
+        assert_eq!(max.get_output_type(&[ValueType::Int, ValueType::String]).unwrap(), ValueType::String);
+        assert!(max.get_output_type(&[]).is_err());
+
+        max.feed(&[Value::Int(2), "b".into()]).unwrap();
+        max.feed(&[Value::Int(3), "c".into()]).unwrap();
+        max.feed(&[Value::Int(1), "a".into()]).unwrap();
+        max.feed(&[Value::Int(4), "d".into()]).unwrap();
+        assert_eq!(max.get_result().unwrap(), Value::String("d".into()));
     }
 }

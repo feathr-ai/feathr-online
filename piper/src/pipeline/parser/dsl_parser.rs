@@ -350,7 +350,7 @@ pub fn parse_script(
 }
 
 pub fn parse_pipeline(input: &str, ctx: &BuildContext) -> Result<Pipeline, PiperError> {
-    pipeline_parser::pipeline(input)
+    pipeline_parser::pipeline(input.trim())
         .map_err(|e| PiperError::SyntaxError(e.to_string()))?
         .build(ctx)
 }

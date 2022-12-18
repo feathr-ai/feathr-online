@@ -50,6 +50,9 @@ pub struct Args {
     pub enable_managed_identity: bool,
 }
 
+/**
+ * The pipeline service
+ */
 pub struct PiperService {
     arg: Args,
     piper: Arc<Piper>,
@@ -65,6 +68,9 @@ pub struct HandlerData {
 }
 
 impl PiperService {
+    /**
+     * Create a new pipeline service
+     */
     pub async fn new(arg: Args) -> Result<Self, PiperError> {
         let pipeline_def = match &arg.pipeline_definition {
             Some(def) => def.clone(),
@@ -84,6 +90,9 @@ impl PiperService {
         })
     }
 
+    /**
+     * Create a new pipeline service with UDF
+     */
     pub async fn with_udf(
         arg: Args,
         udf: HashMap<String, Box<dyn Function>>,
@@ -99,6 +108,9 @@ impl PiperService {
         })
     }
 
+    /**
+     * Create a new pipeline service with lookup source in JSON and UDF
+     */
     pub fn create(pipelines: &str, lookups: &str, udf: HashMap<String, Box<dyn Function>>) -> Self {
         let piper = Piper::new_with_udf(pipelines, lookups, udf).unwrap();
         Self {
@@ -108,6 +120,9 @@ impl PiperService {
         }
     }
 
+    /**
+     * Create a new pipeline service with lookup source map in JSON and UDF
+     */
     pub fn create_with_lookup_udf(
         pipelines: &str,
         lookups: HashMap<String, Arc<dyn LookupSource>>,
@@ -121,6 +136,9 @@ impl PiperService {
         }
     }
 
+    /**
+     * Start the pipeline service
+     */
     pub async fn start(
         &mut self,
         #[cfg(feature = "python")] use_py_async: bool,
@@ -135,6 +153,9 @@ impl PiperService {
         .await
     }
 
+    /**
+     * Start the service at the given address and port
+     */
     pub async fn start_at(
         &mut self,
         address: &str,
@@ -181,6 +202,9 @@ impl PiperService {
         .await
     }
 
+    /**
+     * Stop the pipeline service
+     */
     pub fn stop(&mut self) {
         self.should_stop.store(true, Ordering::Relaxed);
     }

@@ -188,6 +188,9 @@ pub fn arrays_zip(array: Vec<Value>, other: Vec<Value>) -> Value {
     for (i, value) in array.into_iter().enumerate() {
         if let Some(other) = other.get(i) {
             result.push(Value::Array(vec![value, other.clone()]));
+        } else {
+            // The 2nd array is shorter than the 1st array
+            break;
         }
     }
     Value::Array(result)
@@ -211,14 +214,231 @@ pub fn flatten(maybe_array: Value) -> Value {
 
 #[cfg(test)]
 mod tests {
+    use crate::Function;
+
+    #[test]
+    fn test_array_contains() {
+        use super::array_contains;
+        use crate::pipeline::Value;
+        assert_eq!(
+            array_contains(vec![1.into(), 2.into(), 3.into()], 2.into()),
+            true.into(),
+        );
+        assert_eq!(
+            array_contains(vec![1.into(), 2.into(), 3.into()], 4.into()),
+            false.into(),
+        );
+        assert_eq!(
+            array_contains(vec![1.into(), 2.into(), 3.into()], Value::Null),
+            false.into(),
+        );
+    }
+
+    #[test]
+    fn test_array_except() {
+        use super::array_except;
+        use crate::pipeline::Value;
+        assert_eq!(
+            array_except(vec![1.into(), 2.into(), 3.into()], vec![2.into(), 3.into()]),
+            vec![Value::Int(1)].into(),
+        );
+        assert_eq!(
+            array_except(vec![1.into(), 2.into(), 3.into()], vec![4.into(), 5.into()]),
+            vec![Value::Int(1), 2.into(), 3.into()].into(),
+        );
+    }
+
+    #[test]
+    fn test_array_intersect() {
+        use super::array_intersect;
+        use crate::pipeline::Value;
+        assert_eq!(
+            array_intersect(vec![1.into(), 2.into(), 3.into()], vec![2.into(), 3.into()]),
+            vec![Value::Int(2), 3.into()].into(),
+        );
+        assert_eq!(
+            array_intersect(vec![1.into(), 2.into(), 3.into()], vec![4.into(), 5.into()]),
+            Value::Array(vec![]),
+        );
+    }
+
+    #[test]
+    fn test_array_join() {
+        use super::ArrayJoin;
+        use crate::pipeline::Value;
+        let array_join = ArrayJoin;
+        assert_eq!(
+            array_join.eval(vec![
+                vec![Value::Int(1), 2.into(), 3.into()].into(),
+                ",".into()
+            ]),
+            "1,2,3".into(),
+        );
+        assert_eq!(
+            array_join.eval(vec![
+                vec![Value::Int(1), 2.into(), Value::Null, 3.into()].into(),
+                ",".into()
+            ]),
+            "1,2,3".into(),
+        );
+        assert_eq!(
+            array_join.eval(vec![
+                vec![Value::Int(1), 2.into(), Value::Null, 3.into()].into(),
+                ",".into(),
+                "x".into()
+            ]),
+            "1,2,x,3".into(),
+        );
+    }
+
+    #[test]
+    fn test_array_max() {
+        use super::array_max;
+        use crate::pipeline::Value;
+        assert_eq!(array_max(vec![1.into(), 2.into(), 3.into()]), 3.into(),);
+        assert_eq!(array_max(vec![1.into(), 2.into(), Value::Null]), 2.into(),);
+        assert_eq!(array_max(vec![Value::Null, Value::Null]), Value::Null,);
+    }
+
+    #[test]
+    fn test_array_min() {
+        use super::array_min;
+        use crate::pipeline::Value;
+        assert_eq!(array_min(vec![1.into(), 2.into(), 3.into()]), 1.into(),);
+        assert_eq!(array_min(vec![1.into(), 2.into(), Value::Null]), 1.into(),);
+        assert_eq!(array_min(vec![Value::Null, Value::Null]), Value::Null,);
+    }
+
+    #[test]
+    fn test_array_position() {
+        use super::array_position;
+        use crate::pipeline::Value;
+        assert_eq!(
+            array_position(vec![1.into(), 2.into(), 3.into()], 2.into()),
+            2.into(),
+        );
+        assert_eq!(
+            array_position(vec![1.into(), 2.into(), 3.into()], 4.into()),
+            Value::Null,
+        );
+        assert_eq!(
+            array_position(vec![1.into(), 2.into(), 3.into()], Value::Null),
+            Value::Null,
+        );
+    }
+
+    #[test]
+    fn test_array_remove() {
+        use super::array_remove;
+        use crate::pipeline::Value;
+        assert_eq!(
+            array_remove(vec![1.into(), 2.into(), 3.into()], 2.into()),
+            vec![Value::Int(1), 3.into()].into(),
+        );
+        assert_eq!(
+            array_remove(vec![1.into(), 2.into(), 3.into()], 4.into()),
+            vec![Value::Int(1), 2.into(), 3.into()].into(),
+        );
+    }
+
+    #[test]
+    fn test_array_repeat() {
+        use super::array_repeat;
+        use crate::pipeline::Value;
+        assert_eq!(
+            array_repeat(1.into(), 3.into()),
+            vec![Value::Int(1), 1.into(), 1.into()].into(),
+        );
+        assert_eq!(array_repeat(1.into(), 0.into()), Value::Array(vec![]),);
+    }
+
+    #[test]
+    fn test_array_size() {
+        use super::array_size;
+        assert_eq!(array_size(vec![1.into(), 2.into(), 3.into()]), 3.into(),);
+        assert_eq!(array_size(vec![1.into(), 2.into()]), 2.into(),);
+    }
+
+    #[test]
+    fn test_array_union() {
+        use super::array_union;
+        use crate::pipeline::Value;
+        assert_eq!(
+            array_union(vec![1.into(), 2.into(), 3.into()], vec![2.into(), 3.into()]),
+            vec![Value::Int(1), 2.into(), 3.into()].into(),
+        );
+        assert_eq!(
+            array_union(
+                vec![1.into(), 2.into(), 3.into()],
+                vec![3.into(), 4.into(), 5.into()]
+            ),
+            vec![Value::Int(1), 2.into(), 3.into(), 4.into(), 5.into()].into(),
+        );
+        assert_eq!(
+            array_union(vec![1.into(), 2.into(), 3.into()], vec![4.into(), 5.into()]),
+            vec![Value::Int(1), 2.into(), 3.into(), 4.into(), 5.into()].into(),
+        );
+    }
+
+    #[test]
+    fn test_array_overlap() {
+        use super::arrays_overlap;
+        use crate::pipeline::Value;
+        assert!(arrays_overlap(
+            vec![1.into(), 2.into(), 3.into()],
+            vec![2.into(), 3.into()]
+        ));
+        assert!(arrays_overlap(
+            vec![1.into(), 2.into(), 3.into()],
+            vec![3.into(), 4.into(), 5.into()]
+        ));
+        assert!(!arrays_overlap(
+            vec![1.into(), 2.into(), 3.into()],
+            vec![4.into(), 5.into()]
+        ),);
+        assert!(!arrays_overlap(
+            vec![1.into(), 2.into(), 3.into(), Value::Null],
+            vec![4.into(), 5.into(), Value::Null]
+        ));
+    }
+
+    #[test]
+    fn test_arrays_zip() {
+        use super::arrays_zip;
+        use crate::pipeline::Value;
+        assert_eq!(
+            arrays_zip(vec![1.into(), 2.into(), 3.into()], vec![4.into(), 5.into()]),
+            vec![
+                Value::Array(vec![Value::Int(1), 4.into()]),
+                Value::Array(vec![Value::Int(2), 5.into()]),
+            ]
+            .into(),
+        );
+        assert_eq!(
+            arrays_zip(vec![1.into(), 2.into(), 3.into()], vec![4.into(), 5.into(), 6.into()]),
+            vec![
+                Value::Array(vec![Value::Int(1), 4.into()]),
+                Value::Array(vec![Value::Int(2), 5.into()]),
+                Value::Array(vec![Value::Int(3), 6.into()]),
+            ]
+            .into(),
+        );
+        assert_eq!(
+            arrays_zip(vec![1.into(), 2.into(), 3.into()], vec![4.into(), 5.into(), 6.into(), 7.into()]),
+            vec![
+                Value::Array(vec![Value::Int(1), 4.into()]),
+                Value::Array(vec![Value::Int(2), 5.into()]),
+                Value::Array(vec![Value::Int(3), 6.into()]),
+            ]
+            .into(),
+        );
+    }
+
     #[test]
     fn test_flatten() {
-        use crate::pipeline::Value;
         use super::flatten;
-        assert_eq!(
-            flatten(1.into()),
-            1.into(),
-        );
+        use crate::pipeline::Value;
+        assert_eq!(flatten(1.into()), 1.into(),);
         assert_eq!(
             flatten(Value::Array(vec![
                 Value::Array(vec![1.into(), 2.into()]),

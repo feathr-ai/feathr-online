@@ -14,23 +14,6 @@ where
     output_type: PhantomData<R>,
 }
 
-impl<R, F> NullaryFunctionWrapper<R, F>
-where
-    R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
-    F: Fn() -> R + Clone,
-{
-    fn new(function: F) -> Self {
-        Self {
-            function,
-            output_type: PhantomData,
-        }
-    }
-
-    fn invoke(&self) -> Value {
-        (self.function)().into()
-    }
-}
-
 impl<R, F> Function for NullaryFunctionWrapper<R, F>
 where
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
@@ -45,7 +28,7 @@ where
 
     fn eval(&self, arguments: Vec<Value>) -> Value {
         match arguments.as_slice() {
-            [] => self.invoke(),
+            [] => (self.function)().into(),
             _ => Value::Error(PiperError::InvalidArgumentCount(0, arguments.len())),
         }
     }
@@ -56,5 +39,21 @@ where
     R: Into<Value> + Sync + Send + ValueTypeOf + Clone,
     F: Fn() -> R + Sync + Send + Clone,
 {
-    Box::new(NullaryFunctionWrapper::new(f))
+    Box::new(NullaryFunctionWrapper {
+        function: f,
+        output_type: PhantomData,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{ValueType, Function};
+
+    #[test]
+    fn test_nullary() {
+        let f = super::nullary_fn(|| 42i32);
+        assert_eq!(f.eval(vec![]), 42.into());
+        assert!(f.get_output_type(&[]).is_ok());
+        assert!(f.get_output_type(&[ValueType::Int]).is_err());
+    }
 }

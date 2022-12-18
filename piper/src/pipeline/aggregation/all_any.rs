@@ -90,3 +90,40 @@ impl AggregationFunction for Any {
         "any".to_string()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{pipeline::AggregationFunction, Value};
+
+    #[test]
+    fn test_all() {
+        let mut all = super::All::default();
+        assert_eq!(all.get_result().unwrap(), Value::Null);
+        all.feed(&[true.into()]).unwrap();
+        assert_eq!(all.get_result().unwrap(), true.into());
+        all.feed(&[true.into()]).unwrap();
+        assert_eq!(all.get_result().unwrap(), true.into());
+        all.feed(&[true.into()]).unwrap();
+        assert_eq!(all.get_result().unwrap(), true.into());
+        all.feed(&[false.into()]).unwrap();
+        assert_eq!(all.get_result().unwrap(), false.into());
+        all.feed(&[true.into()]).unwrap();
+        assert_eq!(all.get_result().unwrap(), false.into());
+    }
+
+    #[test]
+    fn test_any() {
+        let mut any = super::Any::default();
+        assert_eq!(any.get_result().unwrap(), Value::Null);
+        any.feed(&[false.into()]).unwrap();
+        assert_eq!(any.get_result().unwrap(), false.into());
+        any.feed(&[false.into()]).unwrap();
+        assert_eq!(any.get_result().unwrap(), false.into());
+        any.feed(&[false.into()]).unwrap();
+        assert_eq!(any.get_result().unwrap(), false.into());
+        any.feed(&[true.into()]).unwrap();
+        assert_eq!(any.get_result().unwrap(), true.into());
+        any.feed(&[false.into()]).unwrap();
+        assert_eq!(any.get_result().unwrap(), true.into());
+    }
+}

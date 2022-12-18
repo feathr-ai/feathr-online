@@ -63,3 +63,34 @@ impl AggregationFunction for ArrayAggIf {
         "array_agg_if".to_string()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{pipeline::AggregationFunction, Value, ValueType};
+
+    #[test]
+    fn test_array_agg() {
+        let mut agg = super::ArrayAgg::default();
+        assert_eq!(agg.get_output_type(&[ValueType::String]).unwrap(), ValueType::Array);
+        assert_eq!(agg.get_result().unwrap(), Value::Array(vec![]));
+        agg.feed(&[1.into()]).unwrap();
+        assert_eq!(agg.get_result().unwrap(), Value::Array(vec![1.into()]));
+        agg.feed(&[2.into()]).unwrap();
+        assert_eq!(agg.get_result().unwrap(), Value::Array(vec![1.into(), 2.into()]));
+        agg.feed(&[3.into()]).unwrap();
+        assert_eq!(agg.get_result().unwrap(), Value::Array(vec![1.into(), 2.into(), 3.into()]));
+    }
+
+    #[test]
+    fn test_array_agg_if() {
+        let mut agg = super::ArrayAggIf::default();
+        assert_eq!(agg.get_output_type(&[ValueType::Object, ValueType::Bool]).unwrap(), ValueType::Array);
+        assert_eq!(agg.get_result().unwrap(), Value::Array(vec![]));
+        agg.feed(&[1.into(), true.into()]).unwrap();
+        assert_eq!(agg.get_result().unwrap(), Value::Array(vec![1.into()]));
+        agg.feed(&[2.into(), false.into()]).unwrap();
+        assert_eq!(agg.get_result().unwrap(), Value::Array(vec![1.into()]));
+        agg.feed(&[3.into(), true.into()]).unwrap();
+        assert_eq!(agg.get_result().unwrap(), Value::Array(vec![1.into(), 3.into()]));
+    }
+}

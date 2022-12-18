@@ -11,7 +11,6 @@ mod variadic;
  * NOTE: Seems to make generic trait over all function wrappers needs HRTB (and GAT?).
  *
  * E.g. following code does not compile:
- ``` ignore
 trait IntoFunction {
     fn into_function(self) -> Box<dyn Function>;
 }
@@ -27,7 +26,7 @@ where
    }
 }
 
-// But this doesn't because `E` are not directly bounded by `Self: Fn(A)->R + ...`
+// But this doesn't because `E` is not directly bounded by `Self: Fn(A)->R + ...`
 impl<R, F, A, E> IntoFunction for F
 where
    Self: Fn(A)->R + Sync + Send + Clone + 'static,
@@ -40,7 +39,6 @@ where
        unary::unary_fn(self)
    }
 }
-```
  */
 
 /**

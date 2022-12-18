@@ -65,7 +65,13 @@ impl Display for ValueType {
     }
 }
 
+/**
+ * Get ValueType from a type, mainly used for expression type inference.
+ */
 pub trait ValueTypeOf {
+    /**
+     * Get the ValueType of this type
+     */
     fn value_type() -> ValueType;
 }
 
@@ -1214,6 +1220,9 @@ impl Value {
         }
     }
 
+    /**
+     * Dump the value into a string
+     */
     pub fn dump(&self) -> String {
         match self {
             Value::Null => "null".to_string(),
