@@ -417,7 +417,11 @@ mod tests {
         use crate::Value;
         let concat_ws = ConcatWs;
         assert_eq!(
-            concat_ws.eval(vec![Value::String("_".into()), vec![Value::String("a".into()), Value::String("b".into())].into(), Value::String("c".into())]),
+            concat_ws.eval(vec![
+                Value::String("_".into()),
+                vec![Value::String("a".into()), Value::String("b".into())].into(),
+                Value::String("c".into())
+            ]),
             Value::String("a_b_c".into())
         );
     }
