@@ -77,7 +77,7 @@
     {
       "class": "sqlite",
       "name": "join_test",
-      "dbPath": "test.db",
+      "dbPath": "test-data/test.db",
       "sqlTemplate": "select name, age from join_test where group_id = :key",
       "availableFields": [
         "name",

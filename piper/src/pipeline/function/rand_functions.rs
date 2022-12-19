@@ -15,13 +15,17 @@ impl RandomGen {
     }
 }
 
+// `rand` uses HC128, no idea why Devskim reports it as insecure.
+// Devskim: ignore DS148264
 pub fn rand() -> f64 {
     RandomGen::RNG.with(|rng| rng.borrow_mut().gen())
 }
 
+// Devskim: ignore DS148264
 pub fn shuffle(mut array: Vec<Value>) -> Vec<Value> {
     RandomGen::RNG.with(|rng| {
         let r: &mut ThreadRng = &mut rng.borrow_mut();
+        // Devskim: ignore DS148264
         array.shuffle(r)
     });
     array

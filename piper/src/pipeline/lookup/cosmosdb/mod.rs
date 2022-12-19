@@ -185,3 +185,70 @@ impl LookupSource for CosmosDbSource {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{Value, LookupSource};
+
+    use super::CosmosDbSource;
+
+    #[tokio::test]
+    async fn test_lookup_by_key() {
+        dotenvy::dotenv().ok();
+        if std::env::var("COSMOS_ACCOUNT").is_err() {
+            println!("CosmosDb is not configured, skip the test.");
+            return;
+        }
+        let s = r#"
+        {
+            "account": "${COSMOS_ACCOUNT}",
+            "apiKey": "${COSMOS_API_KEY}",
+            "database": "${COSMOS_DATABASE}",
+            "collection": "${COSMOS_COLLECTION}"
+        }
+        "#;
+        let s: CosmosDbSource = serde_json::from_str(s).unwrap();
+        let l = Box::new(s);
+        let k: Value = 107.into();
+        let fields = vec![
+            "f_location_avg_fare".to_string(),
+            "f_location_max_fare".to_string(),
+        ];
+        let ret = l.lookup(&k, &fields).await;
+        println!("{:?}", ret);
+        assert_eq!(ret.len(), 2);
+        assert_eq!(ret[0].clone().get_int().unwrap(), 23);
+        assert_eq!(ret[1].clone().get_int().unwrap(), 78);
+    }
+
+
+    #[tokio::test]
+    async fn test_lookup_by_query() {
+        dotenvy::dotenv().ok();
+        if std::env::var("COSMOS_ACCOUNT").is_err() {
+            println!("CosmosDb is not configured, skip the test.");
+            return;
+        }
+        let s = r#"
+        {
+            "account": "${COSMOS_ACCOUNT}",
+            "apiKey": "${COSMOS_API_KEY}",
+            "database": "${COSMOS_DATABASE}",
+            "collection": "${COSMOS_COLLECTION}",
+            "query": "SELECT * FROM table1 c WHERE c.key0 = @key"
+        }
+        "#;
+        let s: CosmosDbSource = serde_json::from_str(s).unwrap();
+        let l = Box::new(s);
+        let k: Value = 107.into();
+        let fields = vec![
+            "f_location_avg_fare".to_string(),
+            "f_location_max_fare".to_string(),
+        ];
+        let ret = l.lookup(&k, &fields).await;
+        println!("{:?}", ret);
+        assert_eq!(ret.len(), 2);
+        assert_eq!(ret[0].clone().get_int().unwrap(), 23);
+        assert_eq!(ret[1].clone().get_int().unwrap(), 78);
+    }
+}
