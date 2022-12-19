@@ -102,6 +102,7 @@ mod tests {
             .eval()
             .await;
         assert_eq!(schema, pipeline.output_schema);
+        println!("pipelines: {}", pipeline.dump());
         println!("{:?}", rows);
         assert_eq!(rows.len(), 4);
         assert_eq!(rows[0][0], 10.into());

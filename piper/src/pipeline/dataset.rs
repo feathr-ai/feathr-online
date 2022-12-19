@@ -3,7 +3,7 @@ use std::collections::{HashMap, VecDeque};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use super::{expression::Expression, PiperError, Value, ValueType};
+use super::{expression::Expression, PiperError, Value, ValueType, ValueTypeOf};
 
 /**
  * The column definition
@@ -364,19 +364,22 @@ impl EagerDataSet {
     }
 }
 
-impl FromIterator<Vec<Value>> for Box<EagerDataSet> {
-    fn from_iter<T: IntoIterator<Item = Vec<Value>>>(iter: T) -> Self {
+impl<T> FromIterator<Vec<T>> for Box<EagerDataSet>
+where
+    T: Into<Value> + ValueTypeOf,
+{
+    fn from_iter<U: IntoIterator<Item = Vec<T>>>(iter: U) -> Self {
         let mut rows = vec![];
         let mut schema = None;
         let mut col = 0;
         for row in iter {
             if schema.is_none() {
-                schema = Some(Schema::from_iter(row.iter().map(|v| {
+                schema = Some(Schema::from_iter(row.iter().map(|_| {
                     col += 1;
-                    Column::new(format!("col{}", col), v.value_type())
+                    Column::new(format!("col{}", col), <T as ValueTypeOf>::value_type())
                 })));
             }
-            rows.push(row);
+            rows.push(row.into_iter().map(|v| v.into()).collect());
         }
         Box::new(EagerDataSet {
             schema: schema.unwrap_or_default(), // In case nothing is provided
@@ -409,13 +412,15 @@ impl DataSet for EagerDataSet {
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
+
     use super::*;
 
     fn gen_schema() -> Schema {
         vec![
             Column::new("col1", ValueType::Int),
             Column::new("col2", ValueType::String),
-            Column::new("col2", ValueType::Bool),
+            Column::new("col3", ValueType::Bool),
         ]
         .into()
     }
@@ -433,6 +438,48 @@ mod tests {
                 vec![Value::from(70), Value::from(700), Value::from(true)],
             ],
         )
+    }
+
+    #[tokio::test]
+    async fn test_create_ds() {
+        let v = vec![
+            vec![10, 100, 1000],
+            vec![20, 200, 2000],
+            vec![30, 300, 3000],
+            vec![40, 400, 4000],
+        ];
+        let mut ds: Box<EagerDataSet> = v.into_iter().collect();
+        assert_eq!(ds.schema().columns.len(), 3);
+        assert_eq!(ds.schema().columns[0].name, "col1");
+        assert_eq!(ds.schema().columns[0].column_type, ValueType::Int);
+        assert_eq!(ds.schema().columns[1].name, "col2");
+        assert_eq!(ds.schema().columns[1].column_type, ValueType::Int);
+        assert_eq!(ds.schema().columns[2].name, "col3");
+        assert_eq!(ds.schema().columns[2].column_type, ValueType::Int);
+        println!("{}", ds.dump().await);
+    }
+
+    #[tokio::test]
+    async fn test_error_collector() {
+        let schema = gen_schema();
+        let rows = vec![
+            vec![Value::from(10), Value::from(100), Value::from(true)],
+            vec![Value::from(20), Value::from("foo"), Value::from(true)],
+            vec![
+                Value::from(30),
+                Value::Error(PiperError::Unknown("".to_string())),
+                Value::from(false),
+            ],
+            vec![Value::from(40), Value::from(400), Value::from(false)],
+        ];
+        let (s, r, e) = (schema.clone(), rows.clone()).collect_errors(ErrorCollectingMode::On);
+        assert_eq!(s, schema);
+        assert_eq!(r, rows);
+        assert_eq!(e.len(), 1);
+        let (m, e) = (schema.clone(), rows).collect_into_json(ErrorCollectingMode::On);
+        assert_eq!(s, schema);
+        assert_eq!(e.len(), 1);
+        assert_eq!(m[2]["col2"], json!(null));
     }
 
     #[tokio::test]
