@@ -1,4 +1,4 @@
-use chrono::{TimeZone, NaiveDateTime, Utc};
+use chrono::{NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
 use tracing::instrument;
 
@@ -12,17 +12,17 @@ pub struct TimestampFunction;
 const DEFAULT_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
 
 impl Function for TimestampFunction {
-    fn get_output_type(
-        &self,
-        argument_types: &[ValueType],
-    ) -> Result<ValueType, PiperError> {
+    fn get_output_type(&self, argument_types: &[ValueType]) -> Result<ValueType, PiperError> {
         if argument_types.is_empty() || argument_types.len() > 3 {
             return Err(PiperError::ArityError(
                 "timestamp".to_string(),
                 argument_types.len(),
             ));
         }
-        if argument_types[0] != ValueType::String && argument_types[0] != ValueType::DateTime && argument_types[0] != ValueType::Dynamic {
+        if argument_types[0] != ValueType::String
+            && argument_types[0] != ValueType::DateTime
+            && argument_types[0] != ValueType::Dynamic
+        {
             return Err(PiperError::InvalidArgumentType(
                 "timestamp".to_string(),
                 0,
@@ -30,21 +30,30 @@ impl Function for TimestampFunction {
             ));
         }
 
-        if argument_types[0] == ValueType::DateTime && argument_types[0] != ValueType::Dynamic && argument_types.len() > 1 {
+        if argument_types[0] == ValueType::DateTime
+            && argument_types[0] != ValueType::Dynamic
+            && argument_types.len() > 1
+        {
             return Err(PiperError::ArityError(
                 "timestamp".to_string(),
                 argument_types.len(),
             ));
         }
 
-        if argument_types.len() > 1 && argument_types[1] != ValueType::String && argument_types[1] != ValueType::Dynamic {
+        if argument_types.len() > 1
+            && argument_types[1] != ValueType::String
+            && argument_types[1] != ValueType::Dynamic
+        {
             return Err(PiperError::InvalidArgumentType(
                 "timestamp".to_string(),
                 1,
                 argument_types[1],
             ));
         }
-        if argument_types.len() > 2 && argument_types[2] != ValueType::String && argument_types[2] != ValueType::Dynamic {
+        if argument_types.len() > 2
+            && argument_types[2] != ValueType::String
+            && argument_types[2] != ValueType::Dynamic
+        {
             return Err(PiperError::InvalidArgumentType(
                 "timestamp".to_string(),
                 2,
@@ -96,7 +105,7 @@ impl Function for TimestampFunction {
 }
 
 pub fn to_utc_timestamp(dt: NaiveDateTime, tz: String) -> Value {
-    let tz =  match tz.parse::<Tz>() {
+    let tz = match tz.parse::<Tz>() {
         Ok(tz) => tz,
         Err(e) => return PiperError::InvalidValue(e).into(),
     };
@@ -120,6 +129,31 @@ mod tests {
         use crate::pipeline::Value;
 
         let f = TimestampFunction;
+
+        assert!(f.get_output_type(&[ValueType::Int]).is_err());
+        assert!(f.get_output_type(&[ValueType::String]).is_ok());
+        assert!(f.get_output_type(&[ValueType::DateTime]).is_ok());
+        assert!(f
+            .get_output_type(&[ValueType::String, ValueType::String])
+            .is_ok());
+        assert!(f
+            .get_output_type(&[ValueType::String, ValueType::Int])
+            .is_err());
+        assert!(f
+            .get_output_type(&[ValueType::String, ValueType::String, ValueType::String])
+            .is_ok());
+        assert!(f
+            .get_output_type(&[ValueType::String, ValueType::String, ValueType::Int])
+            .is_err());
+        assert!(f
+            .get_output_type(&[
+                ValueType::String,
+                ValueType::String,
+                ValueType::String,
+                ValueType::String
+            ])
+            .is_err());
+
         // Default format
         assert_eq!(
             f.eval(vec![Value::String("2020-01-01 00:00:00".into())]),

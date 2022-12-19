@@ -109,7 +109,10 @@ pub fn make_timestamp(arguments: Vec<Value>) -> Result<Value, PiperError> {
 
 #[cfg(test)]
 mod tests {
-    use crate::pipeline::{function::datetime_functions::to_timestamp, value::IntoValue};
+    use crate::{
+        pipeline::{function::datetime_functions::to_timestamp, value::IntoValue},
+        ValueType,
+    };
 
     use super::from_utc_timestamp;
 
@@ -143,10 +146,57 @@ mod tests {
         .into_value();
         assert_eq!(dt, gmt);
 
-        let dt = to_timestamp(vec![
-            "2022-03-04 05:00:00".into_value(),
-        ])
-        .into_value();
+        let dt = to_timestamp(vec!["2022-03-04 05:00:00".into_value()]).into_value();
         assert_eq!(dt, gmt);
+    }
+
+    #[test]
+    fn test_add_month() {
+        let dt = "2021-03-31".into_value().get_datetime().into_value();
+        let dt = super::add_months(dt.get_datetime().unwrap().naive_utc().date(), 1);
+        assert_eq!(
+            dt,
+            "2021-04-30"
+                .into_value()
+                .get_datetime()
+                .unwrap()
+                .naive_utc()
+                .date()
+        );
+    }
+
+    #[test]
+    fn test_add_days() {
+        let dt = "2021-03-31".into_value().get_datetime().into_value();
+        let dt = super::add_days(dt.get_datetime().unwrap().naive_utc().date(), 1);
+        assert_eq!(
+            dt.unwrap(),
+            "2021-04-01"
+                .into_value()
+                .get_datetime()
+                .unwrap()
+                .naive_utc()
+                .date()
+        );
+    }
+
+    #[test]
+    fn test_make_timestamp() {
+        let dt = super::make_timestamp(vec![
+            2021.into_value(),
+            3.into_value(),
+            31.into_value(),
+            13.into_value(),
+            0.into_value(),
+            0.into_value(),
+            "Asia/Shanghai".into_value(),
+        ])
+        .unwrap();
+        assert_eq!(
+            dt,
+            "2021-03-31 05:00:00"
+                .into_value()
+                .cast_to(ValueType::DateTime)
+        );
     }
 }

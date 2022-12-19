@@ -81,18 +81,45 @@ impl Function for ExtractJsonArray {
 
 #[cfg(test)]
 mod tests {
+    use crate::{Function, Value};
+
     #[test]
-    fn jp() {
-        let s = r#"{
-            "a" : [
-                {
-                    "b" : [1, 2]
-                }
-            ]
-        }"#;
-        let v: serde_json::Value = serde_json::from_str(s).unwrap();
-        let path = "$.a[*].c";
-        let ret = jsonpath_lib::select(&v, path).unwrap();
-        println!("{:?}", ret);
+    fn test_extract_json_object() {
+        let v = Value::String(
+            r#"{
+            "a": {
+                "b" : [1, 2]
+            }
+        }"#
+            .into(),
+        );
+        let extract_json_object = super::ExtractJsonObject;
+        assert_eq!(
+            extract_json_object.eval(vec![v, Value::String("$.a".into())]),
+            Value::Object(
+                vec![(
+                    "b".into(),
+                    Value::Array(vec![Value::Long(1), Value::Long(2)])
+                )]
+                .into_iter()
+                .collect()
+            )
+        );
+    }
+
+    #[test]
+    fn test_extract_json_array() {
+        let v = Value::String(r#"{
+            "a": 1,
+            "b": 2,
+            "c": 3
+        }"#
+            .into(),
+        );
+        let extract_json_array = super::ExtractJsonArray;
+        assert_eq!(
+            extract_json_array.eval(vec![v, Value::String("$.*".into())]),
+            Value::Array(vec![Value::Long(1), Value::Long(2), Value::Long(3)])
+        );
     }
 }

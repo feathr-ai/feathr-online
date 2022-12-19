@@ -58,7 +58,7 @@ pub struct SubstringFunction;
 
 impl Function for SubstringFunction {
     fn get_output_type(&self, argument_types: &[ValueType]) -> Result<ValueType, PiperError> {
-        if argument_types.len() != 2 {
+        if argument_types.len() != 3 {
             return Err(PiperError::ArityError(
                 "substring".to_string(),
                 argument_types.len(),
@@ -210,8 +210,15 @@ mod tests {
     fn test_split() {
         let split = super::SplitFunction;
         assert!(split.get_output_type(&[ValueType::String]).is_err());
-        assert!(split.get_output_type(&[ValueType::String, ValueType::Int]).is_err());
-        assert!(split.get_output_type(&[ValueType::String, ValueType::String]).is_ok());
+        assert!(split
+            .get_output_type(&[ValueType::String, ValueType::Int])
+            .is_err());
+        assert!(split
+            .get_output_type(&[ValueType::Int, ValueType::String])
+            .is_err());
+        assert!(split
+            .get_output_type(&[ValueType::String, ValueType::String])
+            .is_ok());
         let v = split.eval(vec!["a_b".into(), "_".into()]);
         assert_eq!(v, Value::Array(vec!["a".into(), "b".into()]));
     }
@@ -219,6 +226,19 @@ mod tests {
     #[test]
     fn test_substring() {
         let substring = super::SubstringFunction;
+        assert!(substring.get_output_type(&[ValueType::String]).is_err());
+        assert!(substring
+            .get_output_type(&[ValueType::String, ValueType::Int, ValueType::Int])
+            .is_ok());
+        assert!(substring
+            .get_output_type(&[ValueType::Object, ValueType::String, ValueType::Int])
+            .is_err());
+        assert!(substring
+            .get_output_type(&[ValueType::String, ValueType::Object, ValueType::Int])
+            .is_err());
+        assert!(substring
+            .get_output_type(&[ValueType::String, ValueType::Int, ValueType::Object])
+            .is_err());
         assert_eq!(
             substring.eval(vec!["www.apache.org".into(), 4.into(), 6.into()]),
             Value::String("apache".into())
@@ -293,6 +313,37 @@ mod tests {
         assert_eq!(
             super::substring_index("www.apache.org".to_string(), ".".to_string(), -4),
             "www.apache.org"
+        );
+    }
+
+    #[test]
+    fn test_split_part() {
+        assert_eq!(
+            super::split_part("www.apache.org".to_string(), ".".to_string(), 1).unwrap(),
+            "www"
+        );
+        assert_eq!(
+            super::split_part("www.apache.org".to_string(), ".".to_string(), 2).unwrap(),
+            "apache"
+        );
+        assert_eq!(
+            super::split_part("www.apache.org".to_string(), ".".to_string(), 3).unwrap(),
+            "org"
+        );
+        assert!(super::split_part("www.apache.org".to_string(), ".".to_string(), 4).is_err());
+        assert!(super::split_part("www.apache.org".to_string(), ".".to_string(), 0).is_err());
+    }
+
+    #[test]
+    fn test_translate() {
+        assert_eq!(
+            super::translate(
+                "www.apache.org".to_string(),
+                "wcx".to_string(),
+                "WCX".to_string()
+            )
+            .unwrap(),
+            "WWW.apaChe.org"
         );
     }
 }
