@@ -321,3 +321,34 @@ impl std::ops::DivAssign for Value {
         *self = DivideOperator::default().eval(vec![self.clone(), rhs]);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_math_op() {
+        use crate::Value;
+
+        assert_eq!(Value::Int(1) + Value::Int(2), Value::Int(3));
+        assert_eq!(Value::Int(1) - Value::Int(2), Value::Int(-1));
+        assert_eq!(Value::Int(1) * Value::Int(2), Value::Int(2));
+        assert_eq!(Value::Int(1) / Value::Int(2), Value::Int(0));
+        assert_eq!(Value::Int(1) % Value::Int(2), Value::Int(1));
+
+        assert_eq!(Value::Long(1) + Value::Long(2), Value::Long(3));
+        assert_eq!(Value::Long(1) - Value::Long(2), Value::Long(-1));
+        assert_eq!(Value::Long(1) * Value::Long(2), Value::Long(2));
+        assert_eq!(Value::Long(1) / Value::Long(2), Value::Long(0));
+        assert_eq!(Value::Long(1) % Value::Long(2), Value::Long(1));
+
+        assert_eq!(Value::Float(1.0) + Value::Float(2.0), Value::Float(3.0));
+        assert_eq!(Value::Float(1.0) - Value::Float(2.0), Value::Float(-1.0));
+        assert_eq!(Value::Float(1.0) * Value::Float(2.0), Value::Float(2.0));
+        assert_eq!(Value::Float(1.0) / Value::Float(2.0), Value::Float(0.5));
+        assert_eq!(Value::Float(1.0) % Value::Float(2.0), Value::Float(1.0));
+
+        assert_eq!(Value::Double(1.0) + Value::Double(2.0), Value::Double(3.0));
+        assert_eq!(Value::Double(1.0) - Value::Double(2.0), Value::Double(-1.0));
+        assert_eq!(Value::Double(1.0) * Value::Double(2.0), Value::Double(2.0));
+        assert_eq!(Value::Double(1.0) / Value::Double(2.0), Value::Double(0.5));
+    }
+}

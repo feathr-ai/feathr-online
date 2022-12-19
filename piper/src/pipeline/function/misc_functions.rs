@@ -382,6 +382,9 @@ mod tests {
         use super::*;
         use crate::Value;
         let abs = Abs;
+        assert!(abs.get_output_type(&[ValueType::Int]).is_ok());
+        assert!(abs.get_output_type(&[ValueType::String]).is_err());
+        assert!(abs.get_output_type(&[ValueType::Int, ValueType::Int]).is_err());
         assert_eq!(abs.eval(vec![Value::Int(1)]), Value::Int(1));
         assert_eq!(abs.eval(vec![Value::Int(-1)]), Value::Int(1));
         assert_eq!(abs.eval(vec![Value::Long(1)]), Value::Long(1));
@@ -398,6 +401,11 @@ mod tests {
         use super::*;
         use crate::Value;
         let concat = Concat;
+        assert!(concat.get_output_type(&[ValueType::Int]).is_err());
+        assert!(concat.get_output_type(&[ValueType::String, ValueType::String]).is_ok());
+        assert!(concat.get_output_type(&[ValueType::Array, ValueType::Array]).is_ok());
+        assert!(concat.get_output_type(&[ValueType::Array, ValueType::String]).is_err());
+        assert!(concat.get_output_type(&[ValueType::Int, ValueType::Int]).is_err());
         assert_eq!(
             concat.eval(vec![Value::String("a".into()), Value::String("b".into())]),
             Value::String("ab".into())
@@ -416,6 +424,11 @@ mod tests {
         use super::*;
         use crate::Value;
         let concat_ws = ConcatWs;
+        assert!(concat_ws.get_output_type(&[ValueType::String]).is_err());
+        assert!(concat_ws.get_output_type(&[ValueType::String, ValueType::String]).is_ok());
+        assert!(concat_ws.get_output_type(&[ValueType::Array, ValueType::Array]).is_ok());
+        assert!(concat_ws.get_output_type(&[ValueType::Array, ValueType::String]).is_ok());
+        assert!(concat_ws.get_output_type(&[ValueType::Array, ValueType::String, ValueType::Array]).is_ok());
         assert_eq!(
             concat_ws.eval(vec![
                 Value::String("_".into()),
@@ -431,6 +444,10 @@ mod tests {
         use super::*;
         use crate::Value;
         let conv = Conv;
+        assert!(conv.get_output_type(&[ValueType::String, ValueType::Int, ValueType::Int]).is_ok());
+        assert!(conv.get_output_type(&[ValueType::String, ValueType::Int]).is_err());
+        assert!(conv.get_output_type(&[ValueType::String, ValueType::Int, ValueType::String]).is_err());
+        assert!(conv.get_output_type(&[ValueType::String, ValueType::String, ValueType::String]).is_err());
         assert_eq!(
             conv.eval(vec![Value::String("100".into()), 2.into(), 3.into()]),
             Value::String("11".into())

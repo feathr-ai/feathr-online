@@ -236,3 +236,25 @@ impl std::ops::Not for Value {
         NotOperator::default().eval(vec![self])
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_unary_ops() {
+        use super::*;
+        use crate::Value;
+
+        assert_eq!(-Value::Int(1), Value::Int(-1));
+        assert_eq!(-Value::Long(1), Value::Long(-1));
+        assert_eq!(-Value::Float(1.0), Value::Float(-1.0));
+        assert_eq!(-Value::Double(1.0), Value::Double(-1.0));
+
+        assert_eq!(!Value::Bool(true), Value::Bool(false));
+        assert_eq!(!Value::Bool(false), Value::Bool(true));
+
+        assert_eq!(IsNullOperator.eval(vec![Value::Null]), Value::Bool(true));
+        assert_eq!(IsNullOperator.eval(vec![Value::Int(1)]), Value::Bool(false));
+        assert_eq!(IsNotNullOperator.eval(vec![Value::Null]), Value::Bool(false));
+        assert_eq!(IsNotNullOperator.eval(vec![Value::Int(1)]), Value::Bool(true));
+    }
+}

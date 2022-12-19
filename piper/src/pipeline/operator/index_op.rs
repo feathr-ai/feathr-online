@@ -18,7 +18,7 @@ impl Operator for ArrayIndexOperator {
             && argument_types[0] != ValueType::Dynamic
         {
             return Err(PiperError::InvalidArgumentType(
-                "[]]".to_string(),
+                "[]".to_string(),
                 0,
                 argument_types[0],
             ));
@@ -101,5 +101,76 @@ impl Operator for MapIndexOperator {
 
     fn dump(&self, arguments: Vec<String>) -> String {
         format!("{}.{})", arguments[0], arguments[1])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::ValueType;
+
+    #[test]
+    fn test_array_index() {
+        use crate::pipeline::operator::index_op::ArrayIndexOperator;
+        use crate::pipeline::operator::Operator;
+        use crate::pipeline::Value;
+
+        let op = ArrayIndexOperator;
+        assert!(op
+            .get_output_type(&[ValueType::Array, ValueType::Int])
+            .is_ok());
+        assert!(op
+            .get_output_type(&[ValueType::Int, ValueType::Int])
+            .is_err());
+        assert_eq!(
+            op.eval(vec![
+                Value::Array(vec![Value::Int(1), Value::Int(2)]),
+                Value::Int(0)
+            ]),
+            Value::Int(1)
+        );
+        assert_eq!(
+            op.eval(vec![
+                Value::Array(vec![Value::Int(1), Value::Int(2)]),
+                Value::Int(1)
+            ]),
+            Value::Int(2)
+        );
+    }
+
+    #[test]
+    fn test_map_index() {
+        use crate::pipeline::operator::index_op::MapIndexOperator;
+        use crate::pipeline::operator::Operator;
+        use crate::pipeline::Value;
+
+        let op = MapIndexOperator;
+        assert!(op
+            .get_output_type(&[ValueType::Object, ValueType::String])
+            .is_ok());
+        assert!(op
+            .get_output_type(&[ValueType::Object, ValueType::Int])
+            .is_err());
+        assert_eq!(
+            op.eval(vec![
+                Value::Object(
+                    vec![("a".into(), Value::Int(1)), ("b".into(), Value::Int(2)),]
+                        .into_iter()
+                        .collect()
+                ),
+                Value::String("a".into())
+            ]),
+            Value::Int(1)
+        );
+        assert_eq!(
+            op.eval(vec![
+                Value::Object(
+                    vec![("a".into(), Value::Int(1)), ("b".into(), Value::Int(2)),]
+                        .into_iter()
+                        .collect()
+                ),
+                Value::String("b".into())
+            ]),
+            Value::Int(2)
+        );
     }
 }
