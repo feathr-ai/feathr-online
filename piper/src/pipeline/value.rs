@@ -1394,4 +1394,18 @@ mod tests {
             Value::Array(vec![Value::Int(1), Value::Int(2)])
         );
     }
+
+    #[test]
+    fn test_value() {
+        assert_eq!(Value::String("a".into()).dump(), "\"a\"".to_string());
+        assert_eq!(Value::String("a\t".into()).dump(), "\"a\\t\"".to_string());
+        assert_eq!(Value::Int(10).get_int().unwrap(), 10);
+        assert_eq!(Value::Int(10).get_long().unwrap(), 10);
+        assert_eq!(Value::Int(10).get_float().unwrap(), 10f32);
+        assert_eq!(Value::Int(10).get_double().unwrap(), 10f64);
+        assert!(Value::Int(0).get_bool().is_err());
+        assert!(!Value::Int(10).is_error());
+        assert!(!Value::Int(10).is_null());
+        assert!(Value::Null.is_null());
+        assert!(!Value::Null.is_error());}
 }

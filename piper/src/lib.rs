@@ -15,7 +15,7 @@ pub use pipeline::{
 };
 pub use service::{Args, PiperService};
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
 pub enum RequestData {
     Single(HashMap<String, serde_json::Value>),
@@ -42,7 +42,7 @@ pub struct LookupResponse {
     pub data: Vec<HashMap<String, serde_json::Value>>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SingleRequest {
     pub pipeline: String,

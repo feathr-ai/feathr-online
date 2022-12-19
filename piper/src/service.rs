@@ -376,3 +376,18 @@ async fn load_file(path: &str, enable_managed_identity: bool) -> Result<String, 
         );
     }))
 }
+
+#[cfg(test)]
+mod tests {
+    #[tokio::test]
+    async fn test_load_file() {
+        dotenvy::dotenv().ok();
+        let content = super::load_file(
+            "https://xchfeathrtest4sto.blob.core.windows.net/xchfeathrtest4fs/lookup.json",
+            false,
+        )
+        .await
+        .unwrap();
+        serde_json::from_str::<serde_json::Value>(&content).unwrap();
+    }
+}

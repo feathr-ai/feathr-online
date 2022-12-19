@@ -252,7 +252,9 @@ impl Piper {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Function, Piper, PiperError};
+    use serde_json::json;
+
+    use crate::{Function, Piper, PiperError, Request};
 
     #[test]
     fn test_dup_columns() {
@@ -283,5 +285,67 @@ mod tests {
         );
         // Try to define a udf with the same name as a built-in function
         assert!(matches!(p, Err(PiperError::FunctionAlreadyDefined(_))));
+    }
+
+    #[tokio::test]
+    async fn test_piper() {
+        let p = Piper::new("test_pipeline(a) | project b=a+42, c=a-42 ;", "").unwrap();
+        let r = p
+            .process_single_request(crate::SingleRequest {
+                pipeline: "test_pipeline".to_string(),
+                data: crate::RequestData::Multi(vec![
+                    vec![("a".to_string(), json!(1))].into_iter().collect(),
+                    vec![("a".to_string(), json!(2))].into_iter().collect(),
+                    vec![("a".to_string(), json!(3))].into_iter().collect(),
+                ]),
+                validate: false,
+                errors: crate::ErrorCollectingMode::On,
+            })
+            .await
+            .unwrap();
+        assert_eq!(r.data.as_ref().unwrap().len(), 3);
+        assert_eq!(r.data.as_ref().unwrap()[0]["b"], json!(43));
+        assert_eq!(r.data.as_ref().unwrap()[0]["c"], json!(-41));
+        assert_eq!(r.data.as_ref().unwrap()[1]["b"], json!(44));
+        assert_eq!(r.data.as_ref().unwrap()[1]["c"], json!(-40));
+        assert_eq!(r.data.as_ref().unwrap()[2]["b"], json!(45));
+        assert_eq!(r.data.as_ref().unwrap()[2]["c"], json!(-39));
+
+        let req = crate::SingleRequest {
+            pipeline: "test_pipeline".to_string(),
+            data: crate::RequestData::Multi(vec![
+                vec![("a".to_string(), json!(1))].into_iter().collect(),
+                vec![("a".to_string(), json!(2))].into_iter().collect(),
+                vec![("a".to_string(), json!(3))].into_iter().collect(),
+            ]),
+            validate: false,
+            errors: crate::ErrorCollectingMode::On,
+        };
+
+        let r = p.process_single_request(req.clone()).await.unwrap();
+        assert_eq!(r.data.as_ref().unwrap().len(), 3);
+        assert_eq!(r.data.as_ref().unwrap()[0]["b"], json!(43));
+        assert_eq!(r.data.as_ref().unwrap()[0]["c"], json!(-41));
+        assert_eq!(r.data.as_ref().unwrap()[1]["b"], json!(44));
+        assert_eq!(r.data.as_ref().unwrap()[1]["c"], json!(-40));
+        assert_eq!(r.data.as_ref().unwrap()[2]["b"], json!(45));
+        assert_eq!(r.data.as_ref().unwrap()[2]["c"], json!(-39));
+
+        let req = Request {
+            requests: vec![req],
+        };
+        let mut r = p.process(req).await.unwrap();
+        assert_eq!(r.results.len(), 1);
+        let r = r.results.remove(0);
+
+        assert_eq!(r.data.as_ref().unwrap().len(), 3);
+        assert_eq!(r.data.as_ref().unwrap()[0]["b"], json!(43));
+        assert_eq!(r.data.as_ref().unwrap()[0]["c"], json!(-41));
+        assert_eq!(r.data.as_ref().unwrap()[1]["b"], json!(44));
+        assert_eq!(r.data.as_ref().unwrap()[1]["c"], json!(-40));
+        assert_eq!(r.data.as_ref().unwrap()[2]["b"], json!(45));
+        assert_eq!(r.data.as_ref().unwrap()[2]["c"], json!(-39));
+
+        assert!(p.health_check().await);
     }
 }

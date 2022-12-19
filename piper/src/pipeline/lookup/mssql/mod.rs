@@ -125,3 +125,33 @@ impl LookupSource for MsSqlLookupSource {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{LookupSource, Value};
+
+    #[tokio::test]
+    async fn test_sqlite_lookup() {
+        dotenvy::dotenv().ok();
+        let s: MsSqlLookupSource = serde_json::from_str(r#"{
+            "connectionString": "${CONN_STR}",
+            "sqlTemplate": "select name, age from join_test where group_id = @P1",
+            "availableFields": [
+              "name",
+              "age"
+            ]
+        }"#).unwrap();
+        let l = Box::new(s);
+        let result = l
+            .join(&Value::Int(2), &["name".to_string(), "age".to_string()])
+            .await;
+        assert_eq!(
+            result,
+            vec![
+                vec![Value::String("Jill".into()), Value::Int(33)],
+                vec![Value::String("Jose".into()), Value::Int(34)]
+            ]
+        );
+    }
+}

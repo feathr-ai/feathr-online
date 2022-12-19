@@ -456,6 +456,7 @@ mod tests {
 
         let mut output = trans.transform(input).unwrap();
         let (output_schema, output_rows) = output.eval().await;
+        println!("transform: {}", trans.dump());
         println!("{:?}", output_schema);
         println!("{:?}", output_rows);
         assert_eq!(output_rows.len(), 8);
