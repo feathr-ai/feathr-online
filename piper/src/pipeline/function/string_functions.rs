@@ -205,6 +205,20 @@ pub fn translate(s: String, from: String, to: String) -> Result<String, PiperErr
 
 #[cfg(test)]
 mod tests {
+    use crate::{Function, Value};
+
+    #[test]
+    fn test_substring() {
+        let substring = super::SubstringFunction;
+        assert_eq!(
+            substring.eval(vec!["www.apache.org".into(), 4.into(), 6.into()]),
+            Value::String("apache".into())
+        );
+        assert_eq!(
+            substring.eval(vec!["www.apache.org".into(), Value::Int(-3), 3.into()]),
+            Value::String("org".into())
+        );
+    }
     #[test]
     fn test_substring_index() {
         assert_eq!(

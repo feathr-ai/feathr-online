@@ -174,5 +174,21 @@ mod tests {
         assert_eq!(op.eval(vec![Value::Int(42), Value::Long(43)]), Value::Bool(true));
         assert!(op.eval(vec![Value::Int(42), Value::String("42".into())]).is_error());
         assert_eq!(op.eval(vec![Value::String("42".into()), Value::String("42".into())]), Value::Bool(false));
+
+        let op = super::LessThanOperator;
+        assert_eq!(op.eval(vec![Value::Int(42), Value::Int(42)]), Value::Bool(false));
+        assert_eq!(op.eval(vec![Value::Int(42), Value::Long(42)]), Value::Bool(false));
+        assert_eq!(op.eval(vec![Value::Int(42), Value::Long(43)]), Value::Bool(true));
+        assert!(op.eval(vec![Value::Int(42), Value::String("42".into())]).is_error());
+        assert_eq!(op.eval(vec![Value::String("42".into()), Value::String("43".into())]), Value::Bool(true));
+
+        let op = super::GreaterThanOperator;
+        assert_eq!(op.eval(vec![Value::Int(42), Value::Int(42)]), Value::Bool(false));
+        assert_eq!(op.eval(vec![Value::Int(42), Value::Long(42)]), Value::Bool(false));
+        assert_eq!(op.eval(vec![Value::Int(42), Value::Long(43)]), Value::Bool(false));
+        assert_eq!(op.eval(vec![Value::Int(43), Value::Long(42)]), Value::Bool(true));
+        assert!(op.eval(vec![Value::Int(42), Value::String("42".into())]).is_error());
+        assert_eq!(op.eval(vec![Value::String("42".into()), Value::String("43".into())]), Value::Bool(false));
+        assert_eq!(op.eval(vec![Value::String("43".into()), Value::String("42".into())]), Value::Bool(true));
     }
 }

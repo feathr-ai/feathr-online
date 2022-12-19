@@ -54,3 +54,21 @@ macro_rules! logical_op {
 
 logical_op!(AndOperator, and, &&);
 logical_op!(OrOperator, or, ||);
+
+#[cfg(test)]
+mod tests {
+    use crate::ValueType;
+
+    #[test]
+    fn test_and() {
+        use crate::pipeline::operator::Operator;
+        use crate::pipeline::operator::logical_op::AndOperator;
+        use crate::pipeline::Value;
+
+        let and = AndOperator::default();
+        assert_eq!(and.get_output_type(&[ValueType::Bool, ValueType::Bool]).unwrap(), ValueType::Bool);
+        assert!(and.get_output_type(&[ValueType::Bool, ValueType::String]).is_err());
+        assert_eq!(and.eval(vec![Value::Bool(true), Value::Bool(true)]), Value::Bool(true));
+        assert_eq!(and.eval(vec![Value::Bool(true), Value::Bool(false)]), Value::Bool(false));
+    }
+}
