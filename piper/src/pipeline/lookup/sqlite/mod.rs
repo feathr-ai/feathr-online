@@ -46,10 +46,13 @@ impl SqliteLookupSource {
     async fn make_query(&self, key: &Value) -> Result<Vec<Vec<Value>>, PiperError> {
         let conn = self
             .client
-            .get_or_init(|| {
-                let conn = rusqlite::Connection::open(&self.db_path).unwrap();
-                Arc::new(Mutex::new(conn))
+            .get_or_try_init(|| {
+                let conn = rusqlite::Connection::open(&self.db_path)?;
+                Ok(Arc::new(Mutex::new(conn)))
             })
+            .map_err(|e: rusqlite::Error| {
+                PiperError::ExternalError(format!("Failed to spawn blocking task: {}", e))
+            })?
             .clone();
         let sql_template = self.sql_template.clone();
         let key = key.clone();
@@ -113,5 +116,46 @@ impl super::LookupSource for SqliteLookupSource {
                 "available_fields": super::serialize_field_list(&self.available_fields),
             }
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{LookupSource, Value};
+
+    #[tokio::test]
+    async fn test_sqlite_lookup() {
+        let db_path = if !std::path::Path::new("test-data/test.db").exists() {
+            "../test-data/test.db"
+        } else {
+            "test-data/test.db"
+        };
+        let s = format!(
+            r#"
+        {{
+            "name": "join_test",
+            "dbPath": "{}",
+            "sqlTemplate": "select name, age from join_test where group_id = :key",
+            "availableFields": [
+              "name",
+              "age"
+            ]
+        }}
+        "#,
+            db_path
+        );
+        let s: SqliteLookupSource = serde_json::from_str(&s).unwrap();
+        let l = Box::new(s);
+        let result = l
+            .join(&Value::Int(2), &["name".to_string(), "age".to_string()])
+            .await;
+        assert_eq!(
+            result,
+            vec![
+                vec![Value::String("Jill".into()), Value::Int(33)],
+                vec![Value::String("Jose".into()), Value::Int(34)]
+            ]
+        );
     }
 }

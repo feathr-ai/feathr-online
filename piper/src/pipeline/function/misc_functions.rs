@@ -32,7 +32,10 @@ impl Function for Abs {
             Value::Long(v) => Value::Long(v.abs()),
             Value::Float(v) => Value::Float(v.abs()),
             Value::Double(v) => Value::Double(v.abs()),
-            _ => unreachable!(),
+            _ => Value::Error(PiperError::InvalidValue(format!(
+                "Invalid value: {:?}",
+                arguments[0]
+            ))),
         }
     }
 }
@@ -52,7 +55,7 @@ impl Function for Concat {
         let init_type = argument_types.iter().find(|t| **t != ValueType::Dynamic);
         let init_type = match init_type {
             Some(t) => *t,
-            None => return Ok(ValueType::Dynamic),      // All arguments are dynamic
+            None => return Ok(ValueType::Dynamic), // All arguments are dynamic
         };
         if init_type != ValueType::String && init_type != ValueType::Array {
             return Err(PiperError::InvalidArgumentType(
@@ -271,7 +274,6 @@ impl Function for Conv {
     }
 }
 
-
 pub fn json_object_keys(json: Option<String>) -> Value {
     match json {
         Some(json) => {
@@ -338,12 +340,23 @@ pub fn elt(arguments: Vec<Value>) -> Value {
 }
 
 pub fn slice(array: Vec<Value>, start: i64, end: i64) -> Result<Value, PiperError> {
-    let start = if start<0 { array.len() as i64 + start } else { start };
-    let start = if start<0 { 0 } else { start as usize };
-    let end = if end<0 { array.len() as i64 + end } else { end };
-    let end = if end<0 { 0 } else { end as usize };
+    let start = if start < 0 {
+        array.len() as i64 + start
+    } else {
+        start
+    };
+    let start = if start < 0 { 0 } else { start as usize };
+    let end = if end < 0 {
+        array.len() as i64 + end
+    } else {
+        end
+    };
+    let end = if end < 0 { 0 } else { end as usize };
     if start > end {
-        return Err(PiperError::InvalidValue(format!("start ({}) must be less than end ({})", start, end)));
+        return Err(PiperError::InvalidValue(format!(
+            "start ({}) must be less than end ({})",
+            start, end
+        )));
     }
     Ok(Value::Array(array[start..end].to_vec()))
 }
@@ -365,11 +378,81 @@ mod tests {
     use crate::pipeline::value::IntoValue;
 
     #[test]
+    fn test_abs() {
+        use super::*;
+        use crate::Value;
+        let abs = Abs;
+        assert_eq!(abs.eval(vec![Value::Int(1)]), Value::Int(1));
+        assert_eq!(abs.eval(vec![Value::Int(-1)]), Value::Int(1));
+        assert_eq!(abs.eval(vec![Value::Long(1)]), Value::Long(1));
+        assert_eq!(abs.eval(vec![Value::Long(-1)]), Value::Long(1));
+        assert_eq!(abs.eval(vec![Value::Float(1.0)]), Value::Float(1.0));
+        assert_eq!(abs.eval(vec![Value::Float(-1.0)]), Value::Float(1.0));
+        assert_eq!(abs.eval(vec![Value::Double(1.0)]), Value::Double(1.0));
+        assert_eq!(abs.eval(vec![Value::Double(-1.0)]), Value::Double(1.0));
+        assert!(abs.eval(vec!["a".into_value()]).is_error());
+    }
+
+    #[test]
+    fn test_concat() {
+        use super::*;
+        use crate::Value;
+        let concat = Concat;
+        assert_eq!(
+            concat.eval(vec![Value::String("a".into()), Value::String("b".into())]),
+            Value::String("ab".into())
+        );
+        assert_eq!(
+            concat.eval(vec![
+                Value::Array(vec![1.into(), 2.into()]),
+                Value::Array(vec![3.into(), 4.into()])
+            ]),
+            Value::Array(vec![1.into(), 2.into(), 3.into(), 4.into()])
+        );
+    }
+
+    #[test]
+    fn test_concat_ws() {
+        use super::*;
+        use crate::Value;
+        let concat_ws = ConcatWs;
+        assert_eq!(
+            concat_ws.eval(vec![
+                Value::String("_".into()),
+                vec![Value::String("a".into()), Value::String("b".into())].into(),
+                Value::String("c".into())
+            ]),
+            Value::String("a_b_c".into())
+        );
+    }
+
+    #[test]
+    fn test_conv() {
+        use super::*;
+        use crate::Value;
+        let conv = Conv;
+        assert_eq!(
+            conv.eval(vec![Value::String("100".into()), 2.into(), 3.into()]),
+            Value::String("11".into())
+        );
+    }
+
+    #[test]
     fn test_slice() {
         use super::*;
-        let array = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].into_value().get_array().unwrap().clone();
-        assert_eq!(slice(array.clone(), 0, 5).unwrap(), vec![1i32, 2, 3, 4, 5].into_value());
+        let array = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+            .into_value()
+            .get_array()
+            .unwrap()
+            .clone();
+        assert_eq!(
+            slice(array.clone(), 0, 5).unwrap(),
+            vec![1i32, 2, 3, 4, 5].into_value()
+        );
         assert_eq!(slice(array.clone(), 0, 0).unwrap(), Value::Array(vec![]));
-        assert_eq!(slice(array, 0, -1).unwrap(), vec![1i32, 2, 3, 4, 5, 6, 7, 8, 9].into_value());
+        assert_eq!(
+            slice(array, 0, -1).unwrap(),
+            vec![1i32, 2, 3, 4, 5, 6, 7, 8, 9].into_value()
+        );
     }
 }

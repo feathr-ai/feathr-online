@@ -25,12 +25,20 @@ jobs:
         REDIS_HOST: ${{ secrets.REDIS_HOST }}
         REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
         REDIS_TABLE: ${{ secrets.REDIS_TABLE }}
+        COSMOS_ACCOUNT: ${{ secrets.COSMOS_ACCOUNT }}
+        COSMOS_API_KEY: ${{ secrets.COSMOS_API_KEY }}
+        COSMOS_DATABASE: ${{ secrets.COSMOS_DATABASE }}
+        COSMOS_COLLECTION: ${{ secrets.COSMOS_COLLECTION }}
       run: cargo test --package=piper --verbose
     - name: Run cargo-tarpaulin
       env:
         REDIS_HOST: ${{ secrets.REDIS_HOST }}
         REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
         REDIS_TABLE: ${{ secrets.REDIS_TABLE }}
+        COSMOS_ACCOUNT: ${{ secrets.COSMOS_ACCOUNT }}
+        COSMOS_API_KEY: ${{ secrets.COSMOS_API_KEY }}
+        COSMOS_DATABASE: ${{ secrets.COSMOS_DATABASE }}
+        COSMOS_COLLECTION: ${{ secrets.COSMOS_COLLECTION }}
       uses: actions-rs/tarpaulin@v0.1
       with:
         version: '0.15.0'
