@@ -79,3 +79,47 @@ impl DataSet for ProjectRemovedDataSet {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{pipeline::{pipelines::BuildContext, DataSetCreator, Value, Pipeline}, PiperError};
+
+    #[tokio::test]
+    async fn test_explode() {
+        let pipeline = Pipeline::parse(
+            "test_pipeline(a as int, b as array)
+            | project-remove b
+            ;",
+            &BuildContext::default(),
+        )
+        .unwrap();
+        let ds = DataSetCreator::eager(
+            pipeline.input_schema.clone(),
+            vec![
+                vec![Value::from(10), Value::from(vec![1, 2, 3])],
+                vec![Value::from(10), Value::from(Vec::<i32>::new())],
+                vec![Value::from(20), Value::from(Vec::<i32>::new())],
+                vec![Value::from(20), Value::from(vec![400])],
+                vec![Value::from(30), Value::Error(PiperError::Unknown("test".to_string()))],
+                vec![Value::from(30), Value::from(vec![600])],
+                vec![Value::from(40), Value::from(vec![800])],
+            ],
+        );
+        let (schema, rows) = pipeline
+            .process(ds, crate::pipeline::ValidationMode::Strict)
+            .unwrap()
+            .eval()
+            .await;
+        assert_eq!(schema, pipeline.output_schema);
+        println!("pipelines: {}", pipeline.dump());
+        println!("{:?}", rows);
+        assert_eq!(rows.len(), 7);
+        assert_eq!(rows[0], vec![Value::from(10)]);
+        assert_eq!(rows[1], vec![Value::from(10)]);
+        assert_eq!(rows[2], vec![Value::from(20)]);
+        assert_eq!(rows[3], vec![Value::from(20)]);
+        assert_eq!(rows[4], vec![Value::from(30)]);
+        assert_eq!(rows[5], vec![Value::from(30)]);
+        assert_eq!(rows[6], vec![Value::from(40)]);
+    }
+}
