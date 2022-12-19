@@ -1,5 +1,7 @@
 # README
 
+[![codecov](https://codecov.io/gh/windoze/piper/branch/main/graph/badge.svg?token=O4IH3NIM4K)](https://codecov.io/gh/windoze/piper) [![PyPI version](https://badge.fury.io/py/feathrpiper.svg)](https://badge.fury.io/py/feathrpiper) 
+
 This project include 4 components:
 
 * The transformation core, it's a shared component used by all the other components.
