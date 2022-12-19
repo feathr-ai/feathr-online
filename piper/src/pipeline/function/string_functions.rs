@@ -205,7 +205,16 @@ pub fn translate(s: String, from: String, to: String) -> Result<String, PiperErr
 
 #[cfg(test)]
 mod tests {
-    use crate::{Function, Value};
+    use crate::{Function, Value, ValueType};
+    #[test]
+    fn test_split() {
+        let split = super::SplitFunction;
+        assert!(split.get_output_type(&[ValueType::String]).is_err());
+        assert!(split.get_output_type(&[ValueType::String, ValueType::Int]).is_err());
+        assert!(split.get_output_type(&[ValueType::String, ValueType::String]).is_ok());
+        let v = split.eval(vec!["a_b".into(), "_".into()]);
+        assert_eq!(v, Value::Array(vec!["a".into(), "b".into()]));
+    }
 
     #[test]
     fn test_substring() {
