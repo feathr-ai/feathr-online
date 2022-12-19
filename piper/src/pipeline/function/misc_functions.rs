@@ -308,7 +308,7 @@ pub fn json_array_length(json: Option<String>) -> Value {
 pub fn element_at(container: Value, index: Value) -> Value {
     match container {
         Value::Array(array) => {
-            if let Value::Long(index) = index {
+            if let Ok(index) = index.get_long() {
                 if index >= 0 && index < array.len() as i64 {
                     return array[index as usize].clone();
                 }
@@ -331,9 +331,9 @@ pub fn elt(arguments: Vec<Value>) -> Value {
     if arguments.len() < 2 {
         return Value::Error(PiperError::InvalidArgumentCount(2, arguments.len()));
     }
-    if let Value::Long(index) = arguments[0] {
+    if let Ok(index) = arguments[0].get_long() {
         if index >= 0 && index < arguments.len() as i64 {
-            return arguments[index as usize + 1].clone();
+            return arguments[index as usize].clone();
         }
     }
     Value::Null
@@ -375,7 +375,7 @@ pub fn distance(lat1: f64, lng1: f64, lat2: f64, lng2: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use crate::pipeline::value::IntoValue;
+    use crate::{pipeline::value::IntoValue, Value};
 
     #[test]
     fn test_abs() {
@@ -384,7 +384,9 @@ mod tests {
         let abs = Abs;
         assert!(abs.get_output_type(&[ValueType::Int]).is_ok());
         assert!(abs.get_output_type(&[ValueType::String]).is_err());
-        assert!(abs.get_output_type(&[ValueType::Int, ValueType::Int]).is_err());
+        assert!(abs
+            .get_output_type(&[ValueType::Int, ValueType::Int])
+            .is_err());
         assert_eq!(abs.eval(vec![Value::Int(1)]), Value::Int(1));
         assert_eq!(abs.eval(vec![Value::Int(-1)]), Value::Int(1));
         assert_eq!(abs.eval(vec![Value::Long(1)]), Value::Long(1));
@@ -402,10 +404,18 @@ mod tests {
         use crate::Value;
         let concat = Concat;
         assert!(concat.get_output_type(&[ValueType::Int]).is_err());
-        assert!(concat.get_output_type(&[ValueType::String, ValueType::String]).is_ok());
-        assert!(concat.get_output_type(&[ValueType::Array, ValueType::Array]).is_ok());
-        assert!(concat.get_output_type(&[ValueType::Array, ValueType::String]).is_err());
-        assert!(concat.get_output_type(&[ValueType::Int, ValueType::Int]).is_err());
+        assert!(concat
+            .get_output_type(&[ValueType::String, ValueType::String])
+            .is_ok());
+        assert!(concat
+            .get_output_type(&[ValueType::Array, ValueType::Array])
+            .is_ok());
+        assert!(concat
+            .get_output_type(&[ValueType::Array, ValueType::String])
+            .is_err());
+        assert!(concat
+            .get_output_type(&[ValueType::Int, ValueType::Int])
+            .is_err());
         assert_eq!(
             concat.eval(vec![Value::String("a".into()), Value::String("b".into())]),
             Value::String("ab".into())
@@ -425,10 +435,18 @@ mod tests {
         use crate::Value;
         let concat_ws = ConcatWs;
         assert!(concat_ws.get_output_type(&[ValueType::String]).is_err());
-        assert!(concat_ws.get_output_type(&[ValueType::String, ValueType::String]).is_ok());
-        assert!(concat_ws.get_output_type(&[ValueType::Array, ValueType::Array]).is_ok());
-        assert!(concat_ws.get_output_type(&[ValueType::Array, ValueType::String]).is_ok());
-        assert!(concat_ws.get_output_type(&[ValueType::Array, ValueType::String, ValueType::Array]).is_ok());
+        assert!(concat_ws
+            .get_output_type(&[ValueType::String, ValueType::String])
+            .is_ok());
+        assert!(concat_ws
+            .get_output_type(&[ValueType::Array, ValueType::Array])
+            .is_ok());
+        assert!(concat_ws
+            .get_output_type(&[ValueType::Array, ValueType::String])
+            .is_ok());
+        assert!(concat_ws
+            .get_output_type(&[ValueType::Array, ValueType::String, ValueType::Array])
+            .is_ok());
         assert_eq!(
             concat_ws.eval(vec![
                 Value::String("_".into()),
@@ -444,13 +462,94 @@ mod tests {
         use super::*;
         use crate::Value;
         let conv = Conv;
-        assert!(conv.get_output_type(&[ValueType::String, ValueType::Int, ValueType::Int]).is_ok());
-        assert!(conv.get_output_type(&[ValueType::String, ValueType::Int]).is_err());
-        assert!(conv.get_output_type(&[ValueType::String, ValueType::Int, ValueType::String]).is_err());
-        assert!(conv.get_output_type(&[ValueType::String, ValueType::String, ValueType::String]).is_err());
+        assert!(conv
+            .get_output_type(&[ValueType::String, ValueType::Int, ValueType::Int])
+            .is_ok());
+        assert!(conv
+            .get_output_type(&[ValueType::String, ValueType::Int])
+            .is_err());
+        assert!(conv
+            .get_output_type(&[ValueType::String, ValueType::Int, ValueType::String])
+            .is_err());
+        assert!(conv
+            .get_output_type(&[ValueType::String, ValueType::String, ValueType::String])
+            .is_err());
         assert_eq!(
             conv.eval(vec![Value::String("100".into()), 2.into(), 3.into()]),
             Value::String("11".into())
+        );
+    }
+
+    #[test]
+    fn test_json_object_keys() {
+        use super::*;
+        use crate::Value;
+        let v = json_object_keys(Some(r#"{"a": 1, "b": 2}"#.to_string()));
+        assert_eq!(v, Value::Array(vec!["a".into(), "b".into()]));
+    }
+
+    #[test]
+    fn test_json_array_length() {
+        use super::*;
+        assert_eq!(json_array_length(Some(r#"[1,2,3]"#.to_string())), 3.into());
+        assert_eq!(json_array_length(Some(r#"[]"#.to_string())), 0.into());
+    }
+
+    #[test]
+    fn test_element_at() {
+        let v: Value = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].into();
+        assert_eq!(super::element_at(v.clone(), 1.into()), 2.into());
+        assert_eq!(super::element_at(v.clone(), 3.into()), 4.into());
+        assert_eq!(super::element_at(v.clone(), 5.into()), 6.into());
+        assert_eq!(super::element_at(v, 99.into()), Value::Null);
+        let v: Value = Value::Object(
+            vec![
+                ("a".to_string(), 1.into()),
+                ("b".to_string(), 2.into()),
+                ("c".to_string(), 3.into()),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        assert_eq!(super::element_at(v.clone(), "a".into()), 1.into());
+        assert_eq!(super::element_at(v.clone(), "b".into()), 2.into());
+        assert_eq!(super::element_at(v.clone(), "c".into()), 3.into());
+        assert_eq!(super::element_at(v, "x".into()), Value::Null);
+    }
+
+    #[test]
+    fn test_elt() {
+        assert_eq!(
+            super::elt(vec![
+                Value::Int(5),
+                1.into(),
+                2.into(),
+                3.into(),
+                4.into(),
+                5.into(),
+                6.into(),
+                7.into(),
+                8.into(),
+                9.into(),
+                10.into()
+            ]),
+            5.into(),
+        );
+        assert_eq!(
+            super::elt(vec![
+                Value::Int(11),
+                1.into(),
+                2.into(),
+                3.into(),
+                4.into(),
+                5.into(),
+                6.into(),
+                7.into(),
+                8.into(),
+                9.into(),
+                10.into()
+            ]),
+            Value::Null,
         );
     }
 
@@ -471,5 +570,12 @@ mod tests {
             slice(array, 0, -1).unwrap(),
             vec![1i32, 2, 3, 4, 5, 6, 7, 8, 9].into_value()
         );
+    }
+
+    #[test]
+    fn test_distance() {
+        let d = super::distance(0f64, 0f64, 0f64, 180f64);
+        // I don't remember the exact number
+        assert!(d > 20000.0 && d < 20100.0);
     }
 }

@@ -1,6 +1,6 @@
 # README
 
-[![codecov](https://codecov.io/gh/windoze/piper/branch/main/graph/badge.svg?token=O4IH3NIM4K)](https://codecov.io/gh/windoze/piper) [![PyPI version](https://badge.fury.io/py/feathrpiper.svg)](https://badge.fury.io/py/feathrpiper) 
+[![PyPI version](https://badge.fury.io/py/feathrpiper.svg)](https://badge.fury.io/py/feathrpiper) [![codecov](https://codecov.io/gh/windoze/piper/branch/main/graph/badge.svg?token=O4IH3NIM4K)](https://codecov.io/gh/windoze/piper)
 
 This project include 4 components:
 
