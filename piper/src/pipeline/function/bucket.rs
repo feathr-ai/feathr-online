@@ -11,10 +11,7 @@ use super::Function;
 pub struct BucketFunction;
 
 impl Function for BucketFunction {
-    fn get_output_type(
-        &self,
-        argument_types: &[ValueType],
-    ) -> Result<ValueType, PiperError> {
+    fn get_output_type(&self, argument_types: &[ValueType]) -> Result<ValueType, PiperError> {
         if argument_types.len() < 2 {
             return Err(PiperError::InvalidArgumentCount(2, argument_types.len()));
         }
@@ -36,7 +33,7 @@ impl Function for BucketFunction {
 
     #[instrument(level = "trace", skip(self))]
     fn eval(&self, arguments: Vec<Value>) -> Value {
-        for (bucket, pivot) in arguments.iter().enumerate().skip(1) {
+        for (bucket, pivot) in arguments.iter().skip(1).enumerate() {
             let pred = LessThanOperator
                 .eval(vec![arguments[0].clone(), pivot.clone()])
                 .get_bool();
@@ -81,6 +78,17 @@ mod tests {
                 ])
                 .unwrap(),
             ValueType::Long
+        );
+
+        assert_eq!(
+            BucketFunction.eval(vec![
+                0.5.into(),
+                0.0.into(),
+                1.0.into(),
+                2.0.into(),
+                3.0.into()
+            ]),
+            1.into()
         );
     }
 }

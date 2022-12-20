@@ -336,6 +336,12 @@ mod tests {
 
     #[test]
     fn test_translate() {
+        assert!(super::translate(
+            "www.apache.org".to_string(),
+            "wcx_".to_string(),
+            "WCX".to_string()
+        )
+        .is_err());
         assert_eq!(
             super::translate(
                 "www.apache.org".to_string(),

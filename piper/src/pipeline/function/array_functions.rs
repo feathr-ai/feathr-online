@@ -214,7 +214,25 @@ pub fn flatten(maybe_array: Value) -> Value {
 
 #[cfg(test)]
 mod tests {
-    use crate::Function;
+    use crate::{Function, ValueType};
+
+    #[test]
+    fn test_array_distinct() {
+        use super::array_distinct;
+        use crate::pipeline::Value;
+        assert_eq!(
+            array_distinct(vec![1.into(), 2.into(), 3.into()]),
+            vec![Value::Int(1), 2.into(), 3.into()].into(),
+        );
+        assert_eq!(
+            array_distinct(vec![1.into(), 2.into(), 3.into(), 2.into()]),
+            vec![Value::Int(1), 2.into(), 3.into()].into(),
+        );
+        assert_eq!(
+            array_distinct(vec![1.into(), 2.into(), 3.into(), Value::Null]),
+            vec![Value::Int(1), 2.into(), 3.into(), Value::Null].into(),
+        );
+    }
 
     #[test]
     fn test_array_contains() {
@@ -267,6 +285,24 @@ mod tests {
         use super::ArrayJoin;
         use crate::pipeline::Value;
         let array_join = ArrayJoin;
+        assert!(array_join
+            .get_output_type(&[ValueType::Array, ValueType::String])
+            .is_ok());
+        assert!(array_join
+            .get_output_type(&[ValueType::Array, ValueType::String, ValueType::String])
+            .is_ok());
+        assert!(array_join
+            .get_output_type(&[ValueType::Dynamic, ValueType::String])
+            .is_ok());
+        assert!(array_join
+            .get_output_type(&[ValueType::Array, ValueType::Dynamic])
+            .is_ok());
+        assert!(array_join
+            .get_output_type(&[ValueType::Dynamic, ValueType::Dynamic, ValueType::Dynamic])
+            .is_ok());
+        assert!(array_join
+            .get_output_type(&[ValueType::Int, ValueType::Int, ValueType::Int])
+            .is_err());
         assert_eq!(
             array_join.eval(vec![
                 vec![Value::Int(1), 2.into(), 3.into()].into(),
@@ -415,7 +451,10 @@ mod tests {
             .into(),
         );
         assert_eq!(
-            arrays_zip(vec![1.into(), 2.into(), 3.into()], vec![4.into(), 5.into(), 6.into()]),
+            arrays_zip(
+                vec![1.into(), 2.into(), 3.into()],
+                vec![4.into(), 5.into(), 6.into()]
+            ),
             vec![
                 Value::Array(vec![Value::Int(1), 4.into()]),
                 Value::Array(vec![Value::Int(2), 5.into()]),
@@ -424,7 +463,10 @@ mod tests {
             .into(),
         );
         assert_eq!(
-            arrays_zip(vec![1.into(), 2.into(), 3.into()], vec![4.into(), 5.into(), 6.into(), 7.into()]),
+            arrays_zip(
+                vec![1.into(), 2.into(), 3.into()],
+                vec![4.into(), 5.into(), 6.into(), 7.into()]
+            ),
             vec![
                 Value::Array(vec![Value::Int(1), 4.into()]),
                 Value::Array(vec![Value::Int(2), 5.into()]),

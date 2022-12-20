@@ -437,6 +437,12 @@ mod tests {
             .eval(vec![Value::String("a".into()), Value::Null])
             .is_error());
         assert!(concat
+            .eval(vec![Value::String("a".into()), Value::Array(vec![])])
+            .is_error());
+        assert!(concat
+            .eval(vec![Value::Array(vec![]), Value::String("a".into())])
+            .is_error());
+        assert!(concat
             .eval(vec![Value::Array(vec![1.into(), 2.into()]),])
             .is_error());
         assert_eq!(
@@ -538,6 +544,12 @@ mod tests {
             .is_error());
         assert!(conv
             .eval(vec![Value::Null, Value::String("100".into()), 2.into()])
+            .is_error());
+        assert!(conv
+            .eval(vec![Value::String("100".into()), 37.into(), 3.into()])
+            .is_error());
+        assert!(conv
+            .eval(vec![Value::String("100".into()), 3.into(), 37.into()])
             .is_error());
         assert_eq!(
             conv.eval(vec![Value::String("100".into()), 2.into(), 3.into()]),
