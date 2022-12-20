@@ -387,6 +387,8 @@ mod tests {
         assert!(abs
             .get_output_type(&[ValueType::Int, ValueType::Int])
             .is_err());
+        assert!(abs.eval(vec![]).is_error());
+        assert!(abs.eval(vec![Value::Null]).is_error());
         assert_eq!(abs.eval(vec![Value::Int(1)]), Value::Int(1));
         assert_eq!(abs.eval(vec![Value::Int(-1)]), Value::Int(1));
         assert_eq!(abs.eval(vec![Value::Long(1)]), Value::Long(1));
@@ -399,11 +401,19 @@ mod tests {
     }
 
     #[test]
+    fn test_ascii() {
+        assert_eq!(super::ascii("a".to_string()), 97.into_value());
+    }
+
+    #[test]
     fn test_concat() {
         use super::*;
         use crate::Value;
         let concat = Concat;
         assert!(concat.get_output_type(&[ValueType::Int]).is_err());
+        assert!(concat
+            .get_output_type(&[ValueType::Dynamic, ValueType::Dynamic])
+            .is_ok());
         assert!(concat
             .get_output_type(&[ValueType::String, ValueType::String])
             .is_ok());
@@ -420,6 +430,15 @@ mod tests {
             concat.eval(vec![Value::String("a".into()), Value::String("b".into())]),
             Value::String("ab".into())
         );
+        assert!(concat
+            .eval(vec![Value::Null, Value::String("a".into())])
+            .is_error());
+        assert!(concat
+            .eval(vec![Value::String("a".into()), Value::Null])
+            .is_error());
+        assert!(concat
+            .eval(vec![Value::Array(vec![1.into(), 2.into()]),])
+            .is_error());
         assert_eq!(
             concat.eval(vec![
                 Value::Array(vec![1.into(), 2.into()]),
@@ -436,6 +455,9 @@ mod tests {
         let concat_ws = ConcatWs;
         assert!(concat_ws.get_output_type(&[ValueType::String]).is_err());
         assert!(concat_ws
+            .get_output_type(&[ValueType::Bool, ValueType::String])
+            .is_err());
+        assert!(concat_ws
             .get_output_type(&[ValueType::String, ValueType::String])
             .is_ok());
         assert!(concat_ws
@@ -447,6 +469,14 @@ mod tests {
         assert!(concat_ws
             .get_output_type(&[ValueType::Array, ValueType::String, ValueType::Array])
             .is_ok());
+        assert!(concat_ws.eval(vec![Value::String("_".into())]).is_error());
+        assert!(concat_ws
+            .eval(vec![
+                Value::Null,
+                vec![Value::String("a".into()), Value::String("b".into())].into(),
+                Value::String("c".into())
+            ])
+            .is_error());
         assert_eq!(
             concat_ws.eval(vec![
                 Value::String("_".into()),
@@ -454,6 +484,26 @@ mod tests {
                 Value::String("c".into())
             ]),
             Value::String("a_b_c".into())
+        );
+    }
+
+    #[test]
+    fn test_contains() {
+        assert_eq!(
+            super::contains(Some("www.apache.org".to_string()), None),
+            Value::Null
+        );
+        assert_eq!(
+            super::contains(None, Some("apache".to_string())),
+            Value::Null
+        );
+        assert_eq!(super::contains(None, None), Value::Null);
+        assert_eq!(
+            super::contains(
+                Some("www.apache.org".to_string()),
+                Some("apache".to_string())
+            ),
+            true.into_value()
         );
     }
 
@@ -474,6 +524,21 @@ mod tests {
         assert!(conv
             .get_output_type(&[ValueType::String, ValueType::String, ValueType::String])
             .is_err());
+        assert!(conv
+            .get_output_type(&[ValueType::Null, ValueType::String, ValueType::String])
+            .is_err());
+        assert!(conv
+            .eval(vec![Value::String("100".into()), 2.into()])
+            .is_error());
+        assert!(conv
+            .eval(vec![Value::String("100".into()), 2.into(), Value::Null])
+            .is_error());
+        assert!(conv
+            .eval(vec![Value::String("100".into()), Value::Null, 2.into()])
+            .is_error());
+        assert!(conv
+            .eval(vec![Value::Null, Value::String("100".into()), 2.into()])
+            .is_error());
         assert_eq!(
             conv.eval(vec![Value::String("100".into()), 2.into(), 3.into()]),
             Value::String("11".into())
@@ -485,12 +550,14 @@ mod tests {
         use super::*;
         use crate::Value;
         let v = json_object_keys(Some(r#"{"a": 1, "b": 2}"#.to_string()));
+        assert_eq!(json_object_keys(None), Value::Null);
         assert_eq!(v, Value::Array(vec!["a".into(), "b".into()]));
     }
 
     #[test]
     fn test_json_array_length() {
         use super::*;
+        assert_eq!(json_array_length(None), Value::Null);
         assert_eq!(json_array_length(Some(r#"[1,2,3]"#.to_string())), 3.into());
         assert_eq!(json_array_length(Some(r#"[]"#.to_string())), 0.into());
     }

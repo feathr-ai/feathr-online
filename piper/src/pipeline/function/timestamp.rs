@@ -109,7 +109,11 @@ pub fn to_utc_timestamp(dt: NaiveDateTime, tz: String) -> Value {
         Ok(tz) => tz,
         Err(e) => return PiperError::InvalidValue(e).into(),
     };
-    tz.from_utc_datetime(&dt).with_timezone(&Utc).into()
+    tz.from_local_datetime(&dt)
+        .earliest()
+        .unwrap()
+        .with_timezone(&Utc)
+        .into()
 }
 
 impl TimestampFunction {
@@ -122,6 +126,8 @@ impl TimestampFunction {
 }
 #[cfg(test)]
 mod tests {
+    use chrono::NaiveDateTime;
+
     #[test]
     fn test_timestamp() {
         use super::*;
@@ -140,6 +146,9 @@ mod tests {
             .get_output_type(&[ValueType::String, ValueType::Int])
             .is_err());
         assert!(f
+            .get_output_type(&[ValueType::DateTime, ValueType::Int])
+            .is_err());
+        assert!(f
             .get_output_type(&[ValueType::String, ValueType::String, ValueType::String])
             .is_ok());
         assert!(f
@@ -154,6 +163,29 @@ mod tests {
             ])
             .is_err());
 
+        assert!(f.eval(vec![]).is_error());
+        assert!(f.eval(vec![Value::Null]).is_error());
+        assert!(f
+            .eval(vec![
+                Value::String("00:00:00-2020/01/01".into()),
+                Value::Bool(true)
+            ])
+            .is_error());
+        assert!(f
+            .eval(vec![
+                Value::String("00:00:00-2020/01/01".into()),
+                Value::String("%H:%M:%S-%Y/%m/%d".into()),
+                Value::Bool(true)
+            ])
+            .is_error());
+        assert!(f
+            .eval(vec![
+                Value::String("00:00:00-2020/01/01".into()),
+                Value::String("%H:%M:%S-%Y/%m/%d".into()),
+                Value::String("Asia/Shanghai".into()),
+                1.into(),
+            ])
+            .is_error());
         // Default format
         assert_eq!(
             f.eval(vec![Value::String("2020-01-01 00:00:00".into())]),
@@ -176,6 +208,18 @@ mod tests {
             ]),
             // 8 hours earlier than UTC
             Value::Double(1577836800.0 - 8.0 * 3600.0)
+        );
+    }
+
+    #[test]
+    fn test_to_utc_timestamp() {
+        // 1970-01-01 08:00:00 Asia/Shanghai is 1970-01-01 00:00:00 UTC
+        assert_eq!(
+            super::to_utc_timestamp(
+                NaiveDateTime::from_timestamp_opt(3600 * 8, 0).unwrap(),
+                "Asia/Shanghai".to_string()
+            ),
+            NaiveDateTime::from_timestamp_opt(0, 0).unwrap().into()
         );
     }
 }

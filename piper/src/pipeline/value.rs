@@ -1299,6 +1299,20 @@ mod tests {
     use crate::pipeline::{value::str_to_datetime, Value};
 
     #[test]
+    fn test_value_type() {
+        assert_eq!(format!("{}", super::ValueType::Null), "null");
+        assert_eq!(format!("{}", super::ValueType::Bool), "bool");
+        assert_eq!(format!("{}", super::ValueType::Int), "int");
+        assert_eq!(format!("{}", super::ValueType::Long), "long");
+        assert_eq!(format!("{}", super::ValueType::Float), "float");
+        assert_eq!(format!("{}", super::ValueType::Double), "double");
+        assert_eq!(format!("{}", super::ValueType::String), "string");
+        assert_eq!(format!("{}", super::ValueType::DateTime), "datetime");
+        assert_eq!(format!("{}", super::ValueType::Array), "array");
+        assert_eq!(format!("{}", super::ValueType::Object), "object");
+    }
+
+    #[test]
     fn value_conv() {
         use super::*;
         let v = Value::Int(1);
@@ -1407,5 +1421,6 @@ mod tests {
         assert!(!Value::Int(10).is_error());
         assert!(!Value::Int(10).is_null());
         assert!(Value::Null.is_null());
-        assert!(!Value::Null.is_error());}
+        assert!(!Value::Null.is_error());
+    }
 }
