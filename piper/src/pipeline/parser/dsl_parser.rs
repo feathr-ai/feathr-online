@@ -331,9 +331,9 @@ peg::parser! {
         rule reserved_words()
             = "null" / "true" / "false" / "and" / "or" / "not" / "is" / "as" / "dynamic" / "PI" / "E" / "TAU" / "case" / "when" / "then" / "else"
 
-        rule _() = quiet!{ (whitespace_char() / "\n" / comment())* }
+        rule _() = quiet!{ (whitespace_char() / "\n" / "\r" / comment())* }
         rule whitespace_char() = ['\t' | ' ']
-        rule comment() = "#" (!"\n" [_])* ("\n" / ![_])
+        rule comment() = "#" (!['\n' | '\r'] [_])* (['\n' | '\r'] / ![_])
     }
 }
 
