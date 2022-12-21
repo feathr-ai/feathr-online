@@ -11,7 +11,8 @@ mod variadic;
  * NOTE: Seems to make generic trait over all function wrappers needs HRTB (and GAT?).
  *
  * E.g. following code does not compile:
-trait IntoFunction {
+```rust,ignore
+ trait IntoFunction {
     fn into_function(self) -> Box<dyn Function>;
 }
 
@@ -39,6 +40,7 @@ where
        unary::unary_fn(self)
    }
 }
+```
  */
 
 /**
