@@ -90,9 +90,9 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "azure_core"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8a13a7e5f9c8413644579bdee6731f0a7a0f722e318b3a5ea6dba5ecfd8eb64"
+checksum = "ca6dd496e30132b9403c478ea87121834669fa1a307ee2d0b6721c3aca47cccd"
 dependencies = [
  "async-trait",
  "base64 0.13.1",
@@ -116,9 +116,9 @@ dependencies = [
 
 [[package]]
 name = "azure_data_cosmos"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3887d594fd3f00177bd9660b3e9f2d2d0e43bca26db13ddfa859a317d1868ea"
+checksum = "b69c7e06fa52da1d5a43ff47ffa05af63a403cffdbc18f983a12f5b804826e87"
 dependencies = [
  "async-trait",
  "azure_core",
@@ -138,9 +138,9 @@ dependencies = [
 
 [[package]]
 name = "azure_identity"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a4f72c60d1fc960e305dadf20f2c7c16dd64723a9f760e3492a4ea829d73dcb"
+checksum = "30e5c1eebcb9f425b9d8faecda921e782c66e15af5050d53f44027c66d5d7ca9"
 dependencies = [
  "async-lock",
  "async-trait",
@@ -1666,7 +1666,7 @@ dependencies = [
  "protobuf-codegen",
  "pyo3",
  "pyo3-asyncio",
- "rand 0.7.3",
+ "rand 0.8.5",
  "redis",
  "regex",
  "reqwest",

@@ -28,3 +28,20 @@ impl Function for TypeConverterFunction {
         arguments.remove(0).convert_to(self.to)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_conv() {
+        use super::*;
+        use crate::pipeline::function::Function;
+        use crate::pipeline::ValueType;
+
+        let f = TypeConverterFunction { to: ValueType::Int };
+        assert!(f.get_output_type(&[ValueType::Int]).is_ok());
+        assert!(f.get_output_type(&[]).is_err());
+        assert!(f.get_output_type(&[ValueType::Int, ValueType::Int]).is_err());
+        assert_eq!(f.eval(vec![Value::Int(1)]), Value::Int(1));
+        assert_eq!(f.eval(vec![Value::Double(1.2)]), Value::Int(1));
+    }
+}
