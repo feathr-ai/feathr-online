@@ -113,7 +113,7 @@ peg::parser! {
             / "join" _ "kind" _ "=" _ kind:join_kind() _ columns:(rename_with_type() **<1,> list_sep()) _ "from" _ source:identifier() _ "on" _ key:expression() {
                 LookupTransformationBuilder::new(kind, columns, source, key)
             }
-        
+
         pub rule join_kind() -> JoinKind
             = "left-inner" { JoinKind::LeftInner }
             / "left-outer" { JoinKind::LeftOuter }
@@ -286,7 +286,7 @@ peg::parser! {
 
         rule u64_lit() -> Value
             = n:$(['0'..='9']+) {?
-                n.parse().or(Err("u64")).map(|v: u64| v.into())
+                n.parse().or(Err("u64")).map(|v: u64| if v > (i32::MAX as u64) { v.into() } else { (v as u32).into() })
             }
 
         rule constant_lit() -> Value

@@ -18,8 +18,8 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Piper {
-    pub(crate) pipelines: HashMap<String, Pipeline>,
-    pub(crate) ctx: IgnoreDebug<BuildContext>,
+    pub pipelines: HashMap<String, Pipeline>,
+    pub ctx: IgnoreDebug<BuildContext>,
 }
 
 impl Piper {

@@ -459,6 +459,44 @@ impl Piper {
         }
     }
 
+    fn __getstate__(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let dict = PyDict::new(py);
+        dict.set_item("pipelines", self.pipelines.clone()).log()?;
+        dict.set_item("lookups", self.lookups.clone()).log()?;
+        dict.set_item("functions", self.functions.clone()).log()?;
+        Ok(dict.into())
+    }
+
+    fn __setstate__(&mut self, state: PyObject, py: Python<'_>) -> PyResult<()> {
+        let state = state.extract::<Py<PyDict>>(py)?;
+        let pipelines: String = state
+            .as_ref(py)
+            .get_item("pipelines")
+            .ok_or_else(|| PyErr::new::<PiperError, _>("Missing field 'pipelines'"))
+            .and_then(|v| v.extract())?;
+        let lookups: PyObject = state
+            .as_ref(py)
+            .get_item("lookups")
+            .ok_or_else(|| PyErr::new::<PiperError, _>("Missing field 'lookups'"))
+            .and_then(|v| v.extract())?;
+        let functions: HashMap<String, PyObject> = state
+            .as_ref(py)
+            .get_item("functions")
+            .ok_or_else(|| PyErr::new::<PiperError, _>("Missing field 'functions'"))
+            .and_then(|v| v.extract())?;
+        let new_me = Self::new(
+            Some(&pipelines),
+            Some(lookups.clone()),
+            functions.clone(),
+            py,
+        )?;
+        self.pipelines = pipelines;
+        self.lookups = lookups;
+        self.functions = functions;
+        self.piper = new_me.piper;
+        Ok(())
+    }
+
     #[args(error_report = "ErrorCollectingMode::default()")]
     fn process(
         &self,
@@ -512,39 +550,6 @@ impl Piper {
                     .map_err(|e| PyErr::new::<PiperError, _>(e.to_string()))
             }),
         )
-    }
-
-    fn __getstate__(&self, py: Python<'_>) -> PyResult<PyObject> {
-        let dict = PyDict::new(py);
-        dict.set_item("pipelines", self.pipelines.clone()).log()?;
-        dict.set_item("lookups", self.lookups.clone()).log()?;
-        dict.set_item("functions", self.functions.clone()).log()?;
-        Ok(dict.into())
-    }
-
-    fn __setstate__(&mut self, state: PyObject, py: Python<'_>) -> PyResult<()> {
-        let state = state.extract::<Py<PyDict>>(py)?;
-        let pipelines: String = state
-            .as_ref(py)
-            .get_item("pipelines")
-            .ok_or_else(|| PyErr::new::<PiperError, _>("Missing field 'pipelines'"))
-            .and_then(|v| v.extract())?;
-        let lookups: PyObject = state
-            .as_ref(py)
-            .get_item("lookups")
-            .ok_or_else(|| PyErr::new::<PiperError, _>("Missing field 'lookups'"))
-            .and_then(|v| v.extract())?;
-        let functions: HashMap<String, PyObject> = state
-            .as_ref(py)
-            .get_item("functions")
-            .ok_or_else(|| PyErr::new::<PiperError, _>("Missing field 'functions'"))
-            .and_then(|v| v.extract())?;
-        let new_me = Self::new(Some(&pipelines), Some(lookups.clone()), functions.clone(), py)?;
-        self.pipelines = pipelines;
-        self.lookups = lookups;
-        self.functions = functions;
-        self.piper = new_me.piper;
-        Ok(())
     }
 
     fn lookup(
@@ -616,6 +621,41 @@ impl Piper {
                 Ok(data)
             }),
         )
+    }
+
+    #[getter]
+    fn get_pipelines(&self, py: Python<'_>) -> PyResult<PyObject> {
+        if self.piper.is_none() {
+            return Err(PyErr::new::<PiperError, _>(
+                "Piper has not been initialized",
+            ));
+        }
+
+        let ret = PyDict::new(py);
+        for (name, pipeline) in self.piper.as_ref().unwrap().pipelines.iter() {
+            if name.starts_with('%') {
+                continue;
+            }
+            let dict = PyDict::new(py);
+            let input_schema = PyList::empty(py);
+            for c in pipeline.input_schema.columns.iter() {
+                let column = PyDict::new(py);
+                column.set_item("name", c.name.clone()).unwrap();
+                column.set_item("type", c.column_type.to_string()).unwrap();
+                input_schema.append(column).unwrap();
+            }
+            dict.set_item("input_schema", input_schema).unwrap();
+            let output_schema = PyList::empty(py);
+            for c in pipeline.output_schema.columns.iter() {
+                let column = PyDict::new(py);
+                column.set_item("name", c.name.clone()).unwrap();
+                column.set_item("type", c.column_type.to_string()).unwrap();
+                output_schema.append(column).unwrap();
+            }
+            dict.set_item("output_schema", output_schema).unwrap();
+            ret.set_item(name, dict).unwrap();
+        }
+        Ok(ret.into())
     }
 }
 

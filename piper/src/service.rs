@@ -379,6 +379,12 @@ async fn load_file(path: &str, enable_managed_identity: bool) -> Result<String, 
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
+    use serde_json::json;
+
+    use crate::pipeline::init_lookup_sources;
+
     #[tokio::test]
     async fn test_load_file() {
         dotenvy::dotenv().ok();
@@ -389,5 +395,93 @@ mod tests {
         .await
         .unwrap();
         serde_json::from_str::<serde_json::Value>(&content).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_svc() {
+        dotenvy::dotenv().ok();
+        let lookup_src = if let Ok(s) = super::load_file("../conf/lookup.json", false).await {
+            s
+        } else {
+            super::load_file("conf/lookup.json", false).await.unwrap()
+        };
+        let lookups = init_lookup_sources(&lookup_src).unwrap();
+        tokio::spawn(async {
+            let pipelines = "t(x) | project y=x+42, z=x-42;";
+            let mut svc =
+                super::PiperService::create_with_lookup_udf(pipelines, lookups, Default::default());
+            svc.start_at("127.0.0.1", 38080).await.unwrap();
+        });
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        let client = reqwest::Client::new();
+        let resp = client
+            // Devskim: ignore DS137138
+            .get("http://127.0.0.1:38080/healthz")
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), 200);
+        let resp = client
+            // Devskim: ignore DS137138
+            .get("http://127.0.0.1:38080/lookup-sources")
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), 200);
+        let resp = client
+            // Devskim: ignore DS137138
+            .get("http://127.0.0.1:38080/pipelines")
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), 200);
+        let resp = client
+            // Devskim: ignore DS137138
+            .get("http://127.0.0.1:38080/metrics")
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), 200);
+        let resp = client
+            // Devskim: ignore DS137138
+            .get("http://127.0.0.1:38080/version")
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), 200);
+        let resp: serde_json::Value = client
+            // Devskim: ignore DS137138
+            .post("http://127.0.0.1:38080/process")
+            .json(&json!({ "requests": [{ "pipeline": "t", "data": [{"x": 57}] }] }))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(resp["results"][0]["data"][0]["y"], 99);
+        assert_eq!(resp["results"][0]["data"][0]["z"], 15);
+
+        let resp: serde_json::Value = client
+            // Devskim: ignore DS137138
+            .post("http://127.0.0.1:38080/lookup")
+            .json(&json!({
+                "source": "join_test_mssql",
+                "keys": ["1", "2"],
+                "features": ["name", "age"]
+            }))
+            .send()
+            .await
+            .unwrap()
+            .error_for_status()
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert_eq!(resp["data"][0]["name"], "Jack");
+        assert_eq!(resp["data"][0]["age"], 30);
+        assert_eq!(resp["data"][1]["name"], "Jill");
+        assert_eq!(resp["data"][1]["age"], 33);
+        println!("{:?}", resp);
     }
 }
