@@ -15,6 +15,7 @@ mod len;
 mod make_array;
 mod misc_functions;
 mod rand_functions;
+mod regexp;
 mod string_functions;
 mod timestamp;
 mod to_json;
@@ -293,11 +294,11 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     function_map.insert("random".to_string(), nullary_fn(rand_functions::rand));
     // rank
     // reflect
-    // regexp
-    // regexp_extract
-    // regexp_extract_all
-    // regexp_like
-    // regexp_replace
+    function_map.insert("regexp".to_string(), binary_fn(regexp::regexp));
+    function_map.insert("regexp_extract".to_string(), ternary_fn(regexp::regexp_extract));
+    function_map.insert("regexp_extract_all".to_string(), binary_fn(regexp::regexp_extract_all));
+    function_map.insert("regexp_like".to_string(), binary_fn(regexp::regexp));
+    function_map.insert("regexp_replace".to_string(), ternary_fn(regexp::regexp_replace));
     // regr_avgx
     // regr_avgy
     // regr_count
