@@ -33,6 +33,38 @@ impl AggregationFunction for ArrayAgg {
 }
 
 #[derive(Clone, Debug, Default)]
+pub struct SetAgg {
+    result: Vec<Value>,
+}
+
+impl AggregationFunction for SetAgg {
+    fn get_output_type(&self, input_type: &[ValueType]) -> Result<ValueType, PiperError> {
+        if input_type.len() != 1 {
+            return Err(PiperError::InvalidArgumentCount(1, input_type.len()));
+        }
+        Ok(ValueType::Array)
+    }
+
+    fn feed(&mut self, arguments: &[Value]) -> Result<(), PiperError> {
+        if arguments.len() != 1 {
+            return Err(PiperError::InvalidArgumentCount(1, arguments.len()));
+        }
+        if !self.result.contains(&arguments[0]) {
+            self.result.push(arguments[0].clone());
+        }
+        Ok(())
+    }
+
+    fn get_result(&self) -> Result<Value, PiperError> {
+        Ok(self.result.clone().into())
+    }
+
+    fn dump(&self) -> String {
+        "collect_set".to_string()
+    }
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct ArrayAggIf {
     result: Vec<Value>,
 }
@@ -78,6 +110,21 @@ mod tests {
         agg.feed(&[2.into()]).unwrap();
         assert_eq!(agg.get_result().unwrap(), Value::Array(vec![1.into(), 2.into()]));
         agg.feed(&[3.into()]).unwrap();
+        assert_eq!(agg.get_result().unwrap(), Value::Array(vec![1.into(), 2.into(), 3.into()]));
+    }
+
+    #[test]
+    fn test_set_agg() {
+        let mut agg = super::SetAgg::default();
+        assert_eq!(agg.get_output_type(&[ValueType::String]).unwrap(), ValueType::Array);
+        assert_eq!(agg.get_result().unwrap(), Value::Array(vec![]));
+        agg.feed(&[1.into()]).unwrap();
+        assert_eq!(agg.get_result().unwrap(), Value::Array(vec![1.into()]));
+        agg.feed(&[2.into()]).unwrap();
+        assert_eq!(agg.get_result().unwrap(), Value::Array(vec![1.into(), 2.into()]));
+        agg.feed(&[3.into()]).unwrap();
+        assert_eq!(agg.get_result().unwrap(), Value::Array(vec![1.into(), 2.into(), 3.into()]));
+        agg.feed(&[2.into()]).unwrap();
         assert_eq!(agg.get_result().unwrap(), Value::Array(vec![1.into(), 2.into(), 3.into()]));
     }
 

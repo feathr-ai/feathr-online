@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveDateTime, Timelike, Utc};
 use dyn_clonable::clonable;
 
+use crate::IntoValue;
+
 use super::{PiperError, Value, ValueType};
 
 mod array_functions;
@@ -109,8 +111,8 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     function_map.insert("character_length".to_string(), unary_fn(|s: String| s.chars().count() as i64));
     function_map.insert("chr".to_string(), unary_fn(|x: i64| char::from_u32((x % 256) as u32).unwrap().to_string()));
     function_map.insert("coalesce".to_string(), var_fn(|args: Vec<Value>| args.into_iter().find(|v| !v.is_null()).unwrap_or(Value::Null)));
-    // collect_list
-    // collect_set
+    // collect_list, implemented as aggregation function
+    // collect_set, implemented as aggregation function
     function_map.insert("concat".to_string(), Box::new(Concat));
     function_map.insert("concat_ws".to_string(), Box::new(ConcatWs));
     function_map.insert("contains".to_string(), binary_fn(contains));
@@ -163,7 +165,11 @@ pub fn init_built_in_functions() -> HashMap<String, Box<dyn Function + 'static>>
     // explode_outer
     function_map.insert("expm1".to_string(), unary_fn(f64::exp_m1));
     // extract
-    // factorial
+    function_map.insert("factorial".to_string(), unary_fn(|v: i64| match v {
+        0 => 1i64.into_value(),
+        1..=20 => (1..=v).product::<i64>().into_value(),
+        _ => Value::Null
+    }));
     // filter
     // find_in_set
     // first, implemented as aggregation function
