@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use base64::{engine::general_purpose, Engine};
 use bb8::Pool;
 use bb8_redis::RedisConnectionManager;
 use protobuf::Message;
@@ -119,7 +120,7 @@ impl FeathrOnlineStore {
         let ret: Vec<_> = resp
             .into_iter()
             .map(|s| {
-                base64::decode(s)
+                general_purpose::STANDARD.decode(s)
                     .log()
                     .map_err(|e| PiperError::Base64Error(e.to_string()))
                     .and_then(|v| {
