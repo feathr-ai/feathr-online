@@ -12,8 +12,8 @@ classifiers = [
 ]
 
 [project.urls]
-"Source Code" = "https://github.com/windoze/piper"
-Issues = "https://github.com/windoze/piper/issues"
+"Source Code" = "https://github.com/feathr-ai/feathr-online"
+Issues = "https://github.com/feathr-ai/feathr-online/issues"
 
 [tool.feathrpiper]
 target_version = ['py37', 'py38', 'py39', 'py310', 'py311']

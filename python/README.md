@@ -101,7 +101,7 @@ For more information about Python async programming, please refer to [Python Asy
 NOTE:
 * Because of the asynchronous nature of the lookup function, it's recommended to use `asyncio` compatible libraries to implement the lookup function, traditional blocking libraries may cause the performance issue, e.g. use [`aiohttp`](https://pypi.org/project/aiohttp/) or [`HTTPX`](https://pypi.org/project/httpx/) instead of `Requests`.
 * This package only supports `asyncio`,  `Twisted` or `Gevent` based libraries are not supported.
-* In order to lookup data from a standard JSON-based HTTP API, you can use builtin HTTP client instead of implementing your own lookup function, register the lookup data source either in a JSON string or a `dict` with correct content, detailed doc is at [here](https://github.com/windoze/piper#lookup-data-source-definition).
+* In order to lookup data from a standard JSON-based HTTP API, you can use builtin HTTP client instead of implementing your own lookup function, register the lookup data source either in a JSON string or a `dict` with correct content, detailed doc is at [here](https://github.com/feathr-ai/feathr-online#lookup-data-source-definition).
 * The `feathrpiper` also has builtin support of SqlServer/AzureSQL, Sqlite3, and Azure CosmosDb.
 
 ## Integration with Other Web-Service Frameworks
@@ -112,7 +112,7 @@ The `feathrpiper` contains built-in web service, but it doesn't support HTTPS an
 * FastAPI: FastAPI is fully async-based, use `process_async` to process the request.
 * Any other Web framework that doesn't support async: You can use `process` in non-async context, but the user-defined lookup function feature will be unavailable.
 
-A demo of integrating with FastAPI is at [here](https://github.com/windoze/piper/blob/main/python/examples/fastapi_example.py)
+A demo of integrating with FastAPI is at [here](https://github.com/feathr-ai/feathr-online/blob/main/python/examples/fastapi_example.py)
 
 ## Packaging and Deployment
 
