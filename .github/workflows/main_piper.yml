@@ -23,14 +23,14 @@ jobs:
       uses: docker/login-action@v1
       with:
         registry: https://xcacr.azurecr.io/
-        username: ${{ secrets.AzureAppService_ContainerUsername_e560b4ec12514f40a413f01646d53fbc }}
-        password: ${{ secrets.AzureAppService_ContainerPassword_90fcf9f75a7d416b8910cd3e89fee369 }}
+        username: ${{ secrets.AzureAppService_ContainerUsername_93522d3e7c57489ba0b562763bd20bad }}
+        password: ${{ secrets.AzureAppService_ContainerPassword_f8ccecc86e7146ad8cf5dffd8d232ad6 }}
 
     - name: Build and push container image to registry
       uses: docker/build-push-action@v2
       with:
         push: true
-        tags: xcacr.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_e560b4ec12514f40a413f01646d53fbc }}/xcacr/piper:${{ github.sha }}
+        tags: xcacr.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_93522d3e7c57489ba0b562763bd20bad }}/xcacr/xcacr/piper:${{ github.sha }}
         file: ./Dockerfile
 
   deploy:
@@ -47,5 +47,5 @@ jobs:
       with:
         app-name: 'piper'
         slot-name: 'production'
-        publish-profile: ${{ secrets.AzureAppService_PublishProfile_146f11ca1a024061a3a0941679b9ddec }}
-        images: 'xcacr.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_e560b4ec12514f40a413f01646d53fbc }}/xcacr/piper:${{ github.sha }}'
+        publish-profile: ${{ secrets.AzureAppService_PublishProfile_da75eb264ab24893b8ad0b19cababc79 }}
+        images: 'xcacr.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_93522d3e7c57489ba0b562763bd20bad }}/xcacr/xcacr/piper:${{ github.sha }}'
