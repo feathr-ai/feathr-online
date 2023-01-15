@@ -33,4 +33,4 @@ jobs:
           file: ./Dockerfile.multiarch
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: windoze/feathrpiper:latest,windoze/feathrpiper:${{ github.sha }}
+          tags: feathrfeaturestore/feathrpiper:latest,feathrfeaturestore/feathrpiper:${{ github.sha }}
