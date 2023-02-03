@@ -192,7 +192,7 @@ impl PiperService {
 
         info!("Piper started, listening on {}:{}", address, port);
         self.cancelable_wait(async {
-            Server::new(TcpListener::bind(format!("{}:{}", address, port)))
+            Server::new(TcpListener::bind(format!("{address}:{port}")))
                 .run(app)
                 .await
                 .log()
@@ -331,7 +331,7 @@ async fn make_request(
             .get_token("https://storage.azure.com/")
             .await
             .log()
-            .map_err(|e| PiperError::AuthError(format!("{:?}", e)))
+            .map_err(|e| PiperError::AuthError(format!("{e:?}")))
             .map(|t| t.token.secret().to_string())
             .ok();
         match token {
@@ -482,6 +482,6 @@ mod tests {
         assert_eq!(resp["data"][0]["age"], 30);
         assert_eq!(resp["data"][1]["name"], "Jill");
         assert_eq!(resp["data"][1]["age"], 33);
-        println!("{:?}", resp);
+        println!("{resp:?}");
     }
 }

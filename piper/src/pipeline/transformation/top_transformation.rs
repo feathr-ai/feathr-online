@@ -230,7 +230,7 @@ mod tests {
         );
         let (_, rows) = transform.transform(dataset).unwrap().eval().await;
         let rows = rows.into_iter().collect::<Vec<_>>();
-        println!("{:?}", rows);
+        println!("{rows:?}");
         assert_eq!(rows.len(), 5);
         assert_eq!(rows[0][0], Value::Int(9));
         assert_eq!(rows[0][1], Value::Null);

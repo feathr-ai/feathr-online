@@ -66,7 +66,7 @@ impl Auth {
                 });
                 let token =
                     &credential.get_token(&resource).await.log().map_err(|e| {
-                        PiperError::AuthError(format!("Failed to get token: {}", e))
+                        PiperError::AuthError(format!("Failed to get token: {e}"))
                     })?;
                 request.bearer_auth(token.token.secret())
             }

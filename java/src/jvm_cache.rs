@@ -140,7 +140,7 @@ pub fn set_jvm(env: &JNIEnv) {
 
         let mut max_arity = 0;
         loop {
-            if env.find_class(&format!("com/github/windoze/feathr/piper/Function{}", max_arity)).is_err()
+            if env.find_class(&format!("com/github/windoze/feathr/piper/Function{max_arity}")).is_err()
             {
                 // NOTE: Here we already triggered a `ClassNotFound` exception, need to clear it before continue.
                 env.exception_clear().unwrap();

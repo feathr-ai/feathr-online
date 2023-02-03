@@ -1255,7 +1255,7 @@ impl Value {
                 s.push('}');
                 s
             }
-            Value::Error(e) => format!("{:?}", e),
+            Value::Error(e) => format!("{e:?}"),
         }
     }
 }

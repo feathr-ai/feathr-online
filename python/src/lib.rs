@@ -712,7 +712,7 @@ impl PiperService {
     }
 
     #[pyo3(text_signature = "($self address port /)")]
-    fn start<'p>(&mut self, address: &str, port: u16, py: Python<'p>) -> PyResult<()> {
+    fn start(&mut self, address: &str, port: u16, py: Python<'_>) -> PyResult<()> {
         let svc = self.service.clone();
         py.allow_threads(|| {
             block_on(cancelable_wait(async move {

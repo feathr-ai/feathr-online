@@ -78,7 +78,7 @@ impl CosmosDbSource {
                 let mut result = Vec::new();
                 while let Some(page) = resp.next().await {
                     match page.apply(|v| {
-                        println!("{:?}", v);
+                        println!("{v:?}");
                         v
                     }) {
                         Ok(page) => {
@@ -215,7 +215,7 @@ mod tests {
             "f_location_max_fare".to_string(),
         ];
         let ret = l.lookup(&k, &fields).await;
-        println!("{:?}", ret);
+        println!("{ret:?}");
         assert_eq!(ret.len(), 2);
         assert_eq!(ret[0].clone().get_int().unwrap(), 23);
         assert_eq!(ret[1].clone().get_int().unwrap(), 78);
@@ -246,7 +246,7 @@ mod tests {
             "f_location_max_fare".to_string(),
         ];
         let ret = l.lookup(&k, &fields).await;
-        println!("{:?}", ret);
+        println!("{ret:?}");
         assert_eq!(ret.len(), 2);
         assert_eq!(ret[0].clone().get_int().unwrap(), 23);
         assert_eq!(ret[1].clone().get_int().unwrap(), 78);

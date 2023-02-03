@@ -38,7 +38,7 @@ impl Transformation for DistinctTransformation {
             .map(|(col, expr)| format!("{}={}", col.name, expr.dump()))
             .collect::<Vec<_>>()
             .join(", ");
-        format!("distinct by {}", keys)
+        format!("distinct by {keys}")
     }
 }
 
@@ -103,7 +103,7 @@ mod tests {
             .await;
         assert_eq!(schema, pipeline.output_schema);
         println!("pipelines: {}", pipeline.dump());
-        println!("{:?}", rows);
+        println!("{rows:?}");
         assert_eq!(rows.len(), 4);
         assert_eq!(rows[0][0], 10.into());
         assert_eq!(rows[1][0], 20.into());

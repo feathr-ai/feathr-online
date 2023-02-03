@@ -376,7 +376,7 @@ where
             if schema.is_none() {
                 schema = Some(Schema::from_iter(row.iter().map(|_| {
                     col += 1;
-                    Column::new(format!("col{}", col), <T as ValueTypeOf>::value_type())
+                    Column::new(format!("col{col}"), <T as ValueTypeOf>::value_type())
                 })));
             }
             rows.push(row.into_iter().map(|v| v.into()).collect());

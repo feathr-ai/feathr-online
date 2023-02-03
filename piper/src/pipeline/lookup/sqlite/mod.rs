@@ -51,14 +51,14 @@ impl SqliteLookupSource {
                 Ok(Arc::new(Mutex::new(conn)))
             })
             .map_err(|e: rusqlite::Error| {
-                PiperError::ExternalError(format!("Failed to spawn blocking task: {}", e))
+                PiperError::ExternalError(format!("Failed to spawn blocking task: {e}"))
             })?
             .clone();
         let sql_template = self.sql_template.clone();
         let key = key.clone();
         tokio::runtime::Handle::current()
             .spawn_blocking(move || Self::make_query_sync(conn, sql_template, key))
-            .map_err(|e| PiperError::ExternalError(format!("Failed to spawn blocking task: {}", e)))
+            .map_err(|e| PiperError::ExternalError(format!("Failed to spawn blocking task: {e}")))
             .await?
     }
 }
@@ -135,15 +135,14 @@ mod tests {
             r#"
         {{
             "name": "join_test",
-            "dbPath": "{}",
+            "dbPath": "{db_path}",
             "sqlTemplate": "select name, age from join_test where group_id = :key",
             "availableFields": [
               "name",
               "age"
             ]
         }}
-        "#,
-            db_path
+        "#
         );
         let s: SqliteLookupSource = serde_json::from_str(&s).unwrap();
         let l = Box::new(s);

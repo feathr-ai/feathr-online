@@ -224,14 +224,12 @@ impl Function for Conv {
                 if let Ok(to_base) = arguments[2].get_int() {
                     if !(2..=36).contains(&from_base) {
                         return Value::Error(PiperError::InvalidValue(format!(
-                            "from_base must be between 2 and 36, got {}",
-                            from_base
+                            "from_base must be between 2 and 36, got {from_base}"
                         )));
                     }
                     if !(2..=36).contains(&to_base) {
                         return Value::Error(PiperError::InvalidValue(format!(
-                            "to_base must be between 2 and 36, got {}",
-                            to_base
+                            "to_base must be between 2 and 36, got {to_base}"
                         )));
                     }
                     let mut result = String::new();
@@ -354,8 +352,7 @@ pub fn slice(array: Vec<Value>, start: i64, end: i64) -> Result<Value, PiperErro
     let end = if end < 0 { 0 } else { end as usize };
     if start > end {
         return Err(PiperError::InvalidValue(format!(
-            "start ({}) must be less than end ({})",
-            start, end
+            "start ({start}) must be less than end ({end})"
         )));
     }
     Ok(Value::Array(array[start..end].to_vec()))

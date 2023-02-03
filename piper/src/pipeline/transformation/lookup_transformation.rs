@@ -413,8 +413,8 @@ mod tests {
 
         let mut output = trans.transform(input).unwrap();
         let (output_schema, output_rows) = output.eval().await;
-        println!("{:?}", output_schema);
-        println!("{:?}", output_rows);
+        println!("{output_schema:?}");
+        println!("{output_rows:?}");
         assert_eq!(output_rows.len(), 7);
         assert_eq!(
             output_rows.iter().map(|r| r[1].clone()).collect::<Vec<_>>(),
@@ -457,8 +457,8 @@ mod tests {
         let mut output = trans.transform(input).unwrap();
         let (output_schema, output_rows) = output.eval().await;
         println!("transform: {}", trans.dump());
-        println!("{:?}", output_schema);
-        println!("{:?}", output_rows);
+        println!("{output_schema:?}");
+        println!("{output_rows:?}");
         assert_eq!(output_rows.len(), 8);
         assert_eq!(
             output_rows.iter().map(|r| r[1].clone()).collect::<Vec<_>>(),
@@ -501,8 +501,8 @@ mod tests {
 
         let mut output = trans.transform(input).unwrap();
         let (output_schema, output_rows) = output.eval().await;
-        println!("{:?}", output_schema);
-        println!("{:?}", output_rows);
+        println!("{output_schema:?}");
+        println!("{output_rows:?}");
         assert_eq!(output_rows.len(), 4);
         assert_eq!(
             output_rows.iter().map(|r| r[1].clone()).collect::<Vec<_>>(),
