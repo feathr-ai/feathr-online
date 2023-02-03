@@ -44,7 +44,7 @@ pub fn quarter(date: NaiveDate) -> u32 {
 pub fn from_utc_timestamp(dt: Value, tz: String) -> Result<NaiveDateTime, PiperError> {
     let dt = dt.get_datetime()?.naive_utc();
     let tz = Tz::from_str(&tz)
-        .map_err(|e| PiperError::InvalidValue(format!("Invalid timezone: {}", e)))?;
+        .map_err(|e| PiperError::InvalidValue(format!("Invalid timezone: {e}")))?;
     let local_dt = tz.from_local_datetime(&dt).unwrap().naive_utc();
     Ok(local_dt)
 }
@@ -70,10 +70,10 @@ pub fn to_timestamp(arguments: Vec<Value>) -> Result<DateTime<Utc>, PiperError> 
     };
 
     let ret = NaiveDateTime::parse_from_str(dt.as_ref(), format.as_ref())
-        .map_err(|e| PiperError::InvalidValue(format!("Invalid datetime: {}", e)))?;
+        .map_err(|e| PiperError::InvalidValue(format!("Invalid datetime: {e}")))?;
 
     let tz = Tz::from_str(&tz)
-        .map_err(|e| PiperError::InvalidValue(format!("Invalid timezone: {}", e)))?;
+        .map_err(|e| PiperError::InvalidValue(format!("Invalid timezone: {e}")))?;
 
     Ok(tz.from_local_datetime(&ret).unwrap().with_timezone(&Utc))
 }

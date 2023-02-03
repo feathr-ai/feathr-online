@@ -162,7 +162,7 @@ impl Piper {
                     Ok(r) => r,
                     Err(e) => SingleResponse {
                         pipeline,
-                        status: format!("ERROR: {}", e),
+                        status: format!("ERROR: {e}"),
                         time: None,
                         count: None,
                         data: None,

@@ -86,7 +86,7 @@ mod tests {
             .await;
         assert_eq!(schema, pipeline.output_schema);
         println!("pipelines: {}", pipeline.dump());
-        println!("{:?}", rows);
+        println!("{rows:?}");
         assert_eq!(rows.len(), 3);
         assert_eq!(rows[0], vec![Value::from(30), Value::Error(PiperError::Unknown("test".to_string()))]);
         assert_eq!(rows[1], vec![Value::from(30), Value::from(vec![600])]);

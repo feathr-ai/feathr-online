@@ -50,7 +50,7 @@ impl Transformation for ProjectRenameTransformation {
             "project-rename {}",
             self.renames
                 .iter()
-                .map(|(old, new)| format!("{} = {}", old, new))
+                .map(|(old, new)| format!("{old} = {new}"))
                 .collect::<Vec<_>>()
                 .join(", ")
         )
@@ -118,7 +118,7 @@ mod tests {
         assert_eq!(pipeline.output_schema.columns[0].name, "c");
         assert_eq!(pipeline.output_schema.columns[1].name, "d");
         println!("pipelines: {}", pipeline.dump());
-        println!("{:?}", rows);
+        println!("{rows:?}");
         assert_eq!(rows, src_rows);
     }
 }

@@ -177,8 +177,7 @@ pub fn split_part(s: String, delimiter: String, part: usize) -> Result<String, P
     let parts: Vec<&str> = s.split(&delimiter).collect();
     if part == 0 || part > parts.len() {
         Err(PiperError::InvalidValue(format!(
-            "split_part: part {} is out of range",
-            part
+            "split_part: part {part} is out of range"
         )))
     } else {
         Ok(parts[part - 1].to_string())

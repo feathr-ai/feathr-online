@@ -79,7 +79,7 @@ impl Operator for PlusOperator {
             [Value::Double(a), Value::Double(b)] => (a + *b).into(),
 
             // String concat
-            [Value::String(a), Value::String(b)] => (format!("{}{}", a, b)).into(),
+            [Value::String(a), Value::String(b)] => (format!("{a}{b}")).into(),
 
             // All other combinations are invalid
             [a, b] => Value::Error(PiperError::TypeMismatch(

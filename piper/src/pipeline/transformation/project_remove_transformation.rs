@@ -112,7 +112,7 @@ mod tests {
             .await;
         assert_eq!(schema, pipeline.output_schema);
         println!("pipelines: {}", pipeline.dump());
-        println!("{:?}", rows);
+        println!("{rows:?}");
         assert_eq!(rows.len(), 7);
         assert_eq!(rows[0], vec![Value::from(10)]);
         assert_eq!(rows[1], vec![Value::from(10)]);

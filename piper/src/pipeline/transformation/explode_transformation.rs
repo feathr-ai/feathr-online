@@ -160,7 +160,7 @@ mod tests {
             .await;
         assert_eq!(schema, pipeline.output_schema);
         println!("pipelines: {}", pipeline.dump());
-        println!("{:?}", rows);
+        println!("{rows:?}");
         assert_eq!(rows.len(), 9);
         assert_eq!(rows[0], vec![Value::from(10), Value::from(1)]);
         assert_eq!(rows[1], vec![Value::from(10), Value::from(2)]);

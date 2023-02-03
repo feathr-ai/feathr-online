@@ -32,7 +32,7 @@ pub extern "system" fn Java_com_github_windoze_feathr_piper_PiperService_create(
     let pipelines: String = match env.get_string(pipelines) {
         Ok(v) => v,
         Err(e) => {
-            println!("Error getting pipelines: {}", e);
+            println!("Error getting pipelines: {e}");
             illegal_argument(&env, &e.to_string());
             return 0;
         }
@@ -174,7 +174,7 @@ pub fn to_string(env: &JNIEnv, obj: JObject) -> String {
     match ret {
         Ok(v) => env.get_string(v.l().unwrap().into()).unwrap().into(),
         Err(e) => {
-            println!("{:?}", e);
+            println!("{e:?}");
             e.to_string()
         }
     }

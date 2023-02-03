@@ -408,7 +408,7 @@ mod tests {
     fn test_array_index() {
         let input = "(f(12)+a[2] + x.y.z[78] -b)[12] [34][56]";
         let result = pipeline_parser::expression(input);
-        println!("{:?}", result);
+        println!("{result:?}");
         assert!(result.is_ok());
     }
 
@@ -416,7 +416,7 @@ mod tests {
     fn test_case_clause() {
         let input = "case when (a > 1) then (2) when a>2 then 2 else 4 end";
         let result = pipeline_parser::expression(input);
-        println!("{:?}", result);
+        println!("{result:?}");
         assert!(result.is_ok());
     }
 
@@ -424,7 +424,7 @@ mod tests {
     fn test_summarize_column_def() {
         let input = "a=        stat(x, y, z+1)";
         let result = pipeline_parser::summarize_column_def(input);
-        println!("{:?}", result);
+        println!("{result:?}");
         assert!(result.is_ok());
     }
 
@@ -432,12 +432,12 @@ mod tests {
     fn test_group_key() {
         let input = "a=f(x)";
         let result = pipeline_parser::group_key_def(input);
-        println!("{:?}", result);
+        println!("{result:?}");
         assert!(result.is_ok());
 
         let input = "col1";
         let result = pipeline_parser::group_key_def(input);
-        println!("{:?}", result);
+        println!("{result:?}");
         assert!(result.is_ok());
     }
 
@@ -445,13 +445,13 @@ mod tests {
     fn test_summarize() {
         let input = "summarize a=f(x), b=g(y+z), c=count() by b,x=c+1, y=f(d)";
         let result = pipeline_parser::summarize_transformation(input);
-        println!("{:?}", result);
+        println!("{result:?}");
         assert!(result.is_ok());
 
         // The `by` part can be omitted
         let input = "summarize a=f(x), b=g(y+z), c=count()";
         let result = pipeline_parser::summarize_transformation(input);
-        println!("{:?}", result);
+        println!("{result:?}");
         assert!(result.is_ok());
     }
 
@@ -459,12 +459,12 @@ mod tests {
     fn test_lookup() {
         let input = "lookup a, b,c from name on k";
         let result = pipeline_parser::lookup_transformation(input);
-        println!("{:?}", result);
+        println!("{result:?}");
         assert!(result.is_ok());
 
         let input = "join kind=left-inner a=f1 as int,b,c from name on a+b-c";
         let result = pipeline_parser::lookup_transformation(input);
-        println!("{:?}", result);
+        println!("{result:?}");
         assert!(result.is_ok());
     }
 
@@ -472,12 +472,12 @@ mod tests {
     fn test_distinct() {
         let input = "distinct by a=1, b=2, c=3, d";
         let result = pipeline_parser::distinct_transformation(input);
-        println!("{:?}", result);
+        println!("{result:?}");
         assert!(result.is_ok());
 
         let input = "distinct";
         let result = pipeline_parser::distinct_transformation(input);
-        println!("{:?}", result);
+        println!("{result:?}");
         assert!(result.is_ok());
     }
 }

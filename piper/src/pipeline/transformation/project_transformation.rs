@@ -145,7 +145,7 @@ mod tests {
         assert_eq!(pipeline.output_schema.columns[2].name, "c");
         assert!(pipeline.output_schema.columns[2].column_type.is_numeric());
         println!("pipelines: {}", pipeline.dump());
-        println!("{:?}", rows);
+        println!("{rows:?}");
         assert_eq!(rows.len(), 7);
         assert_eq!(rows[0][2], Value::from(11));
         assert_eq!(rows[1][2], Value::from(11));

@@ -109,7 +109,7 @@ impl Transformation for SummarizeTransformation {
             .map(|key| format!("{}={}", key.column_name, key.expression.dump()))
             .collect::<Vec<_>>()
             .join(", ");
-        format!("summarize {} by {}", aggs, keys)
+        format!("summarize {aggs} by {keys}")
     }
 }
 
@@ -216,7 +216,7 @@ mod tests {
             .process(dataset, crate::pipeline::ValidationMode::Lenient)
             .unwrap();
         let (_, rows) = ret.eval().await;
-        println!("{:?}", rows);
+        println!("{rows:?}");
 
         assert_eq!(rows.len(), 3);
 

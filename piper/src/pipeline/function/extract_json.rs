@@ -58,7 +58,7 @@ impl Function for ExtractJsonArray {
             Err(e) => return e.into(),
         };
         let json: serde_json::Value = match serde_json::from_str(&s)
-            .map_err(|e| PiperError::InvalidJsonString(format!("Invalid JSON: {}", e)))
+            .map_err(|e| PiperError::InvalidJsonString(format!("Invalid JSON: {e}")))
         {
             Ok(v) => v,
             Err(e) => return e.into(),
@@ -68,7 +68,7 @@ impl Function for ExtractJsonArray {
             Err(e) => return e.into(),
         };
         match jsonpath_lib::select(&json, &path)
-            .map_err(|e| PiperError::InvalidJsonPath(format!("{}", e)))
+            .map_err(|e| PiperError::InvalidJsonPath(format!("{e}")))
         {
             Ok(v) => v,
             Err(e) => return e.into(),
