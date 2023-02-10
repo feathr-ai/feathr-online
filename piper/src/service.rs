@@ -35,7 +35,7 @@ pub struct Args {
 
     /// Lookup source definition file name
     #[arg(short, long, env = "LOOKUP_DEFINITION_FILE")]
-    pub lookup: String,
+    pub lookup: Option<String>,
 
     #[arg(hide = true, long)]
     pub lookup_definition: Option<String>,
@@ -74,12 +74,12 @@ impl PiperService {
     pub async fn new(arg: Args) -> Result<Self, PiperError> {
         let pipeline_def = match &arg.pipeline_definition {
             Some(def) => def.clone(),
-            None => load_file(&arg.pipeline, arg.enable_managed_identity).await?,
+            None => load_file(Some(&arg.pipeline), arg.enable_managed_identity).await?,
         };
 
         let lookup_def = match &arg.lookup_definition {
             Some(def) => def.clone(),
-            None => load_file(&arg.lookup, arg.enable_managed_identity).await?,
+            None => load_file(arg.lookup.as_deref(), arg.enable_managed_identity).await?,
         };
 
         let piper = Arc::new(Piper::new(&pipeline_def, &lookup_def)?);
@@ -97,8 +97,8 @@ impl PiperService {
         arg: Args,
         udf: HashMap<String, Box<dyn Function>>,
     ) -> Result<Self, PiperError> {
-        let pipeline_def = load_file(&arg.pipeline, arg.enable_managed_identity).await?;
-        let lookup_def = load_file(&arg.lookup, arg.enable_managed_identity).await?;
+        let pipeline_def = load_file(Some(&arg.pipeline), arg.enable_managed_identity).await?;
+        let lookup_def = load_file(arg.lookup.as_deref(), arg.enable_managed_identity).await?;
 
         let piper = Arc::new(Piper::new_with_udf(&pipeline_def, &lookup_def, udf)?);
         Ok(Self {
@@ -349,7 +349,14 @@ async fn make_request(
     }
 }
 
-async fn load_file(path: &str, enable_managed_identity: bool) -> Result<String, PiperError> {
+async fn load_file(
+    path: Option<&str>,
+    enable_managed_identity: bool,
+) -> Result<String, PiperError> {
+    let path = match path {
+        Some(p) => p,
+        None => return Ok("".to_string()),
+    };
     debug!("Reading file at {}", path);
     Ok(if path.starts_with("http:") || path.starts_with("https:") {
         let resp = make_request(path, enable_managed_identity)
@@ -388,8 +395,11 @@ mod tests {
     #[tokio::test]
     async fn test_load_file() {
         dotenvy::dotenv().ok();
+
+        assert!(super::load_file(None, false).await.unwrap().is_empty(),);
+
         let content = super::load_file(
-            "https://xchfeathrtest4sto.blob.core.windows.net/xchfeathrtest4fs/lookup.json",
+            Some("https://xchfeathrtest4sto.blob.core.windows.net/xchfeathrtest4fs/lookup.json"),
             false,
         )
         .await
@@ -400,10 +410,12 @@ mod tests {
     #[tokio::test]
     async fn test_svc() {
         dotenvy::dotenv().ok();
-        let lookup_src = if let Ok(s) = super::load_file("../conf/lookup.json", false).await {
+        let lookup_src = if let Ok(s) = super::load_file(Some("../conf/lookup.json"), false).await {
             s
         } else {
-            super::load_file("conf/lookup.json", false).await.unwrap()
+            super::load_file(Some("conf/lookup.json"), false)
+                .await
+                .unwrap()
         };
         let lookups = init_lookup_sources(&lookup_src).unwrap();
         tokio::spawn(async {
