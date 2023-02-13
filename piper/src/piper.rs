@@ -5,7 +5,7 @@ use std::{
 };
 
 use futures::future::join_all;
-use tracing::{debug, instrument};
+use tracing::{debug, instrument, Level, event};
 
 use crate::{
     common::IgnoreDebug,
@@ -183,6 +183,9 @@ impl Piper {
         &self,
         req: SingleRequest,
     ) -> Result<SingleResponse, PiperError> {
+        let span = tracing::span!(Level::INFO, "process", pipeline = &req.pipeline);
+        let _enter = span.enter();
+
         let pipeline = self
             .pipelines
             .get(&req.pipeline)
@@ -239,10 +242,13 @@ impl Piper {
         .await
         .collect_into_json(req.errors);
 
+        let elapsed = (now.elapsed().as_micros() as f64) / 1000f64;
+        event!(Level::INFO, pipeline = req.pipeline, time = elapsed);
+
         Ok(SingleResponse {
             pipeline: req.pipeline,
             status: "OK".to_owned(),
-            time: Some((now.elapsed().as_micros() as f64) / 1000f64),
+            time: Some(elapsed),
             count: Some(ret.len()),
             data: Some(ret),
             errors,
