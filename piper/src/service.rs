@@ -48,6 +48,9 @@ pub struct Args {
 
     #[arg(long, default_value_t = false, env = "ENABLE_MANAGED_IDENTITY")]
     pub enable_managed_identity: bool,
+
+    #[arg(short, long, default_value_t = false, env = "JSON_LOG")]
+    pub json_log: bool,
 }
 
 /**

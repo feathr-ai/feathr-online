@@ -11,7 +11,7 @@ futures = "0.3"
 poem = { version = "1", features = ["tokio-metrics"] }
 clap = { version = "4", features = ["derive", "env"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter", "json"] }
 
 [target.'cfg(target_env = "musl")'.dependencies]
 # Use statically lined openssl when build with musl
