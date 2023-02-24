@@ -1,5 +1,5 @@
-FeathrPiper Java support
-=======================
+Feathr Online Transformation Java support
+=========================================
 
 FeathrPiper is the Java wrapper for the core package, with the Java UDF support.
 
