@@ -45,7 +45,7 @@ curl -s -XPOST -H"content-type:application/json" localhost:8000/process -d'{"req
 
 The response will be like:
 
-```json
+```javascript
 {
   "results": [
     {
@@ -66,7 +66,7 @@ The response will be like:
 ## The HTTP API spec
 
 The request is a POST request to `host:port/process`, and the body is a JSON object with the following fields (some comments added for clarity but they should not be included in the actual request):
-```json
+```javascript
 {
     // We support multiple requests in one round trip, so this is an array of requests.
     "requests" : [
@@ -79,7 +79,7 @@ The request is a POST request to `host:port/process`, and the body is a JSON obj
                 "column1": "value1",
                 "column2": "value2",
                 "column3": "value3",
-                ...
+                ///...
             }
         },
         // The 2nd request
@@ -89,16 +89,16 @@ The request is a POST request to `host:port/process`, and the body is a JSON obj
                 "column1": "value1",
                 "column2": "value2",
                 "column3": "value3",
-                ...
+                //...
             }
         },
-        ...
+        //...
     ]
 }
 ```
 
 The response will be in following format:
-```json
+```javascript
 {
     // Each result is corresponding to the request in the same position.
     "results": [
@@ -115,14 +115,14 @@ The response will be in following format:
                     "column1": "value1",
                     "column2": "value2",
                     "column3": "value3",
-                    ...
+                    //...
                 },
                 // The other rows, if there is any
                 {
                     "column1": "value1",
                     "column2": "value2",
                     "column3": "value3",
-                    ...
+                    //...
                 }
             ],
             "pipeline": "the_name_of_the_pipeline_in_the_request",
@@ -197,7 +197,7 @@ There are 5 types of builtin lookup data sources:
 * Azure Cosmos DB
 
 They can be defined in the lookup source definition file, which is a JSON file in following format:
-```json
+```javascript
 {
     "sources": [
         {
@@ -206,13 +206,13 @@ They can be defined in the lookup source definition file, which is a JSON file i
         {
             // source2
         }
-        ...
+        //...
     ]
 }
 ```
 
 * Feathr Online Store
-```json
+```javascript
 {
     // This field indicates this is a Feathr Online Store
     "class": "FeathrRedisSource",
@@ -229,7 +229,7 @@ They can be defined in the lookup source definition file, which is a JSON file i
 ```
 
 * JSON-based HTTP API
-```json
+```javascript
 {
     // This field indicates this is a HTTP API source
     "class": "HttpJsonApiSource",
@@ -281,7 +281,7 @@ They can be defined in the lookup source definition file, which is a JSON file i
 ```
 
 * SqlServer 2008 and up / AzureSQL
-```json
+```javascript
 {
     // This field indicates this is a MSSQL source
     "class": "mssql",
@@ -301,7 +301,7 @@ They can be defined in the lookup source definition file, which is a JSON file i
 ```
 
 * Sqlite3
-```json
+```javascript
 {
     // This field indicates this is a Sqlite3 source
     "class": "sqlite",
@@ -320,7 +320,7 @@ They can be defined in the lookup source definition file, which is a JSON file i
 ```
 
 * Azure CosmosDb
-```json
+```javascript
 {
     // This field indicates this is a CosmosDb source
     "class": "cosmosdb",
