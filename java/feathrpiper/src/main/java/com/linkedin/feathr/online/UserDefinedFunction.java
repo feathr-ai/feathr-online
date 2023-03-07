@@ -1,4 +1,4 @@
-package com.github.windoze.feathr.piper;
+package com.linkedin.feathr.online;
 
 /**
  * <p>This is a marker interface for all user defined function types.</p>

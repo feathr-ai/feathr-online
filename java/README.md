@@ -65,14 +65,14 @@ Packaging and Deployment
 ------------------------
 
 The FeathrPiper Java package is provided as a JAR package, you need to build the service, package it, and deploy it by yourself.
-If you don't need Java UDF support, you can use the standalone version of the FeathrPiper, which is published as a Docker image.
+If you don't need Java UDF support, you can use the standalone version of the Feathr Online Transformation Service, which is published as a Docker image.
 
 The FeathrPiper Java package is published to GitHub Package Registry, so you can add the dependency to your project using the following snippet:
 ```xml
 <dependency>
-  <groupId>com.github.windoze.feathr</groupId>
+  <groupId>com.linkedin.feathr.online</groupId>
   <artifactId>feathrpiper</artifactId>
-  <version>0.2.1</version>
+  <version>0.4.7</version>
 </dependency>
 ```
 
@@ -83,11 +83,11 @@ You also need to config Maven settings to use multiple repositories, check out M
 ## Sample Usage
 
 ```java
-package piper.example;
+package feathr.online.example;
 
-import com.github.windoze.feathr.piper.Function1;
-import com.github.windoze.feathr.piper.PiperService;
-import com.github.windoze.feathr.piper.UdfRepository;
+import com.linkedin.feathr.online.Function1;
+import com.linkedin.feathr.online.PiperService;
+import com.linkedin.feathr.online.UdfRepository;
 
 class PiperServiceExample
 {

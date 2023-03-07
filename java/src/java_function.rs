@@ -20,7 +20,7 @@ impl JavaFunction {
         // Check from Function0 to Function'MAX_ARITY'
         for a in 0..get_jvm().max_arity {
             let cls = env
-                .find_class(format!("com/github/windoze/feathr/piper/Function{a}"))
+                .find_class(format!("com/linkedin/feathr/online/Function{a}"))
                 .map_err(|e| piper::PiperError::ExternalError(e.to_string()))?;
             if env
                 .is_instance_of(&obj, cls)

@@ -7,7 +7,7 @@ repositories {
     mavenCentral()
 }
 
-group = "com.github.windoze.feathr"
+group = "com.linkedin.feathr.online"
 version = "0.4.7"
 
 sourceCompatibility = 1.8
