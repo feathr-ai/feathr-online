@@ -395,11 +395,11 @@ struct Piper {
 #[pymethods]
 impl Piper {
     #[new]
-    #[args(pipelines = "None", lookups = "None", functions = "HashMap::new()")]
+    #[pyo3(signature = (pipelines, lookups, functions))]
     fn new(
         pipelines: Option<&str>,
         lookups: Option<PyObject>,
-        functions: HashMap<String, PyObject>,
+        functions: Option<HashMap<String, PyObject>>,
         py: Python<'_>,
     ) -> PyResult<Self> {
         if pipelines.is_none() {
@@ -415,6 +415,7 @@ impl Piper {
             None => PyDict::new(py).into_py(py),
         };
         let l = lookups.clone();
+        let functions = functions.unwrap_or_default();
         let f = functions.clone();
         let functions = functions
             .into_iter()
@@ -487,7 +488,7 @@ impl Piper {
         let new_me = Self::new(
             Some(&pipelines),
             Some(lookups.clone()),
-            functions.clone(),
+            Some(functions.clone()),
             py,
         )?;
         self.pipelines = pipelines;
@@ -497,12 +498,12 @@ impl Piper {
         Ok(())
     }
 
-    #[args(error_report = "ErrorCollectingMode::default()")]
+    #[pyo3(signature = (pipeline, object, error_report))]
     fn process(
         &self,
         pipeline: &str,
         object: PyObject,
-        error_report: ErrorCollectingMode,
+        error_report: Option<ErrorCollectingMode>,
         py: Python<'_>,
     ) -> PyResult<Py<PyTuple>> {
         if self.piper.is_none() {
@@ -510,6 +511,7 @@ impl Piper {
                 "Piper has not been initialized",
             ));
         }
+        let error_report = error_report.unwrap_or_default();
         let req = pyobj_to_request(py, pipeline, object, error_report)?;
         let resp = py.allow_threads(|| {
             block_on(cancelable_wait(async move {
@@ -524,12 +526,12 @@ impl Piper {
         response_to_tuple(py, resp)
     }
 
-    #[args(error_report = "ErrorCollectingMode::default()")]
+    #[pyo3(signature = (pipeline, object, error_report))]
     fn process_async<'p>(
         &self,
         pipeline: &str,
         object: PyObject,
-        error_report: ErrorCollectingMode,
+        error_report: Option<ErrorCollectingMode>,
         py: Python<'p>,
     ) -> PyResult<&'p PyAny> {
         if self.piper.is_none() {
@@ -537,6 +539,7 @@ impl Piper {
                 "Piper has not been initialized",
             ));
         }
+        let error_report = error_report.unwrap_or_default();
         let req = pyobj_to_request(py, pipeline, object, error_report)?;
         let piper = self.piper.clone();
         pyo3_asyncio::tokio::future_into_py(
@@ -668,13 +671,14 @@ struct PiperService {
 #[pymethods]
 impl PiperService {
     #[new]
-    #[args(functions = "HashMap::new()")]
+    #[pyo3(signature = (pipelines, lookups, functions))]
     fn new(
         pipelines: &str,
         lookups: PyObject,
-        functions: HashMap<String, PyObject>,
+        functions: Option<HashMap<String, PyObject>>,
         py: Python<'_>,
     ) -> PyResult<Self> {
+        let functions = functions.unwrap_or_default();
         let functions = functions
             .into_iter()
             .map(|(k, v)| {
