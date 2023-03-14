@@ -225,8 +225,9 @@ where
 /**
  * Value is the type of a value in the pipeline.
  */
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub enum Value {
+    #[default]
     Null,
     Bool(bool),
     Int(i32),
@@ -401,12 +402,6 @@ impl From<serde_json::Value> for Value {
                 Self::Object(v.into_iter().map(|(k, v)| (k, v.into())).collect())
             }
         }
-    }
-}
-
-impl Default for Value {
-    fn default() -> Self {
-        Value::Null
     }
 }
 

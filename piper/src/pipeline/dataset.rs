@@ -223,21 +223,16 @@ impl DataSet for ValidatedDataSet {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ErrorCollectingMode {
     Off,
     // TODO: Remove this alias when the debug mode is actually implemented
     #[serde(alias = "debug")]
+    #[default]
     On,
     // TODO: Real debug mode needs backtrace
     // Debug,
-}
-
-impl Default for ErrorCollectingMode {
-    fn default() -> Self {
-        ErrorCollectingMode::On
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
