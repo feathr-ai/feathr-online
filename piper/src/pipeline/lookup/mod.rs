@@ -11,6 +11,7 @@ use super::{PiperError, Value};
 mod cosmosdb;
 mod feathr_online_store;
 mod http_json_api;
+mod local_store;
 mod mssql;
 mod sqlite;
 
@@ -22,6 +23,10 @@ const DEFAULT_CONCURRENCY: usize = 1;
 
 #[async_trait]
 pub trait LookupSource: Sync + Send + Debug {
+    fn init(&mut self) -> Result<(), PiperError> {
+        Ok(())
+    }
+
     fn batch_size(&self) -> usize {
         DEFAULT_CONCURRENCY
     }
@@ -65,8 +70,12 @@ pub fn init_lookup_sources(
         .map_err(|e| PiperError::Unknown(format!("Failed to parse lookup source config: {e}")))?
         .sources
         .into_iter()
-        .map(|e| (e.name, Arc::new(e.source) as Arc<dyn LookupSource>))
-        .collect();
+        .map(|mut e| {
+            e.source
+                .init()
+                .map(|_| (e.name, Arc::new(e.source) as Arc<dyn LookupSource>))
+        })
+        .collect::<Result<_, _>>()?;
     Ok(cfg)
 }
 
@@ -89,12 +98,25 @@ enum LookupSourceType {
     SqliteLSource(sqlite::SqliteLookupSource),
     #[serde(alias = "cosmosdb", alias = "cosmos")]
     CosmosDb(cosmosdb::CosmosDbSource),
+    #[serde(alias = "LocalStore", alias = "local")]
+    LocalStore(local_store::LocalStoreSource),
     // TODO: Add more lookup sources here
     // MongoDb(MongoDb),
 }
 
 #[async_trait]
 impl LookupSource for LookupSourceType {
+    fn init(&mut self) -> Result<(), PiperError> {
+        match self {
+            LookupSourceType::HttpJsonApi(s) => s.init(),
+            LookupSourceType::FeathrOnlineStore(s) => s.init(),
+            LookupSourceType::MsSqlLSource(s) => s.init(),
+            LookupSourceType::SqliteLSource(s) => s.init(),
+            LookupSourceType::CosmosDb(s) => s.init(),
+            LookupSourceType::LocalStore(s) => s.init(),
+        }
+    }
+
     async fn lookup(&self, key: &Value, fields: &[String]) -> Vec<Value> {
         match self {
             LookupSourceType::HttpJsonApi(s) => s.lookup(key, fields).await,
@@ -102,6 +124,7 @@ impl LookupSource for LookupSourceType {
             LookupSourceType::MsSqlLSource(s) => s.lookup(key, fields).await,
             LookupSourceType::SqliteLSource(s) => s.lookup(key, fields).await,
             LookupSourceType::CosmosDb(s) => s.lookup(key, fields).await,
+            LookupSourceType::LocalStore(s) => s.lookup(key, fields).await,
         }
     }
 
@@ -112,6 +135,7 @@ impl LookupSource for LookupSourceType {
             LookupSourceType::MsSqlLSource(s) => s.join(key, fields).await,
             LookupSourceType::SqliteLSource(s) => s.join(key, fields).await,
             LookupSourceType::CosmosDb(s) => s.join(key, fields).await,
+            LookupSourceType::LocalStore(s) => s.join(key, fields).await,
         }
     }
 
