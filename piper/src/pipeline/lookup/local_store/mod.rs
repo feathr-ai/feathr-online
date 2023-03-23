@@ -1,9 +1,11 @@
-use async_trait::async_trait;
-use polars::prelude::*;
-use serde::{Deserialize, Serialize};
-use tracing::{instrument, debug};
+use std::collections::HashMap;
 
-use crate::{IntoValue, LookupSource, PiperError, Value};
+use async_trait::async_trait;
+use polars::{prelude::{cloud::CloudOptions, *}, io::is_cloud_url};
+use serde::{Deserialize, Serialize};
+use tracing::{debug, instrument};
+
+use crate::{pipeline::lookup::get_secret, IntoValue, LookupSource, PiperError, Value};
 
 mod any_value;
 
@@ -31,6 +33,8 @@ pub struct LocalStoreSource {
     format: FileFormat,
     #[serde(default)]
     local_path: Option<String>,
+    #[serde(default)]
+    cloud_config: HashMap<String, String>,
     #[serde(skip)]
     db: Option<sled::Db>,
 }
@@ -42,16 +46,156 @@ impl LocalStoreSource {
         fields: Vec<String>,
         format: FileFormat,
         local_path: Option<String>,
+        cloud_config: HashMap<String, String>,
     ) -> Result<Self, PiperError> {
-        let (db, fields) = load_db(&path, &key_column, &fields, format, &local_path)?;
-        Ok(Self {
+        let mut s = Self {
             path,
             key_column,
             fields,
             format,
             local_path,
-            db: Some(db),
-        })
+            cloud_config,
+            db: None,
+        };
+        s.load_db()?;
+        Ok(s)
+    }
+
+    fn load_db(&mut self) -> Result<(), PiperError> {
+        let df = if is_cloud_url(&self.path) {
+            let mut args = ScanArgsParquet::default();
+            let mut options: Vec<(String, String)> = Vec::new();
+            for (k, v) in self.cloud_config.iter() {
+                options.push((k.to_string(), get_secret(Some(v))?));
+            }
+            let options = CloudOptions::from_untyped_config(&self.path, options)
+                .map_err(|e| PiperError::ExternalError(e.to_string()))?;
+            args.cloud_options = Some(options);
+            match get_file_format(&self.path, self.format)? {
+                FileFormat::Parquet => LazyFrame::scan_parquet(&self.path, args)
+                    .map_err(|e| PiperError::ExternalError(e.to_string()))?
+                    .collect()
+                    .map_err(|e| PiperError::ExternalError(e.to_string()))?,
+                _ => {
+                    return Err(PiperError::ExternalError(format!(
+                        "Unsupported file format for file {}",
+                        self.path
+                    )))
+                }
+            }
+        } else {
+            match get_file_format(&self.path, self.format)? {
+                FileFormat::Csv => CsvReader::from_path(&self.path)
+                    .map_err(|e| PiperError::ExternalError(e.to_string()))?
+                    .has_header(true)
+                    .infer_schema(Some(100))
+                    .finish()
+                    .map_err(|e| PiperError::ExternalError(e.to_string()))?,
+                FileFormat::Parquet => {
+                    let mut file = std::fs::File::open(&self.path)
+                        .map_err(|e| PiperError::ExternalError(e.to_string()))?;
+                    ParquetReader::new(&mut file)
+                        .finish()
+                        .map_err(|e| PiperError::ExternalError(e.to_string()))?
+                }
+                FileFormat::Json => {
+                    let mut file = std::fs::File::open(&self.path)
+                        .map_err(|e| PiperError::ExternalError(e.to_string()))?;
+                    JsonReader::new(&mut file)
+                        .finish()
+                        .map_err(|e| PiperError::ExternalError(e.to_string()))?
+                }
+                FileFormat::Ndjson => {
+                    let mut file = std::fs::File::open(&self.path)
+                        .map_err(|e| PiperError::ExternalError(e.to_string()))?;
+                    JsonLineReader::new(&mut file)
+                        .finish()
+                        .map_err(|e| PiperError::ExternalError(e.to_string()))?
+                }
+                _ => {
+                    return Err(PiperError::ExternalError(format!(
+                        "Unsupported file format for file {}",
+                        self.path
+                    )))
+                }
+            }
+        };
+        // let df = match get_file_format(&self.path, self.format)? {
+        //     FileFormat::Csv => CsvReader::from_path(&self.path)
+        //         .map_err(|e| PiperError::ExternalError(e.to_string()))?
+        //         .has_header(true)
+        //         .infer_schema(Some(100))
+        //         .finish()
+        //         .map_err(|e| PiperError::ExternalError(e.to_string()))?,
+        //     FileFormat::Parquet => {
+        //         let mut file = std::fs::File::open(&self.path)
+        //             .map_err(|e| PiperError::ExternalError(e.to_string()))?;
+        //         ParquetReader::new(&mut file)
+        //             .finish()
+        //             .map_err(|e| PiperError::ExternalError(e.to_string()))?
+        //     }
+        //     FileFormat::Json => {
+        //         let mut file = std::fs::File::open(&self.path)
+        //             .map_err(|e| PiperError::ExternalError(e.to_string()))?;
+        //         JsonReader::new(&mut file)
+        //             .finish()
+        //             .map_err(|e| PiperError::ExternalError(e.to_string()))?
+        //     }
+        //     FileFormat::Ndjson => {
+        //         let mut file = std::fs::File::open(&self.path)
+        //             .map_err(|e| PiperError::ExternalError(e.to_string()))?;
+        //         JsonLineReader::new(&mut file)
+        //             .finish()
+        //             .map_err(|e| PiperError::ExternalError(e.to_string()))?
+        //     }
+        //     _ => {
+        //         return Err(PiperError::ExternalError(format!(
+        //             "Unsupported file format for file {}",
+        //             self.path
+        //         )))
+        //     }
+        // };
+
+        let mut cfg = sled::Config::new().temporary(true);
+        if let Some(p) = self.local_path.clone() {
+            cfg = cfg.path(p);
+        }
+        let db = cfg
+            .open()
+            .map_err(|e| PiperError::ExternalError(e.to_string()))?;
+
+        let keys: Vec<String> = df
+            .column(&self.key_column)
+            .map_err(|e| PiperError::ExternalError(e.to_string()))?
+            .iter()
+            .map(|v| to_db_key(&v))
+            .collect();
+
+        let fields = if self.fields.is_empty() {
+            df.get_column_names()
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect()
+        } else {
+            self.fields.to_vec()
+        };
+
+        for f in &fields {
+            debug!("Loading field {}", f);
+            let col = df
+                .column(f)
+                .map_err(|e| PiperError::ExternalError(e.to_string()))?;
+            let i = keys.iter().zip(col.iter());
+            for (k, v) in i {
+                let key = format!("{}\0{}", f, k);
+                db.insert(key, to_db_value(&v))
+                    .map_err(|e| PiperError::ExternalError(e.to_string()))?;
+            }
+        }
+
+        self.fields = fields;
+        self.db = Some(db);
+        Ok(())
     }
 
     async fn do_lookup(&self, k: &Value, fields: &[String]) -> Result<Vec<Vec<Value>>, PiperError> {
@@ -84,6 +228,7 @@ impl LookupSource for LocalStoreSource {
             self.fields.clone(),
             self.format,
             self.local_path.clone(),
+            Default::default(),
         )?;
         self.fields = s.fields.clone();
         self.db = s.db.clone();
@@ -122,86 +267,6 @@ impl LookupSource for LocalStoreSource {
     fn batch_size(&self) -> usize {
         super::DEFAULT_CONCURRENCY
     }
-}
-
-fn load_db(
-    path: &str,
-    key_column: &str,
-    fields: &[String],
-    format: FileFormat,
-    local_path: &Option<String>,
-) -> Result<(sled::Db, Vec<String>), PiperError> {
-    let df = match get_file_format(path, format)? {
-        FileFormat::Csv => CsvReader::from_path(path)
-            .map_err(|e| PiperError::ExternalError(e.to_string()))?
-            .has_header(true)
-            .infer_schema(Some(100))
-            .finish()
-            .map_err(|e| PiperError::ExternalError(e.to_string()))?,
-        FileFormat::Parquet => {
-            let mut file =
-                std::fs::File::open(path).map_err(|e| PiperError::ExternalError(e.to_string()))?;
-            ParquetReader::new(&mut file)
-                .finish()
-                .map_err(|e| PiperError::ExternalError(e.to_string()))?
-        }
-        FileFormat::Json => {
-            let mut file =
-                std::fs::File::open(path).map_err(|e| PiperError::ExternalError(e.to_string()))?;
-            JsonReader::new(&mut file)
-                .finish()
-                .map_err(|e| PiperError::ExternalError(e.to_string()))?
-        }
-        FileFormat::Ndjson => {
-            let mut file =
-                std::fs::File::open(path).map_err(|e| PiperError::ExternalError(e.to_string()))?;
-            JsonLineReader::new(&mut file)
-                .finish()
-                .map_err(|e| PiperError::ExternalError(e.to_string()))?
-        }
-        _ => {
-            return Err(PiperError::ExternalError(format!(
-                "Unsupported file format for file {}",
-                path
-            )))
-        }
-    };
-
-    let mut cfg = sled::Config::new().temporary(true);
-    if let Some(p) = local_path {
-        cfg = cfg.path(p);
-    }
-    let db = cfg
-        .open()
-        .map_err(|e| PiperError::ExternalError(e.to_string()))?;
-
-    let keys: Vec<String> = df
-        .column(key_column)
-        .map_err(|e| PiperError::ExternalError(e.to_string()))?
-        .iter()
-        .map(|v| to_db_key(&v))
-        .collect();
-
-    let fields = if fields.is_empty() {
-        df.get_column_names().into_iter().map(|s| s.to_string()).collect()
-    } else {
-        fields.to_vec()
-    };
-
-    for f in &fields {
-        debug!("Loading field {}", f);
-        let col = df
-            .column(f)
-            .map_err(|e| PiperError::ExternalError(e.to_string()))?;
-        let i = keys.iter().zip(col.iter());
-        for (k, v) in i {
-            let key = format!("{}\0{}", f, k);
-            db.insert(key, to_db_value(&v))
-                .map_err(|e| PiperError::ExternalError(e.to_string()))?;
-        }
-    }
-
-    Ok((db, fields))
 }
 
 fn get_file_format(path: &str, format: FileFormat) -> Result<FileFormat, PiperError> {
@@ -245,11 +310,67 @@ mod tests {
             fields.clone(),
             format,
             local_path,
-        ).unwrap();
-        let r = src.lookup(&Value::Int(1), &["imdbId".to_string(), "tmdbId".to_string()]).await;
+            Default::default(),
+        )
+        .unwrap();
+        let r = src
+            .lookup(
+                &Value::Int(1),
+                &["imdbId".to_string(), "tmdbId".to_string()],
+            )
+            .await;
         assert_eq!(r[0], Value::Int(114709));
         assert_eq!(r[1], Value::Int(862));
-        let r = src.lookup(&Value::Int(6), &["imdbId".to_string(), "tmdbId".to_string()]).await;
+        let r = src
+            .lookup(
+                &Value::Int(6),
+                &["imdbId".to_string(), "tmdbId".to_string()],
+            )
+            .await;
+        assert_eq!(r[0], Value::Int(113277));
+        assert_eq!(r[1], Value::Int(949));
+    }
+
+    /// An upstream bug of pola-rs currently prevents reading from Azure Data Lake Gen2
+    /// Disable this test until the bug is fixed.
+    /// @see https://github.com/pola-rs/polars/issues/3906
+    #[tokio::test]
+    #[ignore]
+    async fn test_load_cloud() {
+        dotenvy::dotenv().ok();
+        let path = "abfs://xchfeathrtest4fs@xchfeathrtest4sto.blob.core.windows.net/links.parquet";
+        let key_column = "movieId";
+        let fields = vec!["imdbId".to_string(), "tmdbId".to_string()];
+        let format = FileFormat::Auto;
+        let local_path = None;
+        let mut cloud_options: HashMap<String, String> = HashMap::new();
+        cloud_options.insert(
+            "azure_storage_access_key".to_string(),
+            "${AZURE_STORAGE_KEY}".to_string(),
+        );
+        let src = LocalStoreSource::new(
+            path.to_string(),
+            key_column.to_string(),
+            fields.clone(),
+            format,
+            local_path,
+            cloud_options,
+        )
+        .unwrap();
+        let r = src
+            .lookup(
+                &Value::Int(1),
+                &["imdbId".to_string(), "tmdbId".to_string()],
+            )
+            .await;
+        assert_eq!(r[0], Value::Int(114709));
+        assert_eq!(r[1], Value::Int(862));
+        let r = src
+            .lookup(
+                &Value::Int(6),
+                &["imdbId".to_string(), "tmdbId".to_string()],
+            )
+            .await;
         assert_eq!(r[0], Value::Int(113277));
         assert_eq!(r[1], Value::Int(949));
     }
