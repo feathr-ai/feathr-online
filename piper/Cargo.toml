@@ -39,7 +39,7 @@ bb8-tiberius = "0.15"
 rusqlite = { version = "0.28", features = ["modern-full", "bundled"] }
 # Hit a bug, PR submitted at https://github.com/pola-rs/polars/pull/7739, waiting for the upstream
 #polars = { version = "0.27", features = ["default", "performant", "lazy", "async", "sql", "dtype-full", "parquet", "json", "avro", "ipc", "serde", "decompress", "azure", "aws", "gcp"] }
-polars = { git = "https://github.com/windoze/polars.git", features = ["default", "performant", "lazy", "async", "sql", "dtype-full", "parquet", "json", "avro", "ipc", "serde", "decompress", "azure", "aws", "gcp"] }
+polars = { git = "https://github.com/windoze/polars.git", features = ["default", "performant", "lazy", "async", "sql", "dtype-full", "parquet", "json", "avro", "ipc", "serde", "decompress", "azure", "aws", "gcp", "serde-lazy"] }
 sled = { version = "0.34"}
 
 pyo3 = { version = "0.18", optional = true }

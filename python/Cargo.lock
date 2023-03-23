@@ -1510,6 +1510,7 @@ checksum = "1885e79c1fc4b10f0e172c475f458b7f7b93061064d98c3293e98c5ba0c8b399"
 dependencies = [
  "autocfg",
  "hashbrown 0.12.3",
+ "serde",
 ]
 
 [[package]]
@@ -2397,6 +2398,7 @@ dependencies = [
  "multiversion",
  "num-traits",
  "polars-error",
+ "serde",
  "thiserror",
 ]
 
@@ -2471,6 +2473,7 @@ dependencies = [
  "polars-utils",
  "rayon",
  "regex",
+ "serde",
  "serde_json",
  "simd-json",
  "simdutf8",
@@ -2509,6 +2512,7 @@ dependencies = [
  "polars-arrow",
  "polars-core",
  "polars-utils",
+ "serde",
  "smartstring",
 ]
 
@@ -2548,6 +2552,7 @@ dependencies = [
  "polars-utils",
  "rayon",
  "regex",
+ "serde",
  "smartstring",
 ]
 
@@ -2590,6 +2595,7 @@ dependencies = [
  "polars-ops",
  "polars-utils",
  "regex",
+ "serde",
  "smartstring",
 ]
 
@@ -3382,6 +3388,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fb72c633efbaa2dd666986505016c32c3044395ceaf881518399d2f4127ee29"
 dependencies = [
  "autocfg",
+ "serde",
  "static_assertions",
  "version_check",
 ]
