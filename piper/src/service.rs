@@ -389,7 +389,7 @@ async fn load_file(
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::{time::Duration, env::set_current_dir};
 
     use serde_json::json;
 
@@ -413,6 +413,9 @@ mod tests {
     #[tokio::test]
     async fn test_svc() {
         dotenvy::dotenv().ok();
+        if !std::path::Path::new("conf/lookup.json").exists() {
+            set_current_dir("..").unwrap();
+        }
         let lookup_src = if let Ok(s) = super::load_file(Some("../conf/lookup.json"), false).await {
             s
         } else {
