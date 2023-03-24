@@ -17,6 +17,7 @@ RUN cargo build --release --target=$(xx-info march)-unknown-linux-musl --package
 FROM alpine
 COPY --from=builder /piper /app/piper
 COPY --from=builder /usr/src/conf /conf
+COPY --from=builder /usr/src/test-data /conf/test-data
 # USER 1000
 WORKDIR /conf
 EXPOSE 8000

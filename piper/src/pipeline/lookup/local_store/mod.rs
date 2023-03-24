@@ -120,41 +120,6 @@ impl LocalStoreSource {
                 }
             }
         };
-        // let df = match get_file_format(&self.path, self.format)? {
-        //     FileFormat::Csv => CsvReader::from_path(&self.path)
-        //         .map_err(|e| PiperError::ExternalError(e.to_string()))?
-        //         .has_header(true)
-        //         .infer_schema(Some(100))
-        //         .finish()
-        //         .map_err(|e| PiperError::ExternalError(e.to_string()))?,
-        //     FileFormat::Parquet => {
-        //         let mut file = std::fs::File::open(&self.path)
-        //             .map_err(|e| PiperError::ExternalError(e.to_string()))?;
-        //         ParquetReader::new(&mut file)
-        //             .finish()
-        //             .map_err(|e| PiperError::ExternalError(e.to_string()))?
-        //     }
-        //     FileFormat::Json => {
-        //         let mut file = std::fs::File::open(&self.path)
-        //             .map_err(|e| PiperError::ExternalError(e.to_string()))?;
-        //         JsonReader::new(&mut file)
-        //             .finish()
-        //             .map_err(|e| PiperError::ExternalError(e.to_string()))?
-        //     }
-        //     FileFormat::Ndjson => {
-        //         let mut file = std::fs::File::open(&self.path)
-        //             .map_err(|e| PiperError::ExternalError(e.to_string()))?;
-        //         JsonLineReader::new(&mut file)
-        //             .finish()
-        //             .map_err(|e| PiperError::ExternalError(e.to_string()))?
-        //     }
-        //     _ => {
-        //         return Err(PiperError::ExternalError(format!(
-        //             "Unsupported file format for file {}",
-        //             self.path
-        //         )))
-        //     }
-        // };
 
         let mut cfg = sled::Config::new().temporary(true);
         if let Some(p) = self.local_path.clone() {

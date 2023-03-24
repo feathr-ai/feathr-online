@@ -189,12 +189,13 @@ Lookup data sources can be used in `lookup` and `join` transformations, the form
 
 When lookup data source is used in a `lookup` transformation, it acts like `left-outer` but only the first row of lookup result is used for each key.
 
-There are 5 types of builtin lookup data sources:
+Below are all supported lookup data sources:
 * Feathr Online Store
 * JSON-based HTTP API
 * SqlServer 2008 and up / AzureSQL
 * Sqlite3
 * Azure Cosmos DB
+* Local CSV/Parquet/JSON/NDJSON file
 
 They can be defined in the lookup source definition file, which is a JSON file in following format:
 ```javascript
@@ -336,6 +337,28 @@ They can be defined in the lookup source definition file, which is a JSON file i
     "collection": "table1",
     // Optional, use this field to specify the SQL query to fetch the row by condition, the `@key` will be replaced with the key value.
     "query": "SELECT * FROM table1 c WHERE c.key0 = @key"
+}
+```
+
+* Local File
+```javascript
+{
+    // This field indicates this is a local file source
+    "class": "local",
+    // The name of the source
+    "name": "SOME_NAME",
+    // The path to the local file
+    "path": "PATH_TO_LOCAL_FILE",
+    // The format of the file, can be "csv", "parquet", "json", "ndjson", omit this field to detect the format automatically based on the file extension.
+    "format": "csv",
+    // The column will be used as the lookup key
+    "keyColumn": "f1",
+    // The columns can be returned by the lookup, omit this field to include all columns.
+    "fields": [
+        "f1",
+        "f2",
+        "f3"
+    ]
 }
 ```
 
