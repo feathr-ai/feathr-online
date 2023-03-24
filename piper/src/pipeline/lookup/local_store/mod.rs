@@ -121,7 +121,7 @@ impl LocalStoreSource {
             }
         };
 
-        let mut cfg = sled::Config::new().temporary(true);
+        let mut cfg = sled::Config::new().temporary(true).mode(sled::Mode::LowSpace);
         if let Some(p) = self.local_path.clone() {
             cfg = cfg.path(p);
         }
