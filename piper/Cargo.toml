@@ -1,6 +1,6 @@
 [package]
 name = "piper"
-version = "0.4.6"
+version = "0.4.8"
 edition = "2021"
 
 [dependencies]
@@ -26,9 +26,9 @@ regex = "1"
 clap = { version = "4", features = ["derive", "env"] }
 tracing = "0.1"
 rust_heap = "0.1"
-azure_core = "0.10"
-azure_identity = "0.10"
-azure_data_cosmos = "0.10"
+azure_core = "0.11"
+azure_identity = "0.11"
+azure_data_cosmos = "0.11"
 levenshtein = "1.0.5"
 uuid = "1"
 rand = "*"
@@ -37,6 +37,10 @@ poem = { version = "1", features = ["tokio-metrics"] }
 tiberius = { version = "0.12", default-features = false, features = ["chrono", "tds73", "sql-browser-tokio", "rustls"] }
 bb8-tiberius = "0.15"
 rusqlite = { version = "0.28", features = ["modern-full", "bundled"] }
+# Hit a bug, PR submitted at https://github.com/pola-rs/polars/pull/7739, waiting for the upstream
+#polars = { version = "0.27", features = ["default", "performant", "lazy", "async", "sql", "dtype-full", "parquet", "json", "avro", "ipc", "serde", "decompress", "azure", "aws", "gcp"] }
+polars = { git = "https://github.com/windoze/polars.git", features = ["default", "performant", "lazy", "async", "sql", "dtype-full", "parquet", "json", "avro", "ipc", "serde", "decompress", "azure", "aws", "gcp", "serde-lazy"] }
+sled = { version = "0.34"}
 
 pyo3 = { version = "0.18", optional = true }
 pyo3-asyncio = { version = "0.18", features = ["tokio-runtime"], optional = true }

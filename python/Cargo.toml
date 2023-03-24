@@ -1,6 +1,6 @@
 [package]
 name = "feathrpiper"
-version = "0.4.7"
+version = "0.4.8"
 edition = "2021"
 authors = ["Chen Xu <windoze@0d0a.com>"]
 license = "MIT"

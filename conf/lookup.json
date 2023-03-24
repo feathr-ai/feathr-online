@@ -100,6 +100,31 @@
       "database": "${COSMOS_DATABASE}",
       "collection": "table1",
       "query": "SELECT * FROM table1 c WHERE c.key0 = @key"
+    },
+    {
+      "class": "http",
+      "name": "recommender",
+      "urlBase": "http://localhost:8001",
+      "keyUrlTemplate": "/recommend/$",
+      "resultPath": {
+        "ids": "$"
+      }
+    },
+    {
+      "class": "local",
+      "name": "links",
+      "path": "test-data/links.parquet",
+      "keyColumn": "movieId",
+      "fields": [
+        "imdbId",
+        "tmdbId"
+      ]
+    },
+    {
+      "class": "local",
+      "name": "metadata",
+      "path": "test-data/movies_metadata.parquet",
+      "keyColumn": "id"
     }
   ]
 }
