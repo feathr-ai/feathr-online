@@ -73,10 +73,3 @@ where
 {
     serde_json::to_string(&serde_json::Value::from(v.into_value())).unwrap()
 }
-
-pub fn to_db_value<T>(v: T) -> String
-where
-    T: IntoValue,
-{
-    to_db_key(v)
-}

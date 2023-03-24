@@ -11,11 +11,11 @@ use polars::{
 use serde::{Deserialize, Serialize};
 use tracing::{debug, instrument};
 
-use crate::{pipeline::lookup::get_secret, IntoValue, LookupSource, PiperError, Value};
+use crate::{pipeline::lookup::get_secret, LookupSource, PiperError, Value};
 
 mod any_value;
 
-use any_value::{to_db_key, to_db_value};
+use any_value::to_db_key;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -42,7 +42,7 @@ pub struct LocalStoreSource {
     #[serde(default)]
     cloud_config: HashMap<String, String>,
     #[serde(skip)]
-    db: Option<Arc<RwLock<BTreeMap<String, String>>>>,
+    db: Option<Arc<RwLock<BTreeMap<String, Value>>>>,
 }
 
 impl LocalStoreSource {
@@ -157,7 +157,7 @@ impl LocalStoreSource {
             let i = keys.iter().zip(col.iter());
             for (k, v) in i {
                 let key = format!("{}\0{}", f, k);
-                writer.insert(key, to_db_value(&v));
+                writer.insert(key, v.into());
             }
         }
 
@@ -177,11 +177,8 @@ impl LocalStoreSource {
         let k = to_db_key(k);
         for f in fields {
             let key = format!("{}\0{}", f, k);
-            let value: Option<Value> = db
-                .get(&key)
-                .map(|v| serde_json::from_str(v).unwrap())
-                .map(|v: serde_json::Value| v.into_value());
-            result.push(value.unwrap_or_default());
+            let value = db.get(&key).cloned().unwrap_or_default();
+            result.push(value);
         }
         Ok(vec![result])
     }
