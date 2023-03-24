@@ -1,7 +1,7 @@
 FROM messense/rust-musl-cross:x86_64-musl AS builder
 WORKDIR /usr/src/
 COPY . ./
-RUN cargo build --release --target=x86_64-unknown-linux-musl --package=standalone && strip -s target/x86_64-unknown-linux-musl/release/piper
+RUN cargo build --release --target=x86_64-unknown-linux-musl --package=standalone
 
 FROM alpine
 COPY --from=builder /usr/src/target/x86_64-unknown-linux-musl/release/piper /app/piper

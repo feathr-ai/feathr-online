@@ -3,7 +3,6 @@ use std::ops::Deref;
 use chrono::{TimeZone, Utc};
 use chrono_tz::Tz;
 use polars::prelude::*;
-use sled::IVec;
 
 use crate::{Value, IntoValue};
 
@@ -75,9 +74,9 @@ where
     serde_json::to_string(&serde_json::Value::from(v.into_value())).unwrap()
 }
 
-pub fn to_db_value<T>(v: T) -> IVec
+pub fn to_db_value<T>(v: T) -> String
 where
     T: IntoValue,
 {
-    IVec::from(to_db_key(v).as_bytes())
+    to_db_key(v)
 }
