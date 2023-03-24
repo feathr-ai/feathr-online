@@ -1,7 +1,13 @@
-use std::collections::HashMap;
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::RwLock,
+};
 
 use async_trait::async_trait;
-use polars::{prelude::{cloud::CloudOptions, *}, io::is_cloud_url};
+use polars::{
+    io::is_cloud_url,
+    prelude::{cloud::CloudOptions, *},
+};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, instrument};
 
@@ -36,7 +42,7 @@ pub struct LocalStoreSource {
     #[serde(default)]
     cloud_config: HashMap<String, String>,
     #[serde(skip)]
-    db: Option<sled::Db>,
+    db: Option<Arc<RwLock<BTreeMap<String, String>>>>,
 }
 
 impl LocalStoreSource {
@@ -121,13 +127,7 @@ impl LocalStoreSource {
             }
         };
 
-        let mut cfg = sled::Config::new().temporary(true).mode(sled::Mode::LowSpace);
-        if let Some(p) = self.local_path.clone() {
-            cfg = cfg.path(p);
-        }
-        let db = cfg
-            .open()
-            .map_err(|e| PiperError::ExternalError(e.to_string()))?;
+        let db = Arc::new(RwLock::new(BTreeMap::new()));
 
         let keys: Vec<String> = df
             .column(&self.key_column)
@@ -145,6 +145,10 @@ impl LocalStoreSource {
             self.fields.to_vec()
         };
 
+        let mut writer = db
+            .write()
+            .map_err(|e| PiperError::ExternalError(e.to_string()))?;
+
         for f in &fields {
             debug!("Loading field {}", f);
             let col = df
@@ -153,13 +157,12 @@ impl LocalStoreSource {
             let i = keys.iter().zip(col.iter());
             for (k, v) in i {
                 let key = format!("{}\0{}", f, k);
-                db.insert(key, to_db_value(&v))
-                    .map_err(|e| PiperError::ExternalError(e.to_string()))?;
+                writer.insert(key, to_db_value(&v));
             }
         }
 
         self.fields = fields;
-        self.db = Some(db);
+        self.db = Some(db.clone());
         Ok(())
     }
 
@@ -167,16 +170,16 @@ impl LocalStoreSource {
         let db = self
             .db
             .as_ref()
-            .ok_or_else(|| PiperError::ExternalError("Database not initialized".to_string()))?;
+            .ok_or_else(|| PiperError::ExternalError("Database not initialized".to_string()))?
+            .read()
+            .map_err(|e| PiperError::ExternalError(e.to_string()))?;
         let mut result = Vec::new();
         let k = to_db_key(k);
         for f in fields {
             let key = format!("{}\0{}", f, k);
             let value: Option<Value> = db
-                .get(key)
-                .map_err(|e| PiperError::ExternalError(e.to_string()))?
-                .map(|v| String::from_utf8(v.to_vec()).unwrap())
-                .map(|v| serde_json::from_str(&v).unwrap())
+                .get(&key)
+                .map(|v| serde_json::from_str(v).unwrap())
                 .map(|v: serde_json::Value| v.into_value());
             result.push(value.unwrap_or_default());
         }
