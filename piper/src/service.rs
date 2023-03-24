@@ -413,17 +413,23 @@ mod tests {
     #[tokio::test]
     async fn test_svc() {
         dotenvy::dotenv().ok();
-        if !std::path::Path::new("conf/lookup.json").exists() {
+        if !std::path::Path::new("test-data/test.db").exists() {
             set_current_dir("..").unwrap();
         }
-        let lookup_src = if let Ok(s) = super::load_file(Some("../conf/lookup.json"), false).await {
-            s
-        } else {
-            super::load_file(Some("conf/lookup.json"), false)
-                .await
-                .unwrap()
-        };
-        let lookups = init_lookup_sources(&lookup_src).unwrap();
+        let lookups = init_lookup_sources(r#"{
+            "sources": [
+                {
+                    "class": "sqlite",
+                    "name": "join_test",
+                    "dbPath": "test-data/test.db",
+                    "sqlTemplate": "select name, age from join_test where group_id = :key",
+                    "availableFields": [
+                      "name",
+                      "age"
+                    ]
+                }              
+            ]
+        }"#).unwrap();
         tokio::spawn(async {
             let pipelines = "t(x) | project y=x+42, z=x-42;";
             let mut svc =
@@ -484,7 +490,7 @@ mod tests {
             // Devskim: ignore DS137138
             .post("http://127.0.0.1:38080/lookup")
             .json(&json!({
-                "source": "join_test_mssql",
+                "source": "join_test",
                 "keys": ["1", "2"],
                 "features": ["name", "age"]
             }))
