@@ -68,51 +68,52 @@ impl LocalStoreSource {
     }
 
     fn load_db(&mut self) -> Result<(), PiperError> {
-        let df = if is_cloud_url(&self.path) {
+        let path = get_secret(Some(&self.path))?;
+        let df = if is_cloud_url(&path) {
             let mut args = ScanArgsParquet::default();
             let mut options: Vec<(String, String)> = Vec::new();
             for (k, v) in self.cloud_config.iter() {
                 options.push((k.to_string(), get_secret(Some(v))?));
             }
-            let options = CloudOptions::from_untyped_config(&self.path, options)
+            let options = CloudOptions::from_untyped_config(&path, options)
                 .map_err(|e| PiperError::ExternalError(e.to_string()))?;
             args.cloud_options = Some(options);
-            match get_file_format(&self.path, self.format)? {
-                FileFormat::Parquet => LazyFrame::scan_parquet(&self.path, args)
+            match get_file_format(&path, self.format)? {
+                FileFormat::Parquet => LazyFrame::scan_parquet(&path, args)
                     .map_err(|e| PiperError::ExternalError(e.to_string()))?
                     .collect()
                     .map_err(|e| PiperError::ExternalError(e.to_string()))?,
                 _ => {
                     return Err(PiperError::ExternalError(format!(
                         "Unsupported file format for file {}",
-                        self.path
+                        path
                     )))
                 }
             }
         } else {
-            match get_file_format(&self.path, self.format)? {
-                FileFormat::Csv => CsvReader::from_path(&self.path)
+            match get_file_format(&path, self.format)? {
+                FileFormat::Csv => CsvReader::from_path(&path)
                     .map_err(|e| PiperError::ExternalError(e.to_string()))?
                     .has_header(true)
                     .infer_schema(Some(100))
                     .finish()
                     .map_err(|e| PiperError::ExternalError(e.to_string()))?,
                 FileFormat::Parquet => {
-                    let mut file = std::fs::File::open(&self.path)
+                    let mut file = std::fs::File::open(&path)
                         .map_err(|e| PiperError::ExternalError(e.to_string()))?;
                     ParquetReader::new(&mut file)
                         .finish()
                         .map_err(|e| PiperError::ExternalError(e.to_string()))?
                 }
                 FileFormat::Json => {
-                    let mut file = std::fs::File::open(&self.path)
+                    let mut file = std::fs::File::open(&path)
                         .map_err(|e| PiperError::ExternalError(e.to_string()))?;
                     JsonReader::new(&mut file)
                         .finish()
                         .map_err(|e| PiperError::ExternalError(e.to_string()))?
                 }
                 FileFormat::Ndjson => {
-                    let mut file = std::fs::File::open(&self.path)
+                    let mut file = std::fs::File::open(&path)
                         .map_err(|e| PiperError::ExternalError(e.to_string()))?;
                     JsonLineReader::new(&mut file)
                         .finish()
@@ -121,7 +122,7 @@ impl LocalStoreSource {
                 _ => {
                     return Err(PiperError::ExternalError(format!(
                         "Unsupported file format for file {}",
-                        self.path
+                        path
                     )))
                 }
             }
