@@ -38,8 +38,6 @@ pub struct LocalStoreSource {
     #[serde(default)]
     format: FileFormat,
     #[serde(default)]
-    local_path: Option<String>,
-    #[serde(default)]
     cloud_config: HashMap<String, String>,
     #[serde(skip)]
     db: Option<Arc<RwLock<BTreeMap<String, Value>>>>,
@@ -51,7 +49,6 @@ impl LocalStoreSource {
         key_column: String,
         fields: Vec<String>,
         format: FileFormat,
-        local_path: Option<String>,
         cloud_config: HashMap<String, String>,
     ) -> Result<Self, PiperError> {
         let mut s = Self {
@@ -59,7 +56,6 @@ impl LocalStoreSource {
             key_column,
             fields,
             format,
-            local_path,
             cloud_config,
             db: None,
         };
@@ -193,7 +189,6 @@ impl LookupSource for LocalStoreSource {
             self.key_column.clone(),
             self.fields.clone(),
             self.format,
-            self.local_path.clone(),
             Default::default(),
         )?;
         self.fields = s.fields.clone();
@@ -239,13 +234,13 @@ fn get_file_format(path: &str, format: FileFormat) -> Result<FileFormat, PiperEr
     if format != FileFormat::Auto {
         return Ok(format);
     }
-    if path.ends_with("csv") {
+    if path.ends_with(".csv") {
         Ok(FileFormat::Csv)
-    } else if path.ends_with("parquet") {
+    } else if path.ends_with(".parquet") {
         Ok(FileFormat::Parquet)
-    } else if path.ends_with("json") {
+    } else if path.ends_with(".json") {
         Ok(FileFormat::Json)
-    } else if path.ends_with("ndjson") {
+    } else if path.ends_with(".ndjson") {
         Ok(FileFormat::Ndjson)
     } else {
         Err(PiperError::ExternalError(format!(
@@ -257,10 +252,12 @@ fn get_file_format(path: &str, format: FileFormat) -> Result<FileFormat, PiperEr
 
 #[cfg(test)]
 mod tests {
+    use crate::IntoValue;
+
     use super::*;
 
     #[tokio::test]
-    async fn test_load() {
+    async fn test_load_parquet() {
         let path = if std::path::Path::new("test-data/links.parquet").exists() {
             "test-data/links.parquet"
         } else {
@@ -269,13 +266,11 @@ mod tests {
         let key_column = "movieId";
         let fields = vec!["imdbId".to_string(), "tmdbId".to_string()];
         let format = FileFormat::Auto;
-        let local_path = None;
         let src = LocalStoreSource::new(
             path.to_string(),
             key_column.to_string(),
             fields.clone(),
             format,
-            local_path,
             Default::default(),
         )
         .unwrap();
@@ -297,6 +292,115 @@ mod tests {
         assert_eq!(r[1], Value::Int(949));
     }
 
+    #[tokio::test]
+    async fn test_load_csv() {
+        let path = if std::path::Path::new("test-data/test.csv").exists() {
+            "test-data/test.csv"
+        } else {
+            "../test-data/test.csv"
+        };
+        let key_column = "C1";
+        let fields = vec!["C2".to_string(), "C3".to_string()];
+        let format = FileFormat::Auto;
+        let src = LocalStoreSource::new(
+            path.to_string(),
+            key_column.to_string(),
+            fields.clone(),
+            format,
+            Default::default(),
+        )
+        .unwrap();
+        let r = src
+            .lookup(
+                &Value::Int(1),
+                &["C2".to_string(), "C3".to_string()],
+            )
+            .await;
+        assert_eq!(r[0], "AaA".into_value());
+        assert_eq!(r[1], "BbB".into_value());
+        let r = src
+            .lookup(
+                &Value::Int(3),
+                &["C2".to_string(), "C3".to_string()],
+            )
+            .await;
+        assert_eq!(r[0], "EeE".into_value());
+        assert_eq!(r[1], "FfF".into_value());
+    }
+
+    #[tokio::test]
+    async fn test_load_json() {
+        let path = if std::path::Path::new("test-data/test.json").exists() {
+            "test-data/test.json"
+        } else {
+            "../test-data/test.json"
+        };
+        let key_column = "C1";
+        let fields = vec!["C2".to_string(), "C3".to_string()];
+        let format = FileFormat::Auto;
+        let src = LocalStoreSource::new(
+            path.to_string(),
+            key_column.to_string(),
+            fields.clone(),
+            format,
+            Default::default(),
+        )
+        .unwrap();
+        let r = src
+            .lookup(
+                &Value::Int(1),
+                &["C2".to_string(), "C3".to_string()],
+            )
+            .await;
+        assert_eq!(r[0], "AaA".into_value());
+        assert_eq!(r[1], "BbB".into_value());
+        let r = src
+            .lookup(
+                &Value::Int(3),
+                &["C2".to_string(), "C3".to_string()],
+            )
+            .await;
+        assert_eq!(r[0], "EeE".into_value());
+        assert_eq!(r[1], "FfF".into_value());
+    }
+
+    #[tokio::test]
+    async fn test_load_ndjson() {
+        let path = if std::path::Path::new("test-data/test_nd.json").exists() {
+            "test-data/test_nd.json"
+        } else {
+            "../test-data/test_nd.json"
+        };
+        let key_column = "C1";
+        let fields = vec!["C2".to_string(), "C3".to_string()];
+        // Even with '.json' extension, this file is actually a ndjson file
+        let format = FileFormat::Ndjson;
+        let src = LocalStoreSource::new(
+            path.to_string(),
+            key_column.to_string(),
+            fields.clone(),
+            format,
+            Default::default(),
+        )
+        .unwrap();
+        let r = src
+            .lookup(
+                &Value::Int(1),
+                &["C2".to_string(), "C3".to_string()],
+            )
+            .await;
+        assert_eq!(r[0], "AaA".into_value());
+        assert_eq!(r[1], "BbB".into_value());
+        let r = src
+            .lookup(
+                &Value::Int(3),
+                &["C2".to_string(), "C3".to_string()],
+            )
+            .await;
+        assert_eq!(r[0], "EeE".into_value());
+        assert_eq!(r[1], "FfF".into_value());
+    }
+
     /// An upstream bug of pola-rs currently prevents reading from Azure Data Lake Gen2
     /// Disable this test until the bug is fixed.
     /// @see https://github.com/pola-rs/polars/issues/3906
@@ -308,7 +412,6 @@ mod tests {
         let key_column = "movieId";
         let fields = vec!["imdbId".to_string(), "tmdbId".to_string()];
         let format = FileFormat::Auto;
-        let local_path = None;
         let mut cloud_options: HashMap<String, String> = HashMap::new();
         cloud_options.insert(
             "azure_storage_access_key".to_string(),
@@ -319,7 +422,6 @@ mod tests {
             key_column.to_string(),
             fields.clone(),
             format,
-            local_path,
             cloud_options,
         )
         .unwrap();
