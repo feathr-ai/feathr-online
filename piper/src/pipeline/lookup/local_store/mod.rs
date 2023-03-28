@@ -38,6 +38,8 @@ pub struct LocalStoreSource {
     #[serde(default)]
     format: FileFormat,
     #[serde(default)]
+    local_path: Option<String>,
+    #[serde(default)]
     cloud_config: HashMap<String, String>,
     #[serde(skip)]
     db: Option<Arc<RwLock<BTreeMap<String, Value>>>>,
@@ -49,6 +51,7 @@ impl LocalStoreSource {
         key_column: String,
         fields: Vec<String>,
         format: FileFormat,
+        local_path: Option<String>,
         cloud_config: HashMap<String, String>,
     ) -> Result<Self, PiperError> {
         let mut s = Self {
@@ -56,6 +59,7 @@ impl LocalStoreSource {
             key_column,
             fields,
             format,
+            local_path,
             cloud_config,
             db: None,
         };
@@ -189,6 +193,7 @@ impl LookupSource for LocalStoreSource {
             self.key_column.clone(),
             self.fields.clone(),
             self.format,
+            self.local_path.clone(),
             Default::default(),
         )?;
         self.fields = s.fields.clone();
@@ -234,13 +239,13 @@ fn get_file_format(path: &str, format: FileFormat) -> Result<FileFormat, PiperEr
     if format != FileFormat::Auto {
         return Ok(format);
     }
-    if path.ends_with(".csv") {
+    if path.ends_with(".csv") || path.ends_with(".csv.gz") {
         Ok(FileFormat::Csv)
     } else if path.ends_with(".parquet") {
         Ok(FileFormat::Parquet)
-    } else if path.ends_with(".json") {
+    } else if path.ends_with(".json") || path.ends_with(".json.gz") {
         Ok(FileFormat::Json)
-    } else if path.ends_with(".ndjson") {
+    } else if path.ends_with(".ndjson") || path.ends_with(".ndjson.gz") {
         Ok(FileFormat::Ndjson)
     } else {
         Err(PiperError::ExternalError(format!(
@@ -258,19 +263,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_parquet() {
-        let path = if std::path::Path::new("test-data/links.parquet").exists() {
-            "test-data/links.parquet"
-        } else {
-            "../test-data/links.parquet"
-        };
+        if ! std::path::Path::new("test-data").exists() {
+            std::env::set_current_dir("../").unwrap();
+        }
+        let path = "test-data/links.parquet";
         let key_column = "movieId";
         let fields = vec!["imdbId".to_string(), "tmdbId".to_string()];
         let format = FileFormat::Auto;
+        let local_path = None;
         let src = LocalStoreSource::new(
             path.to_string(),
             key_column.to_string(),
             fields.clone(),
             format,
+            local_path,
             Default::default(),
         )
         .unwrap();
@@ -294,19 +300,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_csv() {
-        let path = if std::path::Path::new("test-data/test.csv").exists() {
-            "test-data/test.csv"
-        } else {
-            "../test-data/test.csv"
-        };
+        if ! std::path::Path::new("test-data").exists() {
+            std::env::set_current_dir("../").unwrap();
+        }
+        let path = "test-data/test.csv";
         let key_column = "C1";
         let fields = vec!["C2".to_string(), "C3".to_string()];
         let format = FileFormat::Auto;
+        let local_path = None;
         let src = LocalStoreSource::new(
             path.to_string(),
             key_column.to_string(),
             fields.clone(),
             format,
+            local_path,
             Default::default(),
         )
         .unwrap();
@@ -330,19 +337,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_json() {
-        let path = if std::path::Path::new("test-data/test.json").exists() {
-            "test-data/test.json"
-        } else {
-            "../test-data/test.json"
-        };
+        if ! std::path::Path::new("test-data").exists() {
+            std::env::set_current_dir("../").unwrap();
+        }
+        let path = "test-data/test.json";
         let key_column = "C1";
         let fields = vec!["C2".to_string(), "C3".to_string()];
         let format = FileFormat::Auto;
+        let local_path = None;
         let src = LocalStoreSource::new(
             path.to_string(),
             key_column.to_string(),
             fields.clone(),
             format,
+            local_path,
             Default::default(),
         )
         .unwrap();
@@ -366,20 +374,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_ndjson() {
-        let path = if std::path::Path::new("test-data/test_nd.json").exists() {
-            "test-data/test_nd.json"
-        } else {
-            "../test-data/test_nd.json"
-        };
+        if ! std::path::Path::new("test-data").exists() {
+            std::env::set_current_dir("../").unwrap();
+        }
+        let path = "test-data/test_nd.json";
         let key_column = "C1";
         let fields = vec!["C2".to_string(), "C3".to_string()];
-        // Even with '.json' extension, this file is actually a ndjson file
         let format = FileFormat::Ndjson;
+        let local_path = None;
         let src = LocalStoreSource::new(
             path.to_string(),
             key_column.to_string(),
             fields.clone(),
             format,
+            local_path,
             Default::default(),
         )
         .unwrap();
@@ -412,6 +420,7 @@ mod tests {
         let key_column = "movieId";
         let fields = vec!["imdbId".to_string(), "tmdbId".to_string()];
         let format = FileFormat::Auto;
+        let local_path = None;
         let mut cloud_options: HashMap<String, String> = HashMap::new();
         cloud_options.insert(
             "azure_storage_access_key".to_string(),
@@ -422,6 +431,7 @@ mod tests {
             key_column.to_string(),
             fields.clone(),
             format,
+            local_path,
             cloud_options,
         )
         .unwrap();

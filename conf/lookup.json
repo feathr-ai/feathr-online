@@ -1,8 +1,14 @@
 {
   "sources": [
     {
-      "class": "FeathrRedisSource",
+      "class": "local",
       "name": "feathrci",
+      "path": "test-data/nyc_online.csv.gz",
+      "keyColumn": "key0"
+    },
+   {
+      "class": "FeathrRedisSource",
+      "name": "feathrci_redis",
       "host": "${FEATHRCI_HOST}",
       "password": "${FEATHRCI_PASS}",
       "ssl": true,
