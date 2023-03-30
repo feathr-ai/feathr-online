@@ -257,15 +257,22 @@ fn get_file_format(path: &str, format: FileFormat) -> Result<FileFormat, PiperEr
 
 #[cfg(test)]
 mod tests {
+    use tracing::debug;
+
     use crate::IntoValue;
 
     use super::*;
 
+    fn fix_current_dir() {
+        if ! std::path::Path::new("test-data").exists() {
+            std::env::set_current_dir("..").unwrap();
+        }
+        debug!("Current dir: {}", std::env::current_dir().unwrap().display());
+    }
+
     #[tokio::test]
     async fn test_load_parquet() {
-        if ! std::path::Path::new("test-data").exists() {
-            std::env::set_current_dir("../").unwrap();
-        }
+        fix_current_dir();
         let path = "test-data/links.parquet";
         let key_column = "movieId";
         let fields = vec!["imdbId".to_string(), "tmdbId".to_string()];
@@ -300,9 +307,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_csv() {
-        if ! std::path::Path::new("test-data").exists() {
-            std::env::set_current_dir("../").unwrap();
-        }
+        fix_current_dir();
         let path = "test-data/test.csv";
         let key_column = "C1";
         let fields = vec!["C2".to_string(), "C3".to_string()];
@@ -337,9 +342,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_json() {
-        if ! std::path::Path::new("test-data").exists() {
-            std::env::set_current_dir("../").unwrap();
-        }
+        fix_current_dir();
         let path = "test-data/test.json";
         let key_column = "C1";
         let fields = vec!["C2".to_string(), "C3".to_string()];
@@ -374,9 +377,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_ndjson() {
-        if ! std::path::Path::new("test-data").exists() {
-            std::env::set_current_dir("../").unwrap();
-        }
+        fix_current_dir();
         let path = "test-data/test_nd.json";
         let key_column = "C1";
         let fields = vec!["C2".to_string(), "C3".to_string()];
