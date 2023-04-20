@@ -1291,7 +1291,9 @@ fn str_to_datetime(v: &str) -> Result<DateTime<Utc>, PiperError> {
 mod tests {
     use chrono::NaiveDate;
 
-    use crate::pipeline::{value::str_to_datetime, Value};
+    use crate::{pipeline::{value::str_to_datetime, Value}, IntoValue};
+
+    use maplit::hashmap;
 
     #[test]
     fn test_value_type() {
@@ -1417,5 +1419,105 @@ mod tests {
         assert!(!Value::Int(10).is_null());
         assert!(Value::Null.is_null());
         assert!(!Value::Null.is_error());
+    }
+
+    #[test]
+    fn test_value_eq() {
+        // Null tests
+        let null_1 = Value::Null;
+        let null_2 = Value::Null;
+        assert_eq!(null_1, null_2);
+
+        // Bool tests
+        let bool_1 = Value::Bool(true);
+        let bool_2 = Value::Bool(false);
+        assert_ne!(bool_1, bool_2);
+        let bool_3 = Value::Bool(true);
+        assert_eq!(bool_1, bool_3);
+
+        // Int tests
+        let int_1 = Value::Int(42);
+        let int_2 = Value::Int(7);
+        assert_ne!(int_1, int_2);
+        let int_3 = Value::Int(42);
+        assert_eq!(int_1, int_3);
+        let int_4 = Value::Long(42);
+        assert_eq!(int_1, int_4);
+        let int_5 = Value::Float(42.0);
+        assert_eq!(int_1, int_5);
+        let int_6 = Value::Double(42.0);
+        assert_eq!(int_1, int_6);
+
+        // Long tests
+        let long_1 = Value::Long(42000000);
+        let long_2 = Value::Long(7000000000);
+        assert_ne!(long_1, long_2);
+        let long_3 = Value::Long(42000000);
+        assert_eq!(long_1, long_3);
+        let long_4 = Value::Int(42000000);
+        assert_eq!(long_1, long_4);
+        let long_5 = Value::Float(42000000.0);
+        assert_eq!(long_1, long_5);
+        let long_6 = Value::Double(42000000.0);
+        assert_eq!(long_1, long_6);
+
+        // Float tests
+        let float_1 = Value::Float(42.5);
+        let float_2 = Value::Float(7.5);
+        assert_ne!(float_1, float_2);
+        let float_3 = Value::Float(42.5);
+        assert_eq!(float_1, float_3);
+        let float_4 = Value::Double(42.5);
+        assert_eq!(float_1, float_4);
+
+        // Double tests
+        let double_1 = Value::Double(42.5);
+        let double_2 = Value::Double(7.5);
+        assert_ne!(double_1, double_2);
+        let double_3 = Value::Double(42.5);
+        assert_eq!(double_1, double_3);
+        let double_4 = Value::Float(42.5);
+        assert_eq!(double_1, double_4);
+
+        // String tests
+        let string_1 = "hello".into_value();
+        let string_2 = "world".into_value();
+        assert_ne!(string_1, string_2);
+        let string_3 = "hello".into_value();
+        assert_eq!(string_1, string_3);
+
+        // Array tests
+        let array_1 = Value::Array(vec![Value::Int(1), Value::Int(2), Value::Int(3)]);
+        let array_2 = Value::Array(vec![Value::Int(4), Value::Int(5), Value::Int(6)]);
+        assert_ne!(array_1, array_2);
+        let array_3 = Value::Array(vec![Value::Int(1), Value::Int(2), Value::Int(3)]);
+        assert_eq!(array_1, array_3);
+
+        // Object tests
+        let object_1 = Value::Object(
+            hashmap! { "a".to_string() => Value::Int(1), "b".to_string() => Value::Int(2) },
+        );
+        let object_2 = Value::Object(
+            hashmap! { "c".to_string() => Value::Int(3), "d".to_string() => Value::Int(4) },
+        );
+        assert_ne!(object_1, object_2);
+        let object_3 = Value::Object(
+            hashmap! { "a".to_string() => Value::Int(1), "b".to_string() => Value::Int(2) },
+        );
+        assert_eq!(object_1, object_3);
+
+        // DateTime tests
+        let dt_1 = NaiveDate::from_ymd_opt(2021, 1, 1).unwrap().and_hms_opt(0, 0, 0).into_value();
+        let dt_2 = NaiveDate::from_ymd_opt(2021, 12, 31).unwrap().and_hms_opt(23, 59, 59).into_value();
+        assert_ne!(dt_1, dt_2);
+        let dt_3 = NaiveDate::from_ymd_opt(2021, 1, 1).unwrap().and_hms_opt(0, 0, 0).into_value();
+        assert_eq!(dt_1, dt_3);
+
+        // // Error tests
+        // let error_1 = Value::Error("oops".to_string());
+        // let error_2 = Value::Error("uh oh".to_string());
+        // assert_ne!(error_1, error_2);
+        // let error_3 = Value::Error("oops".to_string());
+        // assert_eq!(error_1, error_3);
     }
 }
