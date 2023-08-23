@@ -1,6 +1,6 @@
 [package]
 name = "feathrpiper"
-version = "0.4.8"
+version = "0.4.9"
 edition = "2021"
 authors = ["Chen Xu <windoze@0d0a.com>"]
 license = "MIT"
@@ -20,8 +20,8 @@ futures = "0.3"
 chrono = { version = "0.4", default-features = false }
 serde = "1"
 serde_json = "1"
-pyo3 = { version = "0.18", features = ["extension-module", "chrono"] }
-pyo3-asyncio = { version = "0.18", features = ["attributes", "tokio-runtime"] }
+pyo3 = { version = "0.19", features = ["extension-module", "chrono"] }
+pyo3-asyncio = { version = "0.19", features = ["attributes", "tokio-runtime"] }
 piper = { path = "../piper", features = ["python"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]

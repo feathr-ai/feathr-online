@@ -663,7 +663,6 @@ impl Piper {
 }
 
 #[pyclass(module = "feathrpiper")]
-#[pyo3(text_signature = "(pipelines lookups functions /)")]
 struct PiperService {
     service: Arc<RwLock<piper::PiperService>>,
 }
@@ -672,6 +671,7 @@ struct PiperService {
 impl PiperService {
     #[new]
     #[pyo3(signature = (pipelines, lookups, functions))]
+    #[pyo3(text_signature = "(pipelines lookups functions /)")]
     fn new(
         pipelines: &str,
         lookups: PyObject,
