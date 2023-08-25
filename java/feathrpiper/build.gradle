@@ -8,7 +8,7 @@ repositories {
 }
 
 group = "com.linkedin.feathr.online"
-version = "0.4.8"
+version = "0.4.9"
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
